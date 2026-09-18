@@ -1,0 +1,147 @@
+```html
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <title>Cables - Tecnología</title>
+
+    <link rel="stylesheet" href="../../style.css">
+
+    <style>
+        .card img {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+
+</head>
+
+<body data-store="tecnologia" data-store-name="Tecnología">
+
+    <header>
+
+        <div class="nav container" style="margin:0 auto">
+
+            <a class="btn secondary" href="../index.html">
+                ← Tecnología
+            </a>
+
+            <a class="badge" href="../carrito.html">
+                🛒 Carrito:
+                <span class="cart-count">0</span>
+            </a>
+
+        </div>
+
+        <h1>Cables</h1>
+        <p>Productos</p>
+
+    </header>
+
+
+    <main class="container">
+
+        <div id="cart-message"
+             class="notice"
+             style="display:none;margin-bottom:20px">
+        </div>
+
+
+        <section class="grid">
+
+
+            <!-- PRODUCTO 1 -->
+            <article class="card">
+
+                <img src="imagenes/audifnos entrada c.png"
+                     alt="Audifonos alambricos entrada C">
+
+                <h2>Audifonos alambricos entrada C</h2>
+
+                <p>
+                    Excelentes audifonos alambricos para escuchar musica.
+                </p>
+
+                <div class="price">
+                    $100.00 MXN
+                </div>
+
+                <button type="button"
+                        class="btn add-cart-button"
+                        data-product="Audifonos alambricos entrada C"
+                        data-price="100">
+                    🛒 Agregar al carrito
+                </button>
+
+            </article>
+
+
+            <!-- PRODUCTO 2 -->
+            <article class="card">
+
+                <img src="imagenes/Audifonos inalambricos .png"
+                     alt="Audifonos inalambricos">
+
+                <h2>Audifonos inalambricos</h2>
+
+                <p>
+                    Audifonos inalambricos para poder hablar y escuchar musica mientras caminas.
+                </p>
+
+                <div class="price">
+                    $200.00 MXN
+                </div>
+
+                <button type="button"
+                        class="btn add-cart-button"
+                        data-product="Audifonos inalambricos"
+                        data-price="200">
+                    🛒 Agregar al carrito
+                </button>
+
+            </article>
+
+
+            <!-- PRODUCTO 3 -->
+            <article class="card">
+
+                <img src="imagenes/Audifonos inalambricos sencillos.png"
+                     alt="Audifonos inalambricos de 12 horas">
+
+                <h2>Audifonos inalambricos de 12 horas</h2>
+
+                <p>
+                    Audifonos inalambricos para poder hablar y escuchar musica.
+                </p>
+
+                <div class="price">
+                    $180.00 MXN
+                </div>
+
+                <button type="button"
+                        class="btn add-cart-button"
+                        data-product="Audifonos inalambricos de 12 horas"
+                        data-price="180">
+                    🛒 Agregar al carrito
+                </button>
+
+            </article>
+
+
+        </section>
+
+    </main>
+
+
+    <script src="../js/carrito.js"></script>
+
+</body>
+
+</html>
+```
