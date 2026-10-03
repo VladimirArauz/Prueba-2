@@ -1060,3 +1060,27 @@ select option {
     margin-bottom: 12px;
   }
 }
+
+.admin-auth {
+  max-width: 760px;
+  margin: 36px auto;
+}
+
+.admin-auth h2 {
+  margin-bottom: 8px;
+}
+
+.admin-store-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.public-product-card > img {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}

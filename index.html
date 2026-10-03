@@ -191,6 +191,33 @@
           </div>
         </article>
       </div>
+
+      <div class="section-header-row" style="margin-top:36px;">
+        <div>
+          <h2 class="section-title"><span>🏪</span> Stands nuevos</h2>
+          <p class="section-desc">Explora los stands agregados por Necutools.</p>
+        </div>
+      </div>
+      <div class="grid" id="custom-store-cards"></div>
+
+      <div class="section-header-row" style="margin-top:36px;">
+        <div>
+          <h2 class="section-title"><span>✨</span> Productos del catálogo</h2>
+          <p class="section-desc">Productos y precios publicados por los stands.</p>
+        </div>
+      </div>
+      <section class="grid" id="public-products-grid" aria-live="polite"></section>
+    </section>
+
+    <section id="sec-productos" class="app-section">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title"><span>🏪</span> <span id="public-store-title">Productos</span></h2>
+          <p class="section-desc">Productos disponibles en este stand.</p>
+        </div>
+        <button type="button" class="btn secondary btn-sm" onclick="showSection('sec-tienda')">← Volver a tiendas</button>
+      </div>
+      <section class="grid" id="store-products-grid" aria-live="polite"></section>
     </section>
 
     <!-- ================= SECCIÓN 2: CARRITO ================= -->
@@ -251,15 +278,37 @@
 
     <!-- ================= SECCIÓN 3: NECUTOOLS (PANEL ADMIN) ================= -->
     <section id="sec-necutools" class="app-section">
+      <div id="admin-auth" class="admin-card admin-auth">
+        <h2 id="admin-auth-title">Acceso de administración</h2>
+        <p id="admin-auth-description" class="section-desc"></p>
+        <form id="admin-login-form" hidden>
+          <div class="admin-form-grid">
+            <div class="form-group"><label for="admin-login-user">Usuario</label><input id="admin-login-user" autocomplete="username" required></div>
+            <div class="form-group"><label for="admin-login-password">Contraseña</label><input id="admin-login-password" type="password" autocomplete="current-password" required></div>
+          </div>
+          <button class="btn" type="submit" style="margin-top:18px;">Ingresar</button>
+        </form>
+        <form id="admin-setup-form" hidden>
+          <div class="admin-form-grid">
+            <div class="form-group"><label for="admin-setup-user">Crea tu usuario administrador</label><input id="admin-setup-user" autocomplete="username" required></div>
+            <div class="form-group"><label for="admin-setup-password">Crea una contraseña (8 caracteres mínimo)</label><input id="admin-setup-password" type="password" autocomplete="new-password" minlength="8" required></div>
+          </div>
+          <button class="btn" type="submit" style="margin-top:18px;">Crear cuenta</button>
+        </form>
+        <p class="notice">Esta versión guarda la cuenta y los cambios solo en este navegador. No uses esta autenticación para proteger datos o un sitio publicado; para eso hace falta un servidor con cuentas seguras.</p>
+      </div>
+
+      <div id="admin-workspace" hidden>
       <div class="section-header-row">
         <div>
           <div class="admin-badge-head">⚡ Panel de Administración</div>
           <h2 class="section-title"><span>🛠️</span> Necutools Studio</h2>
-          <p class="section-desc">Gestiona y da de alta nuevos productos para todas las secciones de la tienda Necutla.</p>
+          <p class="section-desc">Administra productos, imágenes, precios y stands.</p>
         </div>
-        <button type="button" class="btn secondary btn-sm" onclick="showSection('sec-tienda')">
-          ← Ver Catálogo Público
-        </button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" class="btn secondary btn-sm" onclick="adminLogout()">Cerrar sesión</button>
+          <button type="button" class="btn secondary btn-sm" onclick="showSection('sec-tienda')">← Ver Catálogo Público</button>
+        </div>
       </div>
 
       <!-- Formulario para agregar producto -->
@@ -274,15 +323,7 @@
             <!-- Selección de tienda -->
             <div class="form-group">
               <label for="admin-prod-store">🏬 Tienda de Destino:</label>
-              <select id="admin-prod-store" required>
-                <option value="Ropa">Ropa</option>
-                <option value="Tecnología">Tecnología</option>
-                <option value="Dulces">Dulces</option>
-                <option value="Propaganda">Propaganda</option>
-                <option value="Papelería">Papelería</option>
-                <option value="Regalos">Regalos</option>
-                <option value="Otra">Otra</option>
-              </select>
+              <select id="admin-prod-store" required></select>
             </div>
 
             <!-- Categoría -->
@@ -316,7 +357,7 @@
             <!-- URL o Imagen -->
             <div class="form-group">
               <label for="admin-prod-img">🖼️ Imagen o Referencia:</label>
-              <input type="text" id="admin-prod-img" placeholder="imagenes/ropa.svg (opcional)">
+              <input type="file" id="admin-prod-img" accept="image/*">
             </div>
 
             <!-- Descripción -->
@@ -327,14 +368,24 @@
           </div>
 
           <div style="margin-top: 22px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-            <button type="submit" class="btn">
+            <button type="submit" class="btn" id="admin-product-submit">
               ➕ Guardar Producto en la Tienda
             </button>
+            <button type="button" class="btn secondary" id="admin-product-cancel" onclick="cancelEditAdminProduct()" hidden>Cancelar edición</button>
             <span style="font-size:0.85rem; color:var(--text-muted);">
-              * Los productos guardados se reflejan inmediatamente en la previsualización inferior.
+              * Los productos se publican en el catálogo de clientes.
             </span>
           </div>
         </form>
+      </div>
+
+      <div class="admin-card" style="margin-top:30px;">
+        <h3 style="font-size:1.3rem;color:#ffffff;margin-bottom:6px;">Agregar un stand</h3>
+        <form id="admin-add-store-form" class="admin-form-grid">
+          <div class="form-group"><label for="admin-store-name">Nombre del nuevo stand</label><input id="admin-store-name" maxlength="50" placeholder="Ej. Accesorios" required></div>
+          <div class="form-group" style="justify-content:end;"><button class="btn" type="submit">➕ Crear stand</button></div>
+        </form>
+        <div id="admin-stores-list" class="admin-store-list"></div>
       </div>
 
       <!-- Tabla de productos administrados -->
@@ -360,6 +411,7 @@
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </section>
 

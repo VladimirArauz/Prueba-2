@@ -13,6 +13,11 @@ const WHATSAPP_NUMBERS = [
 
 const CART_STORAGE_KEY = "necutla_carrito_global";
 const ADMIN_STORAGE_KEY = "necutools_productos_admin";
+const ADMIN_ACCOUNT_KEY = "necutools_admin_account";
+const ADMIN_SESSION_KEY = "necutools_admin_session";
+const ADMIN_STORES_KEY = "necutools_admin_stores";
+const DEFAULT_STORES = ["Ropa", "Tecnología", "Dulces", "Propaganda", "Papelería", "Regalos", "Otra"];
+let editingProductId = null;
 
 // Inicializar datos del carrito
 function getCart() {
@@ -51,6 +56,19 @@ function saveAdminProducts(products) {
   localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(products));
 }
 
+function getAdminStores() {
+  try {
+    const saved = localStorage.getItem(ADMIN_STORES_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_STORES;
+  } catch (e) {
+    return DEFAULT_STORES;
+  }
+}
+
+function saveAdminStores(stores) {
+  localStorage.setItem(ADMIN_STORES_KEY, JSON.stringify(stores));
+}
+
 // Formateador de moneda MXN
 function money(amount) {
   return "$" + Number(amount).toFixed(2) + " MXN";
@@ -64,6 +82,9 @@ function escapeHTML(str) {
 
 // ================= NAVEGACIÓN ENTRE SECCIONES =================
 function showSection(sectionId) {
+  if (sectionId === "sec-necutools" && sessionStorage.getItem(ADMIN_SESSION_KEY) !== "active") {
+    renderAdminAccess();
+  }
   // Ocultar todas las secciones
   const sections = document.querySelectorAll('.app-section');
   sections.forEach(sec => sec.classList.remove('active-section'));
@@ -85,7 +106,9 @@ function showSection(sectionId) {
     renderCart();
   } else if (sectionId === 'sec-necutools') {
     document.getElementById('nav-btn-necutools')?.classList.add('active');
-    renderAdminTable();
+    if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "active") renderAdminTable();
+  } else if (sectionId === 'sec-productos') {
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
   }
 
   // Desplazamiento suave al inicio de la sección en móviles si es necesario
@@ -284,6 +307,7 @@ function renderAdminTable() {
         <td><span class="status-badge active">${escapeHTML(prod.stock || "Disponible")}</span></td>
         <td>${escapeHTML(prod.date || "Reciente")}</td>
         <td style="text-align:center;">
+          <button type="button" class="btn secondary btn-sm" onclick="editAdminProduct('${escapeHTML(prod.id)}')">Editar</button>
           <button type="button" class="btn secondary btn-sm" onclick="deleteAdminProduct(${index})" style="color:var(--red-main); border-color:rgba(230,57,70,0.3); padding:4px 10px;">
             Eliminar
           </button>
@@ -295,7 +319,7 @@ function renderAdminTable() {
   tbody.innerHTML = html;
 }
 
-function handleAddAdminProduct(e) {
+async function handleAddAdminProduct(e) {
   e.preventDefault();
 
   const storeSelect = document.getElementById("admin-prod-store");
@@ -304,35 +328,94 @@ function handleAddAdminProduct(e) {
   const priceInput = document.getElementById("admin-prod-price");
   const stockSelect = document.getElementById("admin-prod-stock");
   const descInput = document.getElementById("admin-prod-desc");
+  const imageInput = document.getElementById("admin-prod-img");
 
   if (!nameInput.value.trim() || !priceInput.value) {
     alert("Por favor completa al menos el nombre y precio del producto.");
     return;
   }
 
+  const products = getAdminProducts();
+  const existing = editingProductId ? products.find(product => product.id === editingProductId) : null;
+  let image = existing?.img || "";
+  const imageFile = imageInput.files[0];
+  if (imageFile) {
+    if (!imageFile.type.startsWith("image/") || imageFile.size > 1024 * 1024) {
+      alert("Selecciona una imagen de hasta 1 MB.");
+      return;
+    }
+    image = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(imageFile);
+    }).catch(() => "");
+    if (!image) {
+      alert("No se pudo leer la imagen seleccionada.");
+      return;
+    }
+  }
+
   const newProduct = {
-    id: "P-" + Math.floor(100 + Math.random() * 900),
+    id: existing?.id || "P-" + Date.now(),
     name: nameInput.value.trim(),
     store: storeSelect.value,
     category: catInput.value.trim() || "General",
     price: parseFloat(priceInput.value),
     stock: stockSelect.value,
     desc: descInput.value.trim(),
+    img: image,
     date: "Hoy"
   };
 
-  const products = getAdminProducts();
-  products.unshift(newProduct);
-  saveAdminProducts(products);
+  if (existing) {
+    products[products.findIndex(product => product.id === editingProductId)] = newProduct;
+  } else {
+    products.unshift(newProduct);
+  }
+  try {
+    saveAdminProducts(products);
+  } catch (error) {
+    alert("No hay espacio disponible para guardar los cambios. Prueba con una imagen más pequeña.");
+    return;
+  }
 
   // Limpiar campos
   nameInput.value = "";
   priceInput.value = "";
   catInput.value = "";
   descInput.value = "";
+  imageInput.value = "";
 
+  cancelEditAdminProduct();
   renderAdminTable();
-  showToast(`⚡ ¡Producto "${newProduct.name}" guardado exitosamente en ${newProduct.store}!`);
+  renderPublicCatalog();
+  showToast(`Producto "${newProduct.name}" ${existing ? "actualizado" : "guardado"} en ${newProduct.store}.`);
+}
+
+function editAdminProduct(id) {
+  const product = getAdminProducts().find(item => item.id === id);
+  if (!product) return;
+  editingProductId = id;
+  document.getElementById("admin-prod-store").value = product.store;
+  document.getElementById("admin-prod-cat").value = product.category || "";
+  document.getElementById("admin-prod-name").value = product.name || "";
+  document.getElementById("admin-prod-price").value = product.price || "";
+  document.getElementById("admin-prod-stock").value = product.stock || "Disponible";
+  document.getElementById("admin-prod-desc").value = product.desc || "";
+  document.getElementById("admin-product-submit").textContent = "Guardar cambios";
+  document.getElementById("admin-product-cancel").hidden = false;
+  document.getElementById("admin-add-product-form").scrollIntoView({ behavior: "smooth" });
+}
+
+function cancelEditAdminProduct() {
+  editingProductId = null;
+  const form = document.getElementById("admin-add-product-form");
+  form?.reset();
+  const submit = document.getElementById("admin-product-submit");
+  if (submit) submit.textContent = "➕ Guardar Producto en la Tienda";
+  const cancel = document.getElementById("admin-product-cancel");
+  if (cancel) cancel.hidden = true;
 }
 
 function deleteAdminProduct(index) {
@@ -345,7 +428,89 @@ function deleteAdminProduct(index) {
   products.splice(index, 1);
   saveAdminProducts(products);
   renderAdminTable();
+  renderPublicCatalog();
   showToast(`Producto "${deletedName}" eliminado de Necutools.`);
+}
+
+function renderAdminAccess() {
+  const account = localStorage.getItem(ADMIN_ACCOUNT_KEY);
+  const authenticated = sessionStorage.getItem(ADMIN_SESSION_KEY) === "active";
+  document.getElementById("admin-login-form").hidden = !account;
+  document.getElementById("admin-setup-form").hidden = Boolean(account);
+  document.getElementById("admin-auth-title").textContent = account ? "Iniciar sesión" : "Crear cuenta de administrador";
+  document.getElementById("admin-auth-description").textContent = account
+    ? "Ingresa tu usuario y contraseña para abrir Necutools."
+    : "Configura tu cuenta personal para administrar el catálogo.";
+  document.getElementById("admin-workspace").hidden = !authenticated;
+  document.getElementById("admin-auth").hidden = authenticated;
+  if (authenticated) renderAdminTable();
+}
+
+async function hashAdminPassword(password) {
+  const bytes = new TextEncoder().encode(password);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function adminLogout() {
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  renderAdminAccess();
+  showSection("sec-tienda");
+}
+
+function renderStoreOptions() {
+  const select = document.getElementById("admin-prod-store");
+  if (select) select.innerHTML = getAdminStores().map(store => `<option value="${escapeHTML(store)}">${escapeHTML(store)}</option>`).join("");
+  const list = document.getElementById("admin-stores-list");
+  if (list) list.innerHTML = getAdminStores().map(store => `<span class="status-badge active">${escapeHTML(store)}</span>`).join(" ");
+}
+
+function addAdminStore(event) {
+  event.preventDefault();
+  const input = document.getElementById("admin-store-name");
+  const name = input.value.trim();
+  const stores = getAdminStores();
+  if (!name || stores.some(store => store.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+    alert("Escribe un nombre nuevo para el stand.");
+    return;
+  }
+  stores.push(name);
+  saveAdminStores(stores);
+  input.value = "";
+  renderStoreOptions();
+  renderPublicCatalog();
+  showToast(`Stand "${name}" agregado.`);
+}
+
+function renderPublicCatalog(storeFilter = "") {
+  const allProducts = getAdminProducts();
+  const renderProducts = products => products.length ? products.map(product => `
+    <article class="card public-product-card">
+      <img src="${product.img || "imagenes/ropa.svg"}" alt="${escapeHTML(product.name)}" loading="lazy">
+      <h2>${escapeHTML(product.name)}</h2>
+      <p>${escapeHTML(product.desc || product.category || product.store)}</p>
+      <div class="price">${money(product.price)}</div>
+      <button type="button" class="btn public-add-cart" data-name="${escapeHTML(product.name)}" data-store="${escapeHTML(product.store)}" data-price="${Number(product.price) || 0}">🛒 Agregar al carrito</button>
+    </article>`).join("") : `<p class="notice">Todavía no hay productos publicados${storeFilter ? ` en ${escapeHTML(storeFilter)}` : ""}.</p>`;
+  const allProductsGrid = document.getElementById("public-products-grid");
+  if (allProductsGrid) allProductsGrid.innerHTML = renderProducts(allProducts);
+  const storeProducts = document.getElementById("store-products-grid");
+  if (storeProducts) storeProducts.innerHTML = renderProducts(allProducts.filter(product => !storeFilter || product.store === storeFilter));
+  const storeTitle = document.getElementById("public-store-title");
+  if (storeTitle) storeTitle.textContent = storeFilter;
+  const customStores = getAdminStores().filter(store => !DEFAULT_STORES.includes(store));
+  const storeCards = document.getElementById("custom-store-cards");
+  if (storeCards) storeCards.innerHTML = customStores.map(store => `
+    <article class="card">
+      <div class="card-img-wrap"><span class="card-tag">Stand</span><img src="imagenes/otra.svg" alt="Stand ${escapeHTML(store)}"></div>
+      <h2>${escapeHTML(store)}</h2><p>Productos disponibles de este stand.</p>
+      <button class="btn public-store-button" type="button" data-store="${escapeHTML(store)}">Ver productos →</button>
+    </article>`).join("");
+}
+
+function showStoreProducts(store) {
+  renderPublicCatalog(store);
+  showSection("sec-productos");
 }
 
 // ================= NOTIFICACIÓN TOAST =================
@@ -371,11 +536,52 @@ function showToast(message) {
 document.addEventListener("DOMContentLoaded", () => {
   updateCartCounters();
   renderCart();
-  renderAdminTable();
+  renderAdminAccess();
+  renderStoreOptions();
+  renderPublicCatalog();
 
   // Listener para el formulario de administración
   const adminForm = document.getElementById("admin-add-product-form");
   if (adminForm) {
     adminForm.addEventListener("submit", handleAddAdminProduct);
   }
+
+  document.getElementById("admin-login-form")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const account = JSON.parse(localStorage.getItem(ADMIN_ACCOUNT_KEY) || "null");
+    const username = document.getElementById("admin-login-user").value.trim();
+    const passwordHash = await hashAdminPassword(document.getElementById("admin-login-password").value);
+    if (account && account.username === username && account.passwordHash === passwordHash) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, "active");
+      document.getElementById("admin-auth").hidden = true;
+      document.getElementById("admin-workspace").hidden = false;
+      renderAdminTable();
+    } else {
+      alert("Usuario o contraseña incorrectos.");
+    }
+  });
+
+  document.getElementById("admin-setup-form")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!crypto?.subtle) {
+      alert("No se puede configurar la cuenta en este modo. Abre el sitio desde localhost o un sitio HTTPS.");
+      return;
+    }
+    const username = document.getElementById("admin-setup-user").value.trim();
+    const password = document.getElementById("admin-setup-password").value;
+    if (!username || password.length < 8) return;
+    localStorage.setItem(ADMIN_ACCOUNT_KEY, JSON.stringify({ username, passwordHash: await hashAdminPassword(password) }));
+    sessionStorage.setItem(ADMIN_SESSION_KEY, "active");
+    document.getElementById("admin-auth").hidden = true;
+    document.getElementById("admin-workspace").hidden = false;
+    renderAdminTable();
+  });
+
+  document.getElementById("admin-add-store-form")?.addEventListener("submit", addAdminStore);
+  document.addEventListener("click", event => {
+    const button = event.target.closest(".public-add-cart");
+    if (button) addToCartDirect(button.dataset.name, button.dataset.store, button.dataset.price);
+    const storeButton = event.target.closest(".public-store-button");
+    if (storeButton) showStoreProducts(storeButton.dataset.store);
+  });
 });
