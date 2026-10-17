@@ -21,7 +21,7 @@ Cómo se usa:
 
 ## Pendientes
 
-1. **Desplegar en Render.** Commit local hecho; falta el `git push` a GitHub (`VladimirArauz/Prueba-2`, esta máquina no tenía credenciales: `gh auth login`), crear el Blueprint en Render y conectar pgAdmin. Pasos en `README.md`.
+1. **Desplegar en Render: ver la checklist "Pasos pendientes en Render" justo abajo.** El código ya está en GitHub (commit `1450ad6` en `VladimirArauz/Prueba-2`, subido por el usuario). Si el usuario pregunta "¿qué pasos eran para Render?", responder con esa checklist completa.
 2. **Contraseña del admin en Render.** Después del primer despliegue (cuando ya existe el admin), se puede borrar `ADMIN_PASSWORD` de las variables de Render; ya no se usa. Todavía no hay pantalla para cambiar contraseña ni para crear más admins (se hace insertando en la tabla `admins` con un hash bcrypt).
 3. **Base de datos gratis de Render caduca** a los 30 días de creada (luego hay un periodo corto para pasar a plan de pago) y no tiene respaldos. Antes de que caduque: pasar a plan pagado o exportar con `pg_dump`/pgAdmin y crear otra.
 4. **Restringir el acceso externo a la base** en `render.yaml` (`ipAllowList`): hoy está abierto a `0.0.0.0/0` para que pgAdmin funcione desde cualquier red. Cambiar por la IP del usuario.
@@ -33,6 +33,48 @@ Cómo se usa:
 10. **Mensaje de WhatsApp con emojis** (`public/app.js`, `sendOrderToWhatsApps`): permitido por las reglas; cambiar si se quiere más sobrio.
 11. **Archivo sin uso:** `js_carrito.js` en la raíz (no se publica porque está fuera de `public/`). Borrar si el usuario confirma.
 12. **Plan gratis del servicio web:** se duerme tras 15 min sin visitas y tarda ~1 min en despertar.
+
+### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
+
+Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
+
+**Paso 0: acceso al repositorio (bloqueado: Vladi no contesta)**
+- [ ] El repo `VladimirArauz/Prueba-2` es de Vladi. Para que Render lo vea, hay dos caminos:
+  - **A (con Vladi):** que Vladi te agregue como colaborador (GitHub → repo → Settings → Collaborators) o que él mismo conecte el repo en Render.
+  - **B (sin esperar a Vladi):** haz un **fork** a tu cuenta (botón *Fork* en https://github.com/VladimirArauz/Prueba-2) y despliega desde `TU_USUARIO/Prueba-2`. En la carpeta local, apunta a tu fork con `git remote add mio https://github.com/TU_USUARIO/Prueba-2.git` y sube con `git push mio main`. Más adelante, cuando Vladi conteste, se pueden juntar los cambios con un Pull Request.
+
+**Paso 1: crear la cuenta**
+- [ ] Entrar a https://dashboard.render.com y registrarse con **GitHub** (la cuenta que tenga acceso al repo).
+- [ ] Autorizar a Render a ver el repositorio (*Configure account* → elegir `Prueba-2`).
+
+**Paso 2: crear todo con el Blueprint**
+- [ ] Render → **New → Blueprint** → elegir el repositorio `Prueba-2`, rama `main`.
+- [ ] Render lee `render.yaml` y pide 3 valores:
+  - `ADMIN_USERNAME`: el usuario para entrar a Necutools (ej. `axel`).
+  - `ADMIN_PASSWORD`: contraseña de **12 caracteres o más** (guardarla en un lugar seguro).
+  - `WHATSAPP_NUMBERS`: números reales separados por coma, formato `52` + 10 dígitos, sin espacios ni `+` (ej. `525512345678,525598765432`).
+- [ ] **Apply.** Se crean la base `necutla-db` y el servicio web `necutla` (ambos plan Free, región Oregon).
+- [ ] Esperar a que el servicio diga **Live** (la primera vez tarda unos minutos).
+
+**Paso 3: comprobar que funciona**
+- [ ] Abrir la URL del servicio (`https://necutla….onrender.com`, aparece arriba en la página del servicio).
+- [ ] Abrir `…onrender.com/healthz`: debe decir `{"ok":true}`.
+- [ ] Ir a **Necutools** → iniciar sesión con `ADMIN_USERNAME` / `ADMIN_PASSWORD` → crear un producto de prueba → verlo en "Productos del catálogo".
+- [ ] Probar el carrito y el botón **Enviar pedido por WhatsApp**.
+- [ ] Si algo falla: servicio `necutla` → pestaña **Logs** → copiar el error y pasárselo a Claude.
+
+**Paso 4: conectar pgAdmin (ya está instalado en la máquina)**
+- [ ] Render → `necutla-db` → **Connect** → pestaña **External**: copiar Hostname (`dpg-…-a.oregon-postgres.render.com`), Port `5432`, Database `necutla`, Username, Password.
+- [ ] pgAdmin → clic derecho en *Servers* → **Register → Server**:
+  - *General → Name*: `Necutla (Render)`
+  - *Connection*: Host = hostname externo, Port = `5432`, Maintenance database = `necutla`, Username y Password; marcar *Save password*.
+  - *Parameters*: **SSL mode = require**.
+- [ ] Ver las tablas en *Databases → necutla → Schemas → public → Tables* (`stands`, `productos`, `admins`, `session`).
+
+**Paso 5: después del primer despliegue (seguridad)**
+- [ ] Render → `necutla` → **Environment** → borrar `ADMIN_PASSWORD` (el admin ya quedó creado en la base) → *Save changes*.
+- [ ] Restringir el acceso a la base: `necutla-db` → **Networking / Access Control** → cambiar `0.0.0.0/0` por tu IP (búscala en https://ifconfig.me) con `/32` al final.
+- [ ] Anotar la **fecha de creación de la base**: el plan gratis caduca a los 30 días. Poner recordatorio para respaldarla (pgAdmin → clic derecho en `necutla` → *Backup…*) o pasarla a plan de pago antes.
 
 ---
 
