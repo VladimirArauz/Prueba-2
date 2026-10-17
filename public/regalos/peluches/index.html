@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Peluches - Regalos</title>
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body data-store="regalos" data-store-name="Regalos">
+  <header class="page-bar">
+    <div class="container page-bar-inner">
+      <a class="nav-brand" href="../../index.html">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+      <nav class="page-bar-actions" aria-label="Navegación de la tienda">
+        <a class="btn secondary btn-sm" href="../index.html"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>Regalos</a>
+        <a class="btn ghost btn-sm" href="../carrito.html"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg><span>Carrito</span><span class="cart-pill cart-count">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="container">
+      <div class="page-head">
+        <h1>Peluches</h1>
+        <p>Productos de peluches en Regalos. Agrégalos a tu carrito y envía el pedido por WhatsApp.</p>
+      </div>
+      <div id="cart-message" class="notice success cart-message" role="status"></div>
+      <section class="grid">
+      <article class="card">
+        <div class="card-img-wrap"><img src="imagenes/producto.svg" alt="Peluche" loading="lazy"></div>
+        <h3>Peluche</h3>
+        <p>Producto de ejemplo. Puedes reemplazar esta imagen y descripción por la información real de tu tienda.</p>
+        <div class="price">$300.00 MXN</div>
+        <button type="button" class="btn add-cart-button" data-product="Peluche" data-price="300"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>Agregar al carrito</button>
+      </article>
+      </section>
+    </div>
+  </main>
+
+  <script src="../../iconos.js"></script>
+  <script src="../js/carrito.js"></script>
+</body>
+</html>

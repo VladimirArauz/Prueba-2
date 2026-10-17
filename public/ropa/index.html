@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ropa</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body data-store="ropa" data-store-name="Ropa">
+  <header class="page-bar">
+    <div class="container page-bar-inner">
+      <a class="nav-brand" href="../index.html">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+      <nav class="page-bar-actions" aria-label="Navegación de la tienda">
+        <a class="btn secondary btn-sm" href="../index.html"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>Tiendas</a>
+        <a class="btn ghost btn-sm" href="carrito.html"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg><span>Carrito</span><span class="cart-pill cart-count">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="container">
+      <div class="page-head">
+        <h1><svg class="icon" aria-hidden="true"><use href="#i-shirt"></use></svg>Ropa</h1>
+        <p>Elige una categoría para ver sus productos.</p>
+      </div>
+      <section class="grid">
+      <article class="card">
+        <div class="card-img-wrap"><img src="imagenes/playeras.svg" alt="Playeras" loading="lazy"></div>
+        <h3>Playeras</h3>
+        <a class="btn" href="playeras/index.html">Ver productos</a>
+      </article>
+      <article class="card">
+        <div class="card-img-wrap"><img src="imagenes/pantalones.svg" alt="Pantalones" loading="lazy"></div>
+        <h3>Pantalones</h3>
+        <a class="btn" href="pantalones/index.html">Ver productos</a>
+      </article>
+      <article class="card">
+        <div class="card-img-wrap"><img src="imagenes/sudaderas.svg" alt="Sudaderas" loading="lazy"></div>
+        <h3>Sudaderas</h3>
+        <a class="btn" href="sudaderas/index.html">Ver productos</a>
+      </article>
+      </section>
+    </div>
+  </main>
+
+  <script src="../iconos.js"></script>
+  <script src="js/carrito.js"></script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Necutla — La Ciudad del Estudiante</title>
+  <meta name="description" content="Directorio comercial estudiantil Necutla. Compra en tiendas de ropa, tecnología, dulces, papelería y más con pedidos por WhatsApp.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= 1. NAVBAR SUPERIOR ================= -->
+  <nav class="site-navbar" id="main-navbar" aria-label="Principal">
+    <div class="container navbar-container">
+
+      <a class="nav-brand" href="#inicio" data-section="sec-tienda">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <button type="button" class="nav-btn nav-btn-tienda active" id="nav-btn-tienda" data-section="sec-tienda">
+          <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+          <span>Tienda</span>
+        </button>
+
+        <button type="button" class="nav-btn nav-btn-carrito" id="nav-btn-carrito" data-section="sec-carrito">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span>Carrito</span>
+          <span class="cart-pill" id="nav-cart-count" aria-label="productos en el carrito">0</span>
+        </button>
+
+        <button type="button" class="nav-btn nav-btn-necutools" id="nav-btn-necutools" data-section="sec-necutools">
+          <svg class="icon" aria-hidden="true"><use href="#i-wrench"></use></svg>
+          <span>Necutools</span>
+        </button>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- ================= 2. HERO: TABLERO DIRECTORIO ================= -->
+  <header class="hero" id="inicio">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <h1>Necutla, la ciudad del estudiante</h1>
+        <p>Ropa, tecnología, dulces, papelería y más de los stands de la comunidad. Arma tu pedido y lo confirmamos por WhatsApp.</p>
+        <div class="hero-actions">
+          <a class="btn" href="#directorio">Ver tiendas</a>
+          <button type="button" class="btn secondary" data-section="sec-carrito">
+            <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+            Ir al carrito
+          </button>
+        </div>
+      </div>
+
+      <nav class="board on-tinta" aria-label="Directorio de tiendas">
+        <ul class="board-list">
+          <li><a class="board-row" href="ropa/index.html"><svg class="icon" aria-hidden="true"><use href="#i-shirt"></use></svg><span class="board-name">Ropa</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+          <li><a class="board-row" href="tecnologia/index.html"><svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg><span class="board-name">Tecnología</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+          <li><a class="board-row" href="dulces/index.html"><svg class="icon" aria-hidden="true"><use href="#i-candy"></use></svg><span class="board-name">Dulces</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+          <li><a class="board-row" href="propaganda/index.html"><svg class="icon" aria-hidden="true"><use href="#i-megaphone"></use></svg><span class="board-name">Propaganda</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+          <li><a class="board-row" href="papeleria/index.html"><svg class="icon" aria-hidden="true"><use href="#i-pencil-ruler"></use></svg><span class="board-name">Papelería</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+          <li><a class="board-row" href="regalos/index.html"><svg class="icon" aria-hidden="true"><use href="#i-gift"></use></svg><span class="board-name">Regalos</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+          <li><a class="board-row" href="otra/index.html"><svg class="icon" aria-hidden="true"><use href="#i-shapes"></use></svg><span class="board-name">Otra</span><svg class="icon board-go" aria-hidden="true"><use href="#i-chevron-right"></use></svg></a></li>
+        </ul>
+        <p class="board-foot">
+          <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+          Lun a sáb, 8:00 a 20:00
+        </p>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ================= 3. CONTENIDO PRINCIPAL ================= -->
+  <main class="main-content container">
+
+    <!-- ================= SECCIÓN 1: TIENDA ================= -->
+    <section id="sec-tienda" class="app-section active-section">
+      <div class="section-header-row" id="directorio">
+        <div>
+          <h2 class="section-title">Tiendas</h2>
+          <p class="section-desc">Entra a una tienda para ver todo su catálogo, o agrega su producto destacado.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/ropa.svg" alt="Tienda de ropa"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-shirt"></use></svg>Ropa</h3>
+          <p>Playeras oficiales, sudaderas universitarias, pantalones y prendas para estudiantes.</p>
+          <div class="card-actions">
+            <a class="btn" href="ropa/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Playera Universitaria Necutla" data-store="Ropa" data-price="250">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar playera
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/tecnologia.svg" alt="Tienda de tecnología"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg>Tecnología</h3>
+          <p>Cables, memorias USB, cargadores, audífonos y accesorios para tus clases.</p>
+          <div class="card-actions">
+            <a class="btn" href="tecnologia/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Memoria USB 64GB Kingston" data-store="Tecnología" data-price="180">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar USB
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/dulces.svg" alt="Tienda de dulces"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-candy"></use></svg>Dulces</h3>
+          <p>Botanas, chocolates, gomitas y antojos para las horas de estudio.</p>
+          <div class="card-actions">
+            <a class="btn" href="dulces/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Caja Chocolates Artesanales" data-store="Dulces" data-price="120">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar chocolates
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/propaganda.svg" alt="Tienda de propaganda"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-megaphone"></use></svg>Propaganda</h3>
+          <p>Volantes, stickers, lonas e impresiones para tus proyectos y eventos.</p>
+          <div class="card-actions">
+            <a class="btn" href="propaganda/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Pack Stickers Personalizados (50 pzas)" data-store="Propaganda" data-price="150">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar stickers
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/papeleria.svg" alt="Tienda de papelería"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-pencil-ruler"></use></svg>Papelería</h3>
+          <p>Cuadernos, plumas, juegos geométricos, carpetas y material escolar.</p>
+          <div class="card-actions">
+            <a class="btn" href="papeleria/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Set Marcatextos Pastel" data-store="Papelería" data-price="95">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar marcatextos
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/regalos.svg" alt="Tienda de regalos"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-gift"></use></svg>Regalos</h3>
+          <p>Tazas personalizadas, peluches y detalles para fechas especiales.</p>
+          <div class="card-actions">
+            <a class="btn" href="regalos/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Taza Térmica Necutla" data-store="Regalos" data-price="160">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar taza
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-img-wrap"><img src="imagenes/otra.svg" alt="Otras tiendas"></div>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-shapes"></use></svg>Otra</h3>
+          <p>Servicios especiales, artículos de temporada y productos de la comunidad.</p>
+          <div class="card-actions">
+            <a class="btn" href="otra/index.html">Ver tienda</a>
+            <button type="button" class="btn secondary" data-action="add-direct" data-name="Llavero Multiusos Acero" data-store="Otra" data-price="65">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              Agregar llavero
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <div id="custom-stores-block" hidden>
+        <div class="section-header-row spaced">
+          <div>
+            <h2 class="section-title">Stands nuevos</h2>
+            <p class="section-desc">Stands que se agregaron desde Necutools.</p>
+          </div>
+        </div>
+        <div class="grid" id="custom-store-cards"></div>
+      </div>
+
+      <div class="section-header-row spaced">
+        <div>
+          <h2 class="section-title">Productos del catálogo</h2>
+          <p class="section-desc">Productos y precios publicados por los stands.</p>
+        </div>
+      </div>
+      <section class="grid" id="public-products-grid" aria-live="polite"></section>
+    </section>
+
+    <section id="sec-productos" class="app-section">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="public-store-title">Productos</h2>
+          <p class="section-desc">Productos disponibles en este stand.</p>
+        </div>
+        <button type="button" class="btn secondary btn-sm" data-section="sec-tienda">
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+          Volver a tiendas
+        </button>
+      </div>
+      <section class="grid" id="store-products-grid" aria-live="polite"></section>
+    </section>
+
+    <!-- ================= SECCIÓN 2: CARRITO ================= -->
+    <section id="sec-carrito" class="app-section">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title">Carrito</h2>
+          <p class="section-desc">Revisa tus productos, ajusta cantidades y envía el pedido por WhatsApp.</p>
+        </div>
+        <button type="button" class="btn secondary btn-sm" data-section="sec-tienda">
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+          Seguir comprando
+        </button>
+      </div>
+
+      <div class="cart-layout">
+        <div class="cart-items-card">
+          <div id="cart-items-list">
+            <!-- Renderizado dinámico desde app.js -->
+          </div>
+        </div>
+
+        <aside class="cart-summary-card">
+          <h3>Resumen del pedido</h3>
+
+          <div class="total-display">
+            <span class="total-label">Total</span>
+            <span class="total-amount" id="cart-total-amount">$0.00 MXN</span>
+          </div>
+
+          <div class="cart-summary-fields">
+            <div class="form-group">
+              <label for="order-customer-name">Tu nombre (opcional)</label>
+              <input type="text" id="order-customer-name" placeholder="Ej. Juan Pérez" autocomplete="name">
+            </div>
+
+            <div class="form-group">
+              <label for="order-customer-notes">Indicaciones</label>
+              <textarea id="order-customer-notes" rows="3" placeholder="Tallas, colores o cómo quieres recibirlo"></textarea>
+            </div>
+          </div>
+
+          <div class="cart-summary-actions">
+            <button type="button" class="btn wa btn-block" data-action="send-order">
+              <svg class="icon" aria-hidden="true"><use href="#i-message-circle"></use></svg>
+              Enviar pedido por WhatsApp
+            </button>
+
+            <button type="button" class="btn danger btn-block" data-action="cart-clear">
+              <svg class="icon" aria-hidden="true"><use href="#i-trash-2"></use></svg>
+              Vaciar carrito
+            </button>
+          </div>
+
+          <div class="notice">
+            <svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg>
+            <span>Se abrirán los chats de WhatsApp de Necutla con tu pedido escrito. En cada uno solo pulsa “Enviar”.</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= SECCIÓN 3: NECUTOOLS (PANEL ADMIN) ================= -->
+    <section id="sec-necutools" class="app-section">
+      <div id="admin-auth" class="admin-card admin-auth">
+        <h2>Iniciar sesión</h2>
+        <p class="section-desc">Ingresa tu usuario y contraseña de administrador para abrir Necutools.</p>
+        <form id="admin-login-form">
+          <div class="admin-form-grid">
+            <div class="form-group"><label for="admin-login-user">Usuario</label><input id="admin-login-user" autocomplete="username" maxlength="50" required></div>
+            <div class="form-group"><label for="admin-login-password">Contraseña</label><input id="admin-login-password" type="password" autocomplete="current-password" maxlength="200" required></div>
+          </div>
+          <div class="form-actions"><button class="btn" type="submit">Iniciar sesión</button></div>
+        </form>
+      </div>
+
+      <div id="admin-workspace" hidden>
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">Necutools</h2>
+            <p class="section-desc">Administra productos, imágenes, precios y stands.</p>
+          </div>
+          <div class="admin-actions-head">
+            <button type="button" class="btn secondary btn-sm" data-section="sec-tienda">
+              <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+              Ver catálogo público
+            </button>
+            <button type="button" class="btn secondary btn-sm" data-action="admin-logout">
+              <svg class="icon" aria-hidden="true"><use href="#i-log-out"></use></svg>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulario para agregar producto -->
+        <div class="admin-card">
+          <h3>Agregar producto</h3>
+          <p>Registra un producto en cualquier stand. Aparece para todos los visitantes al guardarlo.</p>
+
+          <form id="admin-add-product-form">
+            <div class="admin-form-grid">
+              <div class="form-group">
+                <label for="admin-prod-store">Stand</label>
+                <select id="admin-prod-store" required></select>
+              </div>
+
+              <div class="form-group">
+                <label for="admin-prod-cat">Subcategoría</label>
+                <input type="text" id="admin-prod-cat" placeholder="Ej. Playeras, Cables, Cuadernos">
+              </div>
+
+              <div class="form-group">
+                <label for="admin-prod-name">Nombre del producto</label>
+                <input type="text" id="admin-prod-name" placeholder="Ej. Sudadera con capucha azul" required>
+              </div>
+
+              <div class="form-group">
+                <label for="admin-prod-price">Precio (MXN)</label>
+                <input type="number" id="admin-prod-price" min="1" step="0.50" placeholder="Ej. 350.00" required>
+              </div>
+
+              <div class="form-group">
+                <label for="admin-prod-stock">Disponibilidad</label>
+                <select id="admin-prod-stock">
+                  <option value="Disponible">Disponible</option>
+                  <option value="Pocas piezas">Pocas piezas</option>
+                  <option value="Por pedido">Bajo pedido</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="admin-prod-img">Imagen (hasta 1 MB)</label>
+                <input type="file" id="admin-prod-img" accept="image/png,image/jpeg,image/webp,image/gif">
+              </div>
+
+              <div class="form-group full-width">
+                <label for="admin-prod-desc">Descripción</label>
+                <textarea id="admin-prod-desc" rows="3" placeholder="Materiales, tallas, colores o indicaciones para el cliente"></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn" id="admin-product-submit">Guardar producto</button>
+              <button type="button" class="btn secondary" id="admin-product-cancel" data-action="product-cancel" hidden>Cancelar edición</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Agregar stand</h3>
+          <form id="admin-add-store-form" class="admin-form-grid">
+            <div class="form-group"><label for="admin-store-name">Nombre del stand</label><input id="admin-store-name" maxlength="50" placeholder="Ej. Accesorios" required></div>
+            <div class="form-group align-end"><button class="btn secondary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Crear stand</button></div>
+          </form>
+          <div id="admin-stores-list" class="admin-store-list"></div>
+        </div>
+
+        <!-- Tabla de productos administrados -->
+        <div class="admin-card">
+          <h3>Productos registrados</h3>
+          <p>Lo que ves aquí es lo que aparece en el catálogo público.</p>
+
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th>Stand</th>
+                  <th>Precio</th>
+                  <th>Disponibilidad</th>
+                  <th>Registro</th>
+                  <th class="col-actions">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="admin-products-tbody">
+                <!-- Renderizado desde app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= 4. FOOTER ================= -->
+  <footer class="site-footer on-tinta">
+    <div class="container footer-main">
+      <div class="footer-grid">
+
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="brand-emblem" aria-hidden="true">N</span>
+            <h3>Necutla</h3>
+          </div>
+          <p>Los stands de la comunidad estudiantil en un solo lugar. Arma tu pedido y lo confirmamos por WhatsApp.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegación</h4>
+          <ul class="footer-links">
+            <li><a href="#inicio" data-section="sec-tienda">Tiendas</a></li>
+            <li><a href="#inicio" data-section="sec-carrito">Carrito</a></li>
+            <li><a href="#inicio" data-section="sec-necutools">Necutools</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Tiendas</h4>
+          <ul class="footer-links">
+            <li><a href="ropa/index.html">Ropa</a></li>
+            <li><a href="tecnologia/index.html">Tecnología</a></li>
+            <li><a href="dulces/index.html">Dulces</a></li>
+            <li><a href="propaganda/index.html">Propaganda</a></li>
+            <li><a href="papeleria/index.html">Papelería</a></li>
+            <li><a href="regalos/index.html">Regalos</a></li>
+            <li><a href="otra/index.html">Otra</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pedidos</h4>
+          <p>Los pedidos se confirman por los 3 números de WhatsApp de Necutla.</p>
+          <p class="footer-hours">
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+            Lun a sáb, 8:00 a 20:00
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+    </div>
+  </footer>
+
+  <script src="iconos.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

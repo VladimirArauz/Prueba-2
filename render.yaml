@@ -1,0 +1,43 @@
+# =========================================================
+# NECUTLA — Blueprint de Render
+# Crea el servicio web y la base de datos PostgreSQL juntos.
+# Render > New > Blueprint > elige este repositorio.
+# =========================================================
+
+services:
+  - type: web
+    name: necutla
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: necutla-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # Estas tres se piden al crear el Blueprint (no se guardan en git)
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: WHATSAPP_NUMBERS
+        sync: false
+
+databases:
+  - name: necutla-db
+    plan: free
+    region: oregon
+    databaseName: necutla
+    user: necutla
+    # Quién puede conectarse desde fuera (pgAdmin). Cámbialo por tu IP: "TU.IP.PUBLICA/32"
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Acceso externo (restringir a tu IP)
