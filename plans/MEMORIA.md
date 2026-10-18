@@ -21,7 +21,7 @@ Cómo se usa:
 
 ## Pendientes
 
-1. **Desplegar en Render: ver la checklist "Pasos pendientes en Render" justo abajo.** El código ya está en GitHub (commit `1450ad6` en `VladimirArauz/Prueba-2`, subido por el usuario). Si el usuario pregunta "¿qué pasos eran para Render?", responder con esa checklist completa.
+1. **Terminar el despliegue en Render: ver la checklist "Pasos pendientes en Render" justo abajo.** Pasos 1, 2 y 4 hechos (2026-10-17); faltan el paso 3 (comprobar la página) y el 5 (seguridad). Si el usuario pregunta "¿qué pasos eran para Render?", responder con esa checklist completa.
 2. **Contraseña del admin en Render.** Después del primer despliegue (cuando ya existe el admin), se puede borrar `ADMIN_PASSWORD` de las variables de Render; ya no se usa. Todavía no hay pantalla para cambiar contraseña ni para crear más admins (se hace insertando en la tabla `admins` con un hash bcrypt).
 3. **Base de datos gratis de Render caduca** a los 30 días de creada (luego hay un periodo corto para pasar a plan de pago) y no tiene respaldos. Antes de que caduque: pasar a plan pagado o exportar con `pg_dump`/pgAdmin y crear otra.
 4. **Restringir el acceso externo a la base** en `render.yaml` (`ipAllowList`): hoy está abierto a `0.0.0.0/0` para que pgAdmin funcione desde cualquier red. Cambiar por la IP del usuario.
@@ -44,17 +44,17 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
   - **B (sin esperar a Vladi):** haz un **fork** a tu cuenta (botón *Fork* en https://github.com/VladimirArauz/Prueba-2) y despliega desde `TU_USUARIO/Prueba-2`. En la carpeta local, apunta a tu fork con `git remote add mio https://github.com/TU_USUARIO/Prueba-2.git` y sube con `git push mio main`. Más adelante, cuando Vladi conteste, se pueden juntar los cambios con un Pull Request.
 
 **Paso 1: crear la cuenta**
-- [ ] Entrar a https://dashboard.render.com y registrarse con **GitHub** (la cuenta que tenga acceso al repo).
-- [ ] Autorizar a Render a ver el repositorio (*Configure account* → elegir `Prueba-2`).
+- [x] Entrar a https://dashboard.render.com y registrarse con **GitHub** (la cuenta que tenga acceso al repo).
+- [x] Autorizar a Render a ver el repositorio (*Configure account* → elegir `Prueba-2`).
 
 **Paso 2: crear todo con el Blueprint**
-- [ ] Render → **New → Blueprint** → elegir el repositorio `Prueba-2`, rama `main`.
-- [ ] Render lee `render.yaml` y pide 3 valores:
+- [x] Render → **New → Blueprint** → elegir el repositorio `Prueba-2`, rama `main`.
+- [x] Render lee `render.yaml` y pide 3 valores:
   - `ADMIN_USERNAME`: el usuario para entrar a Necutools (ej. `axel`).
   - `ADMIN_PASSWORD`: contraseña de **12 caracteres o más** (guardarla en un lugar seguro).
   - `WHATSAPP_NUMBERS`: números reales separados por coma, formato `52` + 10 dígitos, sin espacios ni `+` (ej. `525512345678,525598765432`).
-- [ ] **Apply.** Se crean la base `necutla-db` y el servicio web `necutla` (ambos plan Free, región Oregon).
-- [ ] Esperar a que el servicio diga **Live** (la primera vez tarda unos minutos).
+- [x] **Apply.** Se crean la base `necutla-db` y el servicio web `necutla` (ambos plan Free, región Oregon).
+- [x] Esperar a que el servicio diga **Live** (la primera vez tarda unos minutos).
 
 **Paso 3: comprobar que funciona**
 - [ ] Abrir la URL del servicio (`https://necutla….onrender.com`, aparece arriba en la página del servicio).
@@ -64,12 +64,12 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 - [ ] Si algo falla: servicio `necutla` → pestaña **Logs** → copiar el error y pasárselo a Claude.
 
 **Paso 4: conectar pgAdmin (ya está instalado en la máquina)**
-- [ ] Render → `necutla-db` → **Connect** → pestaña **External**: copiar Hostname (`dpg-…-a.oregon-postgres.render.com`), Port `5432`, Database `necutla`, Username, Password.
-- [ ] pgAdmin → clic derecho en *Servers* → **Register → Server**:
+- [x] Render → `necutla-db` → **Connect** → pestaña **External**: copiar Hostname (`dpg-…-a.oregon-postgres.render.com`), Port `5432`, Database `necutla`, Username, Password.
+- [x] pgAdmin → clic derecho en *Servers* → **Register → Server**:
   - *General → Name*: `Necutla (Render)`
   - *Connection*: Host = hostname externo, Port = `5432`, Maintenance database = `necutla`, Username y Password; marcar *Save password*.
   - *Parameters*: **SSL mode = require**.
-- [ ] Ver las tablas en *Databases → necutla → Schemas → public → Tables* (`stands`, `productos`, `admins`, `session`).
+- [x] Ver las tablas en *Databases → necutla → Schemas → public → Tables* (`stands`, `productos`, `admins`, `session`).
 
 **Paso 5: después del primer despliegue (seguridad)**
 - [ ] Render → `necutla` → **Environment** → borrar `ADMIN_PASSWORD` (el admin ya quedó creado en la base) → *Save changes*.
@@ -79,6 +79,11 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-17: base de Render creada y conectada a pgAdmin
+- Render ya creó la base `necutla-db` con las tablas `admins`, `productos`, `session` y `stands` (el Blueprint corrió).
+- Servidor "Necutla (Render)" registrado en el pgAdmin web local (http://localhost/pgadmin4), con SSL `require`. La contraseña **no** se guardó en ningún archivo: se escribe en pgAdmin al conectar.
+- Checklist de Render: pasos 1, 2 y 4 marcados como hechos.
 
 ### 2026-10-16: `plans/CLAUDE.md` actualizado (autorizado por el usuario) y commit
 - `plans/CLAUDE.md`: sección 1 describe la arquitectura nueva (Render, Node/Express, PostgreSQL, `public/`); regla 8 de mantener `plans/MEMORIA.md`; sección 4 con reglas técnicas y de seguridad (sin JS ni estilos en línea por la CSP, SQL parametrizado, secretos en variables de entorno, migraciones idempotentes).
