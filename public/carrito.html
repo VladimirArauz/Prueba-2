@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carrito | Necutla</title>
+  <meta name="description" content="Tu carrito de Necutla: un pedido por tienda, enviado por WhatsApp a sus vendedores.">
+  <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <nav class="site-navbar" id="main-navbar" aria-label="Principal">
+    <div class="container navbar-container">
+
+      <a class="nav-brand" href="/">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <a class="nav-btn" href="/">
+          <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+          <span>Tiendas</span>
+        </a>
+        <a class="nav-btn" href="/promociones.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg>
+          <span>Promociones</span>
+        </a>
+        <a class="nav-btn active" href="/carrito.html" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span>Carrito</span>
+          <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
+        </a>
+      </div>
+
+    </div>
+  </nav>
+
+  <main class="main-content container" id="contenido">
+
+    <div class="section-header-row">
+      <div>
+        <h2 class="section-title">Carrito</h2>
+        <p class="section-desc">Cada tienda tiene sus propios vendedores: envía un pedido por tienda.</p>
+      </div>
+      <a class="btn secondary btn-sm" href="/">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        Seguir comprando
+      </a>
+    </div>
+
+    <div id="cart-alert"></div>
+
+    <div class="cart-layout">
+      <div id="cart-groups" aria-live="polite"></div>
+
+      <aside class="cart-summary-card" id="cart-summary" hidden>
+        <h3>Tus datos</h3>
+        <p class="section-desc">Se agregan al mensaje de cada pedido.</p>
+
+        <div class="total-display">
+          <span class="total-label">Total de todo</span>
+          <span class="total-amount" id="cart-total-amount">$0.00 MXN</span>
+        </div>
+
+        <div class="cart-summary-fields">
+          <div class="form-group">
+            <label for="order-customer-name">Tu nombre (opcional)</label>
+            <input type="text" id="order-customer-name" maxlength="80" placeholder="Ej. Juan Pérez" autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label for="order-customer-notes">Indicaciones</label>
+            <textarea id="order-customer-notes" rows="3" maxlength="500" placeholder="Tallas, colores o cómo quieres recibirlo"></textarea>
+          </div>
+        </div>
+
+        <div class="cart-summary-actions">
+          <button type="button" class="btn danger btn-block" data-action="vaciar">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash-2"></use></svg>
+            Vaciar carrito
+          </button>
+        </div>
+
+        <div class="notice">
+          <svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg>
+          <span>Al enviar un pedido se abre WhatsApp con el mensaje escrito. Solo pulsa “Enviar”. Los precios se confirman con la tienda.</span>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer on-tinta">
+    <div class="container footer-main">
+      <div class="footer-grid">
+
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="brand-emblem" aria-hidden="true">N</span>
+            <h3>Necutla</h3>
+          </div>
+          <p>Los stands de la comunidad estudiantil en un solo lugar. Arma tu pedido y cada tienda lo confirma por WhatsApp.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegación</h4>
+          <ul class="footer-links">
+            <li><a href="/">Tiendas</a></li>
+            <li><a href="/promociones.html">Promociones</a></li>
+            <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/necutools.html">Necutools</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Tiendas</h4>
+          <ul class="footer-links" id="footer-stores"></ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pedidos</h4>
+          <p>Cada tienda tiene sus propios vendedores: tu pedido les llega directo por WhatsApp.</p>
+          <p class="footer-hours">
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+            Lun a sáb, 8:00 a 20:00
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+    </div>
+  </footer>
+
+  <script src="/iconos.js"></script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/carrito.js"></script>
+</body>
+</html>

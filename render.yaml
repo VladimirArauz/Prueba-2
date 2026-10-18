@@ -28,8 +28,10 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Respaldo para las tiendas que no tengan números propios en Necutools
       - key: WHATSAPP_NUMBERS
         sync: false
+      # HOY_PRUEBA (fecha simulada para probar ofertas) es solo de desarrollo: no se define aquí
 
 databases:
   - name: necutla-db

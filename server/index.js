@@ -9,6 +9,8 @@ const rateLimit = require("express-rate-limit");
 const { pool, migrate } = require("./db");
 const auth = require("./auth");
 const api = require("./api");
+const admin = require("./admin");
+const { importarEjemplos } = require("./ejemplos");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -72,8 +74,23 @@ function sameOrigin(req, res, next) {
 
 app.use("/api", apiLimiter, express.json({ limit: "2mb" }), sameOrigin, auth.sessionMiddleware());
 app.use("/api/auth", auth.router);
+app.use("/api/admin", admin.router);
 app.use("/api", api.router);
 app.use("/api", (req, res) => res.status(404).json({ error: "Ruta no encontrada." }));
+
+// ================= Páginas =================
+// Una sola página para todas las tiendas: /t/ropa, /t/tecnologia?sub=cables…
+app.get("/t/:slug", (req, res, next) => {
+  if (!/^[a-z0-9-]{1,60}$/.test(req.params.slug)) return next();
+  res.sendFile(path.join(PUBLIC_DIR, "tienda.html"));
+});
+
+// Las direcciones de las páginas fijas que había antes siguen funcionando
+const TIENDAS_VIEJAS = "(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)";
+app.get(new RegExp(`^/${TIENDAS_VIEJAS}/carrito\\.html$`), (req, res) => res.redirect(301, "/carrito.html"));
+app.get(new RegExp(`^/${TIENDAS_VIEJAS}(?:/(?:index\\.html)?)?$`), (req, res) => res.redirect(301, `/t/${req.params[0]}`));
+app.get(new RegExp(`^/${TIENDAS_VIEJAS}/([a-z0-9-]+)(?:/(?:index\\.html)?)?$`), (req, res) =>
+  res.redirect(301, `/t/${req.params[0]}?sub=${req.params[1]}`));
 
 // ================= Sitio estático (solo la carpeta public/) =================
 app.use(express.static(PUBLIC_DIR, { dotfiles: "ignore", maxAge: "1h" }));
@@ -98,6 +115,7 @@ app.use((err, req, res, next) => {
 async function start() {
   await migrate();
   await auth.ensureInitialAdmin();
+  await importarEjemplos();
   app.listen(PORT, () => console.log(`Necutla escuchando en el puerto ${PORT}`));
 }
 

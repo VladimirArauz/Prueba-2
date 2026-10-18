@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Necutools | Necutla</title>
+  <meta name="description" content="Panel de administración de las tiendas de Necutla.">
+  <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <nav class="site-navbar" id="main-navbar" aria-label="Principal">
+    <div class="container navbar-container">
+
+      <a class="nav-brand" href="/">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <a class="nav-btn" href="/">
+          <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+          <span>Tiendas</span>
+        </a>
+        <a class="nav-btn" href="/promociones.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg>
+          <span>Promociones</span>
+        </a>
+        <a class="nav-btn" href="/carrito.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span>Carrito</span>
+          <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
+        </a>
+      </div>
+
+    </div>
+  </nav>
+
+  <main class="main-content container" id="contenido">
+
+    <div id="admin-auth" class="admin-card admin-auth">
+      <h2>Iniciar sesión</h2>
+      <p class="section-desc">Entra con tu usuario y contraseña de Necutools.</p>
+      <form id="admin-login-form">
+        <div class="admin-form-grid">
+          <div class="form-group"><label for="admin-login-user">Usuario</label><input id="admin-login-user" autocomplete="username" maxlength="50" required></div>
+          <div class="form-group"><label for="admin-login-password">Contraseña</label><input id="admin-login-password" type="password" autocomplete="current-password" maxlength="200" required></div>
+        </div>
+        <div class="form-actions"><button class="btn" type="submit">Iniciar sesión</button></div>
+      </form>
+    </div>
+
+    <div id="admin-workspace" hidden>
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title">Necutools</h2>
+          <p class="admin-user" id="admin-user"></p>
+        </div>
+        <div class="admin-actions-head">
+          <a class="btn secondary btn-sm" href="/">
+            <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+            Ver el sitio
+          </a>
+          <button type="button" class="btn secondary btn-sm" data-action="logout">
+            <svg class="icon" aria-hidden="true"><use href="#i-log-out"></use></svg>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+
+      <div class="tabs" id="admin-tabs" role="group" aria-label="Secciones de Necutools">
+        <button type="button" class="btn btn-sm" data-action="panel" data-panel="tiendas" aria-pressed="true">Tiendas</button>
+        <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="productos" aria-pressed="false">Productos y servicios</button>
+        <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="ofertas" aria-pressed="false">Ofertas de la tienda</button>
+        <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="promociones" aria-pressed="false" data-solo-dueno hidden>Promociones generales</button>
+        <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="usuarios" aria-pressed="false" data-solo-dueno hidden>Usuarios</button>
+        <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="cuenta" aria-pressed="false">Mi cuenta</button>
+      </div>
+
+      <!-- ================= TIENDAS ================= -->
+      <section class="admin-panel" id="panel-tiendas">
+        <div class="admin-card">
+          <h3>Tus tiendas</h3>
+          <p id="tiendas-intro">Edita el nombre, la descripción, el icono y los números de WhatsApp que reciben los pedidos.</p>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Tienda</th><th>Dirección</th><th>Estado</th><th>Productos</th><th class="col-actions">Acciones</th></tr></thead>
+              <tbody id="tiendas-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-card" id="tienda-card">
+          <h3 id="form-tienda-title">Crear tienda</h3>
+          <p>Los números de WhatsApp son los de los vendedores de esta tienda. Si no pones ninguno, los pedidos llegan a los números generales de Necutla.</p>
+          <form id="form-tienda">
+            <div class="admin-form-grid">
+              <div class="form-group"><label for="tienda-nombre">Nombre</label><input id="tienda-nombre" name="nombre" maxlength="50" placeholder="Ej. Accesorios" required></div>
+              <div class="form-group">
+                <label for="tienda-slug">Dirección de la tienda</label>
+                <input id="tienda-slug" name="slug" maxlength="60" placeholder="Se arma sola con el nombre">
+                <span class="form-hint">Así se verá: /t/accesorios. Solo letras sin acentos, números y guiones.</span>
+              </div>
+              <div class="form-group"><label for="tienda-icono">Icono</label><select id="tienda-icono" name="icono"></select></div>
+              <div class="form-group">
+                <label for="tienda-whatsapp">Números de WhatsApp</label>
+                <input id="tienda-whatsapp" name="whatsapp" maxlength="100" placeholder="525512345678, 525598765432" inputmode="numeric">
+                <span class="form-hint">México: 52 + 10 dígitos, separados por coma. Hasta 5.</span>
+              </div>
+              <div class="form-group"><label for="tienda-orden">Orden en el directorio</label><input id="tienda-orden" name="orden" type="number" min="0" max="9999" value="100"></div>
+              <div class="form-group"><label for="tienda-imagen">Imagen de portada (hasta 1 MB)</label><input id="tienda-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+              <div class="form-group full-width"><label for="tienda-descripcion">Descripción</label><textarea id="tienda-descripcion" name="descripcion" rows="2" maxlength="300" placeholder="Qué vende esta tienda, en una línea"></textarea></div>
+              <div class="form-group full-width">
+                <div class="check-group">
+                  <label><input type="checkbox" name="visible" checked> Visible en el sitio</label>
+                  <label data-solo-edicion hidden><input type="checkbox" name="quitar_imagen"> Quitar la imagen de portada</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn" id="form-tienda-submit">Guardar tienda</button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="tienda" hidden>Cancelar edición</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Subcategorías</h3>
+          <p>Ordenan el catálogo de cada tienda (ej. Playeras, Pantalones). Al borrar una, sus productos quedan sin subcategoría.</p>
+          <div class="admin-filter">
+            <div class="form-group"><label for="sub-tienda">Tienda</label><select id="sub-tienda"></select></div>
+          </div>
+          <ul class="sub-list" id="sub-list"></ul>
+          <form id="form-subcategoria" class="admin-form-grid">
+            <div class="form-group"><label for="sub-nombre">Nueva subcategoría</label><input id="sub-nombre" name="nombre" maxlength="60" placeholder="Ej. Sudaderas" required></div>
+            <div class="form-group align-end">
+              <button class="btn secondary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Agregar subcategoría</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ================= PRODUCTOS Y SERVICIOS ================= -->
+      <section class="admin-panel" id="panel-productos" hidden>
+        <div class="admin-card">
+          <h3 id="form-producto-title">Agregar producto o servicio</h3>
+          <p>Los productos se agregan al carrito. Los servicios (piñatas, reparaciones, kits a tu medida) se piden por WhatsApp.</p>
+          <form id="form-producto">
+            <div class="admin-form-grid">
+              <div class="form-group"><label for="prod-tienda">Tienda</label><select id="prod-tienda" name="stand_id" required></select></div>
+              <div class="form-group">
+                <label for="prod-tipo">Tipo</label>
+                <select id="prod-tipo" name="tipo">
+                  <option value="producto">Producto</option>
+                  <option value="servicio">Servicio</option>
+                </select>
+              </div>
+              <div class="form-group"><label for="prod-nombre">Nombre</label><input id="prod-nombre" name="nombre" maxlength="120" placeholder="Ej. Sudadera con capucha azul" required></div>
+              <div class="form-group"><label for="prod-sub">Subcategoría</label><select id="prod-sub" name="subcategoria_id"></select></div>
+              <div class="form-group" id="prod-modo-group" hidden>
+                <label for="prod-modo">Cómo se cobra</label>
+                <select id="prod-modo" name="precio_modo">
+                  <option value="fijo">Precio fijo</option>
+                  <option value="desde">Desde un precio</option>
+                  <option value="cotizar">Se cotiza</option>
+                </select>
+              </div>
+              <div class="form-group" id="prod-precio-group"><label for="prod-precio">Precio (MXN)</label><input id="prod-precio" name="precio" type="number" min="1" step="0.50" placeholder="Ej. 350.00"></div>
+              <div class="form-group">
+                <label for="prod-disp">Disponibilidad</label>
+                <select id="prod-disp" name="disponibilidad">
+                  <option value="Disponible">Disponible</option>
+                  <option value="Pocas piezas">Pocas piezas</option>
+                  <option value="Por pedido">Por pedido</option>
+                </select>
+              </div>
+              <div class="form-group"><label for="prod-orden">Orden</label><input id="prod-orden" name="orden" type="number" min="0" max="9999" value="0"><span class="form-hint">Los números más bajos salen primero.</span></div>
+              <div class="form-group"><label for="prod-imagen">Imagen (hasta 1 MB)</label><input id="prod-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+              <div class="form-group full-width"><label for="prod-desc">Descripción</label><textarea id="prod-desc" name="descripcion" rows="3" maxlength="1000" placeholder="Materiales, tallas, colores o qué incluye el servicio"></textarea></div>
+              <div class="form-group full-width">
+                <div class="check-group">
+                  <label><input type="checkbox" name="visible" checked> Visible en la tienda</label>
+                  <label data-solo-edicion hidden><input type="checkbox" name="quitar_imagen"> Quitar la imagen</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Guardar</button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="producto" hidden>Cancelar edición</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Catálogo</h3>
+          <div class="admin-filter">
+            <div class="form-group"><label for="prod-filtro">Ver tienda</label><select id="prod-filtro"></select></div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Imagen</th><th>Nombre</th><th>Tienda</th><th>Precio</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+              <tbody id="productos-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= OFERTAS DE LA TIENDA ================= -->
+      <section class="admin-panel" id="panel-ofertas" hidden>
+        <div class="admin-card">
+          <h3 id="form-oferta-title">Crear oferta de la tienda</h3>
+          <p>Ofertas que se repiten cada semana, como "los lunes 2x1 en barritas". El descuento se aplica solo en el carrito los días elegidos.</p>
+          <form id="form-oferta">
+            <div class="admin-form-grid">
+              <div class="form-group"><label for="oferta-tienda">Tienda</label><select id="oferta-tienda" name="stand_id" required></select></div>
+              <div class="form-group"><label for="oferta-titulo">Título</label><input id="oferta-titulo" name="titulo" maxlength="80" placeholder="Ej. Lunes de barritas 2x1" required></div>
+              <div class="form-group">
+                <label for="oferta-aplica">Aplica a</label>
+                <select id="oferta-aplica" name="aplica">
+                  <option value="tienda">Toda la tienda</option>
+                  <option value="subcategoria">Una subcategoría</option>
+                  <option value="producto">Un producto</option>
+                </select>
+              </div>
+              <div class="form-group" id="oferta-sub-group" hidden><label for="oferta-sub">Subcategoría</label><select id="oferta-sub" name="subcategoria_id"></select></div>
+              <div class="form-group" id="oferta-prod-group" hidden><label for="oferta-prod">Producto</label><select id="oferta-prod" name="producto_id"></select></div>
+              <div class="form-group">
+                <label for="oferta-tipo">Tipo de oferta</label>
+                <select id="oferta-tipo" name="tipo">
+                  <option value="porcentaje">Porcentaje de descuento</option>
+                  <option value="dos_por_uno">2x1</option>
+                  <option value="precio_especial">Precio especial (solo un producto)</option>
+                </select>
+              </div>
+              <div class="form-group" id="oferta-valor-group"><label for="oferta-valor" id="oferta-valor-label">Descuento (%)</label><input id="oferta-valor" name="valor" type="number" min="1" max="90" step="1" placeholder="Ej. 15"></div>
+              <fieldset class="form-group full-width">
+                <legend>Días de la semana</legend>
+                <div class="check-group" id="oferta-dias">
+                  <label><input type="checkbox" name="dias" value="1"> Lunes</label>
+                  <label><input type="checkbox" name="dias" value="2"> Martes</label>
+                  <label><input type="checkbox" name="dias" value="3"> Miércoles</label>
+                  <label><input type="checkbox" name="dias" value="4"> Jueves</label>
+                  <label><input type="checkbox" name="dias" value="5"> Viernes</label>
+                  <label><input type="checkbox" name="dias" value="6"> Sábado</label>
+                  <label><input type="checkbox" name="dias" value="0"> Domingo</label>
+                </div>
+              </fieldset>
+              <div class="form-group full-width"><label for="oferta-desc">Descripción (opcional)</label><textarea id="oferta-desc" name="descripcion" rows="2" maxlength="300" placeholder="Ej. En cualquier caja de barritas de cereal"></textarea></div>
+              <div class="form-group full-width">
+                <div class="check-group"><label><input type="checkbox" name="activa" checked> Oferta activa</label></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Guardar oferta</button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="oferta" hidden>Cancelar edición</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Ofertas registradas</h3>
+          <div class="admin-filter">
+            <div class="form-group"><label for="oferta-filtro">Ver tienda</label><select id="oferta-filtro"></select></div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Oferta</th><th>Tienda</th><th>Aplica a</th><th>Días</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+              <tbody id="ofertas-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PROMOCIONES GENERALES ================= -->
+      <section class="admin-panel" id="panel-promociones" hidden>
+        <div class="admin-card">
+          <h3 id="form-promo-title">Crear promoción de temporada</h3>
+          <p>Paquetes con precio propio que pueden juntar productos de varias tiendas (Día de Muertos, Navidad, Buen Fin). Al pedirlo, se avisa a los vendedores de cada tienda incluida.</p>
+          <form id="form-promo">
+            <div class="admin-form-grid">
+              <div class="form-group"><label for="promo-titulo">Título</label><input id="promo-titulo" name="titulo" maxlength="100" placeholder="Ej. Día de Muertos: playera + dulces" required></div>
+              <div class="form-group"><label for="promo-precio">Precio del paquete (MXN)</label><input id="promo-precio" name="precio" type="number" min="1" step="0.50" required></div>
+              <div class="form-group"><label for="promo-inicio">Empieza</label><input id="promo-inicio" name="inicio" type="date" required></div>
+              <div class="form-group"><label for="promo-fin">Termina</label><input id="promo-fin" name="fin" type="date" required></div>
+              <div class="form-group"><label for="promo-imagen">Imagen (hasta 1 MB)</label><input id="promo-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+              <div class="form-group full-width"><label for="promo-desc">Descripción</label><textarea id="promo-desc" name="descripcion" rows="2" maxlength="600"></textarea></div>
+              <fieldset class="form-group full-width">
+                <legend>Productos del paquete</legend>
+                <div class="pack-items" id="promo-items"></div>
+                <div class="form-actions">
+                  <button type="button" class="btn secondary btn-sm" data-action="promo-item-agregar"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Agregar producto al paquete</button>
+                </div>
+              </fieldset>
+              <div class="form-group full-width">
+                <div class="check-group">
+                  <label><input type="checkbox" name="destacada" checked> Destacada en la portada</label>
+                  <label><input type="checkbox" name="activa" checked> Activa</label>
+                  <label data-solo-edicion hidden><input type="checkbox" name="quitar_imagen"> Quitar la imagen</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Guardar promoción</button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="promo" hidden>Cancelar edición</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Promociones registradas</h3>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Promoción</th><th>Fechas</th><th>Precio</th><th>Incluye</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+              <tbody id="promos-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= USUARIOS ================= -->
+      <section class="admin-panel" id="panel-usuarios" hidden>
+        <div class="admin-card">
+          <h3 id="form-usuario-title">Crear usuario</h3>
+          <p>Los dueños pueden todo. Los encargados solo editan las tiendas que les asignes.</p>
+          <form id="form-usuario">
+            <div class="admin-form-grid">
+              <div class="form-group"><label for="usuario-nombre">Usuario</label><input id="usuario-nombre" name="usuario" maxlength="50" placeholder="Ej. fer" autocomplete="off" required></div>
+              <div class="form-group">
+                <label for="usuario-password" id="usuario-password-label">Contraseña</label>
+                <input id="usuario-password" name="password" type="password" minlength="12" maxlength="200" autocomplete="new-password">
+                <span class="form-hint">12 caracteres o más. Pásasela en persona, no por el grupo.</span>
+              </div>
+              <div class="form-group">
+                <label for="usuario-rol">Rol</label>
+                <select id="usuario-rol" name="rol">
+                  <option value="encargado">Encargado de tiendas</option>
+                  <option value="dueno">Dueño</option>
+                </select>
+              </div>
+              <fieldset class="form-group full-width" id="usuario-tiendas-group">
+                <legend>Tiendas que puede editar</legend>
+                <div class="check-group" id="usuario-tiendas"></div>
+              </fieldset>
+              <div class="form-group full-width" data-solo-edicion hidden>
+                <div class="check-group"><label><input type="checkbox" name="activo" checked> Cuenta activa</label></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Guardar usuario</button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="usuario" hidden>Cancelar edición</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Usuarios</h3>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Usuario</th><th>Rol</th><th>Tiendas</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+              <tbody id="usuarios-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= MI CUENTA ================= -->
+      <section class="admin-panel" id="panel-cuenta" hidden>
+        <div class="admin-card">
+          <h3>Cambiar mi contraseña</h3>
+          <p>Al cambiarla se cierran tus sesiones en otros dispositivos.</p>
+          <form id="form-cuenta">
+            <div class="admin-form-grid">
+              <div class="form-group full-width"><label for="cuenta-actual">Contraseña actual</label><input id="cuenta-actual" name="actual" type="password" autocomplete="current-password" maxlength="200" required></div>
+              <div class="form-group"><label for="cuenta-nueva">Contraseña nueva</label><input id="cuenta-nueva" name="nueva" type="password" autocomplete="new-password" minlength="12" maxlength="200" required></div>
+              <div class="form-group"><label for="cuenta-confirmar">Repite la contraseña nueva</label><input id="cuenta-confirmar" name="confirmar" type="password" autocomplete="new-password" minlength="12" maxlength="200" required></div>
+            </div>
+            <div class="form-actions"><button type="submit" class="btn">Cambiar contraseña</button></div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer on-tinta">
+    <div class="container footer-main">
+      <div class="footer-grid">
+
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="brand-emblem" aria-hidden="true">N</span>
+            <h3>Necutla</h3>
+          </div>
+          <p>Los stands de la comunidad estudiantil en un solo lugar. Arma tu pedido y cada tienda lo confirma por WhatsApp.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegación</h4>
+          <ul class="footer-links">
+            <li><a href="/">Tiendas</a></li>
+            <li><a href="/promociones.html">Promociones</a></li>
+            <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/necutools.html">Necutools</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Tiendas</h4>
+          <ul class="footer-links" id="footer-stores"></ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pedidos</h4>
+          <p>Cada tienda tiene sus propios vendedores: tu pedido les llega directo por WhatsApp.</p>
+          <p class="footer-hours">
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+            Lun a sáb, 8:00 a 20:00
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+    </div>
+  </footer>
+
+  <script src="/iconos.js"></script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/necutools.js"></script>
+</body>
+</html>

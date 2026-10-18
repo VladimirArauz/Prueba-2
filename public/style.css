@@ -316,6 +316,7 @@ small, .text-sm {
   font-family: var(--font);
   font-size: 0.9375rem;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
   transition: border-color var(--t-fast), background-color var(--t-fast);
 }
@@ -1145,6 +1146,460 @@ textarea {
   display: flex;
 }
 
+/* ================= CATÁLOGO DE VARIAS TIENDAS ================= */
+
+/* Pestañas y filtros: botones .btn-sm; el activo es el único amarillo del grupo */
+.tabs,
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.filters {
+  margin-bottom: 24px;
+}
+
+.store-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.9375rem;
+  color: var(--texto-2);
+}
+
+.store-meta .icon {
+  color: var(--wa);
+}
+
+.list-more {
+  margin-top: 28px;
+}
+
+/* Precio con descuento */
+.price-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.price-old {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--texto-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-sub {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--texto-2);
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Etiqueta de oferta: relleno señal con borde tinta (nunca texto amarillo sobre claro) */
+.tag-oferta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid var(--tinta);
+  border-radius: var(--r-btn);
+  background: var(--senal);
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.tag-oferta .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Ofertas de la semana dentro de una tienda */
+.offer-card .offer-days {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+/* Letrero de promociones de temporada (portada y /promociones.html) */
+.letrero {
+  background: var(--tinta);
+  color: #FFFFFF;
+  border-radius: var(--r-panel);
+  padding: 28px;
+  margin-bottom: 48px;
+}
+
+.letrero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--linea-tinta);
+}
+
+.letrero h2 {
+  color: var(--senal);
+}
+
+.letrero p {
+  color: var(--tinta-suave);
+}
+
+.letrero-head a {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.letrero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.letrero-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--linea-tinta);
+  border-radius: var(--r-card);
+}
+
+.letrero-item h3 {
+  color: var(--senal);
+  font-size: 1.25rem;
+}
+
+.letrero-item .letrero-img {
+  aspect-ratio: 16 / 10;
+  border-radius: var(--r-btn);
+  overflow: hidden;
+  background: var(--tinta-2);
+}
+
+.letrero-item .letrero-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.letrero-item ul {
+  list-style: none;
+  font-size: 0.9375rem;
+  color: #FFFFFF;
+  flex-grow: 1;
+}
+
+.letrero-item li + li {
+  margin-top: 4px;
+}
+
+.letrero-item .price {
+  color: #FFFFFF;
+}
+
+.letrero-item .price-old {
+  color: var(--tinta-suave);
+}
+
+.letrero-item .letrero-dates {
+  font-size: 0.875rem;
+  color: var(--tinta-suave);
+}
+
+.letrero-item .btn {
+  align-self: flex-start;
+}
+
+.letrero.letrero-page {
+  margin-bottom: 0;
+}
+
+/* Ofertas de hoy en la portada: una línea por tienda */
+.today-list {
+  list-style: none;
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+}
+
+.today-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  color: var(--tinta);
+  text-decoration: none;
+  border-bottom: 1px solid var(--linea);
+}
+
+.today-list li:last-child .today-row {
+  border-bottom: 0;
+}
+
+.today-row:hover {
+  background: var(--gis);
+}
+
+.today-row .today-text {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  align-items: baseline;
+}
+
+.today-row strong {
+  font-variation-settings: 'wdth' 112;
+}
+
+.today-row .today-offers {
+  color: var(--texto-2);
+}
+
+/* Buscador */
+.search-form {
+  display: flex;
+  gap: 10px;
+  max-width: 640px;
+  margin-bottom: 28px;
+}
+
+.search-form input {
+  flex: 1;
+}
+
+.search-results {
+  margin-bottom: 48px;
+}
+
+.search-results .section-header-row {
+  margin-bottom: 20px;
+}
+
+/* ================= CARRITO AGRUPADO POR TIENDA ================= */
+.cart-group {
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  padding: 4px 24px 24px;
+}
+
+.cart-group + .cart-group {
+  margin-top: 24px;
+}
+
+.cart-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 18px 0 14px;
+  border-bottom: 2px solid var(--tinta);
+}
+
+.cart-group-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cart-group-head p {
+  font-size: 0.875rem;
+  margin-top: 2px;
+}
+
+.cart-group .cart-row {
+  grid-template-columns: 2fr 1fr 1fr 48px;
+}
+
+.cart-item-tags {
+  margin-top: 6px;
+}
+
+.cart-totals {
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-totals .total-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--texto-2);
+}
+
+.cart-totals .total-line.total-final {
+  color: var(--tinta);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 112;
+}
+
+.cart-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* El nombre de la tienda puede ser largo: el botón de envío puede usar dos líneas */
+.cart-group-actions .btn {
+  white-space: normal;
+  text-align: left;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.cart-layout > * {
+  min-width: 0;
+}
+
+.wa-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cart-summary-card .total-display {
+  margin-top: 4px;
+}
+
+/* ================= NECUTOOLS ================= */
+.admin-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--texto-2);
+}
+
+.admin-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.admin-filter .form-group {
+  min-width: 240px;
+}
+
+.check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 6px 0;
+}
+
+.check-group label,
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  accent-color: var(--tinta);
+  cursor: pointer;
+}
+
+fieldset {
+  border: 0;
+  min-width: 0;
+}
+
+legend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tinta);
+  margin-bottom: 6px;
+}
+
+.form-hint {
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.admin-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-btn);
+  object-fit: contain;
+  background: var(--gis);
+}
+
+.sub-list {
+  list-style: none;
+  margin-top: 18px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-btn);
+}
+
+.sub-row {
+  display: grid;
+  grid-template-columns: 1fr 100px auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.sub-list li:last-child .sub-row {
+  border-bottom: 0;
+}
+
+.sub-row .sub-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.pack-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pack-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 36px;
+  gap: 10px;
+  align-items: center;
+}
+
+.status-badge.is-off {
+  color: var(--texto-2);
+  background: var(--hoja);
+}
+
 /* ================= 5. RESPONSIVE ================= */
 @media (max-width: 992px) {
   .grid {
@@ -1157,8 +1612,15 @@ textarea {
   .store-cart {
     grid-template-columns: 1fr;
   }
+  .letrero-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .cart-summary-card {
     position: static;
+  }
+  /* En celular, nombre e indicaciones van antes de los botones de envío */
+  .cart-layout .cart-summary-card {
+    order: -1;
   }
   .footer-grid {
     grid-template-columns: 1fr 1fr;
@@ -1206,9 +1668,35 @@ textarea {
     display: none;
   }
   .cart-row,
-  .store-cart .cart-row {
+  .store-cart .cart-row,
+  .cart-group .cart-row {
     grid-template-columns: auto 1fr auto;
     gap: 10px 14px;
+  }
+  .cart-group {
+    padding: 4px 16px 20px;
+  }
+  .letrero {
+    padding: 20px;
+  }
+  .letrero-grid {
+    grid-template-columns: 1fr;
+  }
+  .search-form {
+    flex-direction: column;
+  }
+  .sub-row {
+    grid-template-columns: 1fr 72px;
+  }
+  .sub-row .sub-actions {
+    grid-column: 1 / -1;
+  }
+  .pack-row {
+    grid-template-columns: 1fr 72px 36px;
+  }
+  .admin-filter .form-group {
+    min-width: 0;
+    width: 100%;
   }
   .cart-row > :first-child {
     grid-column: 1 / -1;
@@ -1222,6 +1710,20 @@ textarea {
   .toast-notice {
     right: 16px;
     bottom: 16px;
+  }
+}
+
+/* Pantallas muy angostas: la barra conserva el texto y quita los iconos */
+@media (max-width: 400px) {
+  .nav-actions {
+    gap: 4px;
+  }
+  .nav-btn {
+    gap: 6px;
+    padding: 0 6px;
+  }
+  .nav-btn > .icon {
+    display: none;
   }
 }
 
@@ -1241,4 +1743,13 @@ textarea {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* ================= Ajustes de páginas ================= */
+.main-content > .page-head:first-child {
+  padding-top: 0;
+}
+
+.home-block {
+  margin-bottom: 56px;
 }
