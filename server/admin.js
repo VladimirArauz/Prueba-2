@@ -5,7 +5,12 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const { pool } = require("./db");
-const { requireAdmin, requireDueno, puedeEditarStand, cerrarSesionesDe, BCRYPT_COST } = require("./auth");
+const { requireAdmin, requireDueno, puedeEditarStand, cerrarSesionesDe, usarCodigo, BCRYPT_COST } = require("./auth");
+const { validarContrasena } = require("./contrasenas");
+const { exigirNoFrenada, registrarFallo, limpiarFallos } = require("./intentos");
+const totp = require("./totp");
+const { limpiarMetadatos } = require("./imagenes");
+const { anotar } = require("./bitacora");
 const v = require("./validar");
 const { ErrorDeDatos, ErrorHttp, handle } = v;
 const { textoDias } = require("./ofertas");
@@ -49,14 +54,16 @@ function standFiltro(req, valor) {
   return id;
 }
 
+// Imagen subida, sin metadatos (ubicación GPS, modelo del celular…)
 function imagenDe(body) {
-  if (body.imagen) return v.leerImagen(body.imagen);
-  return null;
+  if (!body.imagen) return null;
+  const { buffer, tipo } = v.leerImagen(body.imagen);
+  return { buffer: limpiarMetadatos(buffer, tipo), tipo };
 }
 
 // ================= Mi sesión =================
 router.get("/yo", (req, res) => {
-  res.json({ id: req.admin.id, usuario: req.admin.usuario, rol: req.admin.rol, tiendas: req.admin.tiendas });
+  res.json({ id: req.admin.id, usuario: req.admin.usuario, rol: req.admin.rol, tiendas: req.admin.tiendas, totp_activo: req.admin.totp_activo });
 });
 
 router.get("/iconos", (req, res) => res.json(ICONOS_TIENDA));
@@ -103,6 +110,7 @@ router.post("/tiendas", requireDueno, handle(async (req, res) => {
     if (err.code === "23505") throw new ErrorHttp(409, "Ya existe una tienda con ese nombre o dirección.");
     throw err;
   });
+  await anotar(req.admin, "crear", "tiendas", rows[0].id, rows[0].nombre);
   res.status(201).json(rows[0]);
 }));
 
@@ -121,6 +129,7 @@ router.put("/tiendas/:id", handle(async (req, res) => {
     if (err.code === "23505") throw new ErrorHttp(409, "Ya existe una tienda con ese nombre o dirección.");
     throw err;
   });
+  await anotar(req.admin, "editar", "tiendas", stand.id, d.nombre);
   res.json({ id: stand.id, nombre: d.nombre, slug: d.slug });
 }));
 
@@ -131,6 +140,7 @@ router.delete("/tiendas/:id", requireDueno, handle(async (req, res) => {
     throw new ErrorHttp(409, `Primero borra o mueve los ${rows[0].total} productos y servicios de ${stand.nombre}.`);
   }
   await pool.query("DELETE FROM stands WHERE id = $1", [stand.id]);
+  await anotar(req.admin, "borrar", "tiendas", stand.id, stand.nombre);
   res.status(204).end();
 }));
 
@@ -159,6 +169,7 @@ router.post("/tiendas/:id/subcategorias", handle(async (req, res) => {
   const { rows } = await pool.query(
     "INSERT INTO subcategorias (stand_id, nombre, slug, orden) VALUES ($1, $2, $3, $4) RETURNING id, nombre, slug, orden",
     [stand.id, d.nombre, d.slug, d.orden]).catch(conflictoSubcategoria);
+  await anotar(req.admin, "crear", "subcategorias", rows[0].id, `${d.nombre} (${stand.nombre})`);
   res.status(201).json(rows[0]);
 }));
 
@@ -167,12 +178,14 @@ router.put("/subcategorias/:id", handle(async (req, res) => {
   const d = datosSubcategoria(req.body);
   await pool.query("UPDATE subcategorias SET nombre = $1, slug = $2, orden = $3 WHERE id = $4",
     [d.nombre, d.slug, d.orden, sub.id]).catch(conflictoSubcategoria);
+  await anotar(req.admin, "editar", "subcategorias", sub.id, d.nombre);
   res.json({ id: sub.id, ...d });
 }));
 
 router.delete("/subcategorias/:id", handle(async (req, res) => {
   const sub = await exigirSubcategoria(req, req.params.id);
   await pool.query("DELETE FROM subcategorias WHERE id = $1", [sub.id]);
+  await anotar(req.admin, "borrar", "subcategorias", sub.id);
   res.status(204).end();
 }));
 
@@ -230,6 +243,7 @@ router.post("/productos", handle(async (req, res) => {
      RETURNING id, nombre`,
     [d.standId, d.subcategoriaId, d.tipo, d.nombre, d.precioModo, d.precio, d.disponibilidad, d.descripcion,
      d.visible, d.orden, d.imagen ? d.imagen.buffer : null, d.imagen ? d.imagen.tipo : null]);
+  await anotar(req.admin, "crear", "productos", rows[0].id, rows[0].nombre);
   res.status(201).json(rows[0]);
 }));
 
@@ -259,12 +273,14 @@ router.put("/productos/:id", handle(async (req, res) => {
   if (d.standId !== producto.stand_id) {
     await pool.query("DELETE FROM ofertas WHERE producto_id = $1 AND stand_id <> $2", [producto.id, d.standId]);
   }
+  await anotar(req.admin, "editar", "productos", producto.id, d.nombre);
   res.json({ id: producto.id, nombre: d.nombre });
 }));
 
 router.delete("/productos/:id", handle(async (req, res) => {
   const producto = await exigirProducto(req, req.params.id);
   await pool.query("DELETE FROM productos WHERE id = $1", [producto.id]);
+  await anotar(req.admin, "borrar", "productos", producto.id, producto.nombre);
   res.status(204).end();
 }));
 
@@ -352,6 +368,7 @@ router.post("/ofertas", handle(async (req, res) => {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id, titulo`,
     [d.standId, d.productoId, d.subcategoriaId, d.titulo, d.descripcion, d.tipo, d.valor, d.dias, d.activa,
      d.clase, d.temporada, d.inicio, d.fin, d.piezas]);
+  await anotar(req.admin, "crear", "ofertas", rows[0].id, rows[0].titulo);
   res.status(201).json(rows[0]);
 }));
 
@@ -372,12 +389,14 @@ router.put("/ofertas/:id", handle(async (req, res) => {
      WHERE id = $15`,
     [d.standId, d.productoId, d.subcategoriaId, d.titulo, d.descripcion, d.tipo, d.valor, d.dias, d.activa,
      d.clase, d.temporada, d.inicio, d.fin, d.piezas, oferta.id]);
+  await anotar(req.admin, "editar", "ofertas", oferta.id, d.titulo);
   res.json({ id: oferta.id, titulo: d.titulo });
 }));
 
 router.delete("/ofertas/:id", handle(async (req, res) => {
   const oferta = await exigirOferta(req, req.params.id);
   await pool.query("DELETE FROM ofertas WHERE id = $1", [oferta.id]);
+  await anotar(req.admin, "borrar", "ofertas", oferta.id);
   res.status(204).end();
 }));
 
@@ -410,6 +429,7 @@ router.put("/resenas/:id", handle(async (req, res) => {
        respondida_en = CASE WHEN $1::text IS NULL THEN NULL
                             WHEN $1::text IS DISTINCT FROM respuesta THEN now() ELSE respondida_en END
      WHERE id = $3`, [respuesta, visible, id]);
+  await anotar(req.admin, "editar", "opiniones", id, `${respuesta ? "Respondió" : "Sin respuesta"}${visible ? "" : ", oculta"}`);
   res.json({ id });
 }));
 
@@ -490,6 +510,7 @@ router.post("/promociones", requireDueno, handle(async (req, res) => {
     await guardarItems(cliente, rows[0].id, d.items);
     return rows[0];
   });
+  await anotar(req.admin, "crear", "promociones", creada.id, creada.titulo);
   res.status(201).json(creada);
 }));
 
@@ -509,6 +530,7 @@ router.put("/promociones/:id", requireDueno, handle(async (req, res) => {
     await guardarItems(cliente, id, d.items);
     return { id, titulo: d.titulo };
   });
+  await anotar(req.admin, "editar", "promociones", id, d.titulo);
   res.json(actualizada);
 }));
 
@@ -516,16 +538,13 @@ router.delete("/promociones/:id", requireDueno, handle(async (req, res) => {
   const id = v.idValido(req.params.id);
   const { rowCount } = id ? await pool.query("DELETE FROM promociones WHERE id = $1", [id]) : { rowCount: 0 };
   if (!rowCount) throw new ErrorHttp(404, "Esa promoción no existe.");
+  await anotar(req.admin, "borrar", "promociones", id);
   res.status(204).end();
 }));
 
 // ================= Usuarios de Necutools (solo dueños) =================
-function contrasena(valor, campo = "La contraseña") {
-  if (typeof valor !== "string" || valor.length < 12 || valor.length > 200) {
-    throw new ErrorDeDatos(`${campo} debe tener de 12 a 200 caracteres.`);
-  }
-  return valor;
-}
+const contrasena = (valor, usuario, campo = "La contraseña") =>
+  validarContrasena(valor, { minimo: 12, campo, contiene: [usuario] });
 
 async function tiendasValidas(lista) {
   if (lista === undefined || lista === null) return [];
@@ -547,7 +566,7 @@ async function asignarTiendas(cliente, adminId, tiendas) {
 
 router.get("/usuarios", requireDueno, handle(async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT a.id, a.usuario, a.rol, a.activo, a.creado_en,
+    `SELECT a.id, a.usuario, a.rol, a.activo, a.totp_activo, a.creado_en,
             COALESCE(array_agg(s.stand_id ORDER BY s.stand_id) FILTER (WHERE s.stand_id IS NOT NULL), '{}') AS tiendas
      FROM admins a LEFT JOIN admin_stands s ON s.admin_id = a.id
      GROUP BY a.id ORDER BY a.rol DESC, a.usuario`);
@@ -559,7 +578,7 @@ router.post("/usuarios", requireDueno, handle(async (req, res) => {
   if (!/^[a-z0-9._-]{3,50}$/.test(usuario)) {
     throw new ErrorDeDatos("El usuario debe tener de 3 a 50 letras sin acentos, números, punto, guion o guion bajo.");
   }
-  const password = contrasena(req.body.password);
+  const password = contrasena(req.body.password, usuario);
   const rol = v.opcion(req.body.rol, ROLES, "el rol");
   const tiendas = rol === "encargado" ? await tiendasValidas(req.body.tiendas) : [];
   const hash = await bcrypt.hash(password, BCRYPT_COST);
@@ -571,6 +590,7 @@ router.post("/usuarios", requireDueno, handle(async (req, res) => {
     await asignarTiendas(cliente, rows[0].id, tiendas);
     return rows[0];
   });
+  await anotar(req.admin, "crear", "usuarios", creado.id, `${creado.usuario} (${rol})`);
   res.status(201).json(creado);
 }));
 
@@ -583,7 +603,12 @@ router.put("/usuarios/:id", requireDueno, handle(async (req, res) => {
   const rol = v.opcion(req.body.rol, ROLES, "el rol");
   const activo = v.booleano(req.body.activo, true);
   const tiendas = rol === "encargado" ? await tiendasValidas(req.body.tiendas) : [];
-  const password = req.body.password ? contrasena(req.body.password, "La contraseña nueva") : null;
+  const password = req.body.password ? contrasena(req.body.password, usuario.usuario, "La contraseña nueva") : null;
+  // Un dueño puede quitarle la verificación en dos pasos a otro usuario que perdió su celular
+  const quitar2fa = v.booleano(req.body.quitar_2fa, false);
+  if (quitar2fa && usuario.id === req.admin.id) {
+    throw new ErrorHttp(409, "Para quitar tu propia verificación en dos pasos usa Mi cuenta.");
+  }
 
   if (usuario.id === req.admin.id && (rol !== "dueno" || !activo)) {
     throw new ErrorHttp(409, "No puedes quitarte el rol de dueño ni desactivar tu propia cuenta.");
@@ -596,26 +621,111 @@ router.put("/usuarios/:id", requireDueno, handle(async (req, res) => {
   const hash = password ? await bcrypt.hash(password, BCRYPT_COST) : null;
   await enTransaccion(async cliente => {
     await cliente.query(
-      "UPDATE admins SET rol = $1, activo = $2, password_hash = COALESCE($3, password_hash) WHERE id = $4",
-      [rol, activo, hash, usuario.id]);
+      `UPDATE admins SET rol = $1, activo = $2, password_hash = COALESCE($3, password_hash),
+         totp_activo = totp_activo AND NOT $5, totp_secreto = CASE WHEN $5 THEN NULL ELSE totp_secreto END,
+         totp_respaldo = CASE WHEN $5 THEN '{}' ELSE totp_respaldo END
+       WHERE id = $4`,
+      [rol, activo, hash, usuario.id, quitar2fa]);
     await asignarTiendas(cliente, usuario.id, tiendas);
   });
   if (!activo || password) await cerrarSesionesDe(usuario.id);
+  const cambios = [rol, activo ? "activa" : "desactivada", password ? "contraseña nueva" : "", quitar2fa ? "sin 2 pasos" : ""];
+  await anotar(req.admin, "editar", "usuarios", usuario.id, `${usuario.usuario}: ${cambios.filter(Boolean).join(", ")}`);
   res.json({ id: usuario.id, usuario: usuario.usuario, rol, activo });
 }));
 
+// ================= Bitácora (solo dueños) =================
+router.get("/bitacora", requireDueno, handle(async (req, res) => {
+  const pagina = v.entero(req.query.pagina, "La página", { min: 1, max: 9999, defecto: 1 });
+  const adminId = v.idOpcional(req.query.usuario, "El usuario");
+  const POR_PAGINA_BITACORA = 50;
+  const [lista, total] = await Promise.all([
+    pool.query(
+      `SELECT id, creado_en, admin_id, usuario, accion, tabla, registro_id, resumen FROM bitacora
+       WHERE ($1::int IS NULL OR admin_id = $1) ORDER BY creado_en DESC, id DESC LIMIT $2 OFFSET $3`,
+      [adminId, POR_PAGINA_BITACORA, (pagina - 1) * POR_PAGINA_BITACORA]),
+    pool.query("SELECT count(*)::int AS total FROM bitacora WHERE ($1::int IS NULL OR admin_id = $1)", [adminId])
+  ]);
+  res.json({
+    registros: lista.rows, pagina, total: total.rows[0].total,
+    paginas: Math.max(1, Math.ceil(total.rows[0].total / POR_PAGINA_BITACORA))
+  });
+}));
+
 // ================= Mi cuenta =================
-router.put("/mi-password", handle(async (req, res) => {
-  const actual = typeof req.body.actual === "string" ? req.body.actual : "";
-  const nueva = contrasena(req.body.nueva, "La contraseña nueva");
+// Revisa la contraseña actual con límite por cuenta: una sesión robada no sirve para adivinarla
+async function exigirPasswordActual(req, valor) {
+  await exigirNoFrenada("password", req.admin.id);
+  const actual = typeof valor === "string" ? valor : "";
   const { rows } = await pool.query("SELECT password_hash FROM admins WHERE id = $1", [req.admin.id]);
-  if (!actual || !(await bcrypt.compare(actual, rows[0].password_hash))) {
+  if (!actual || actual.length > 200 || !(await bcrypt.compare(actual, rows[0].password_hash))) {
+    await registrarFallo("password", req.admin.id);
     throw new ErrorDeDatos("Tu contraseña actual no es correcta.");
   }
+  await limpiarFallos("password", req.admin.id);
+  return actual;
+}
+
+router.put("/mi-password", handle(async (req, res) => {
+  const nueva = contrasena(req.body.nueva, req.admin.usuario, "La contraseña nueva");
+  const actual = await exigirPasswordActual(req, req.body.actual);
   if (actual === nueva) throw new ErrorDeDatos("La contraseña nueva debe ser distinta a la actual.");
   const hash = await bcrypt.hash(nueva, BCRYPT_COST);
   await pool.query("UPDATE admins SET password_hash = $1 WHERE id = $2", [hash, req.admin.id]);
   await cerrarSesionesDe(req.admin.id, req.sessionID);
+  await anotar(req.admin, "contraseña", "usuarios", req.admin.id, "Cambió su contraseña");
+  res.json({ ok: true });
+}));
+
+// ================= Verificación en dos pasos =================
+// 1) Con la contraseña, se genera una clave que solo vive en la sesión hasta confirmarla con un código
+router.post("/2fa/iniciar", handle(async (req, res) => {
+  if (req.admin.totp_activo) throw new ErrorHttp(409, "Ya tienes activa la verificación en dos pasos.");
+  await exigirPasswordActual(req, req.body.password);
+  const secreto = totp.generarSecreto();
+  req.session.totpNuevo = { secreto, hasta: Date.now() + 10 * 60 * 1000 };
+  res.json({ secreto, enlace: totp.enlace(req.admin.usuario, secreto) });
+}));
+
+// 2) El código de la app confirma que quedó bien guardada; se entregan los códigos de respaldo una sola vez
+router.post("/2fa/activar", handle(async (req, res) => {
+  const nuevo = req.session.totpNuevo;
+  if (!nuevo || nuevo.hasta < Date.now()) {
+    delete req.session.totpNuevo;
+    throw new ErrorDeDatos("Pasaron más de 10 minutos. Vuelve a empezar la activación.");
+  }
+  await exigirNoFrenada("totp", req.admin.id);
+  const codigo = typeof req.body.codigo === "string" ? req.body.codigo.replace(/\s/g, "") : "";
+  const paso = totp.verificarCodigo(nuevo.secreto, codigo);
+  if (paso === null) {
+    await registrarFallo("totp", req.admin.id);
+    throw new ErrorDeDatos("El código no coincide. Revisa que la hora de tu celular sea automática y escribe el código que aparece ahora.");
+  }
+  await limpiarFallos("totp", req.admin.id);
+  const respaldo = totp.generarRespaldo();
+  await pool.query(
+    "UPDATE admins SET totp_secreto = $1, totp_activo = true, totp_ultimo = $2, totp_respaldo = $3 WHERE id = $4",
+    [nuevo.secreto, paso, respaldo.map(totp.hashRespaldo), req.admin.id]);
+  delete req.session.totpNuevo;
+  await cerrarSesionesDe(req.admin.id, req.sessionID);
+  await anotar(req.admin, "2 pasos", "usuarios", req.admin.id, "Activó la verificación en dos pasos");
+  res.json({ respaldo });
+}));
+
+router.post("/2fa/desactivar", handle(async (req, res) => {
+  if (!req.admin.totp_activo) throw new ErrorHttp(409, "No tienes activa la verificación en dos pasos.");
+  await exigirPasswordActual(req, req.body.password);
+  await exigirNoFrenada("totp", req.admin.id);
+  const { rows } = await pool.query("SELECT id, totp_secreto, totp_ultimo FROM admins WHERE id = $1", [req.admin.id]);
+  if (!(await usarCodigo(rows[0], req.body.codigo))) {
+    await registrarFallo("totp", req.admin.id);
+    throw new ErrorDeDatos("El código no es correcto. Escribe el que muestra la app o uno de respaldo.");
+  }
+  await limpiarFallos("totp", req.admin.id);
+  await pool.query(
+    "UPDATE admins SET totp_activo = false, totp_secreto = NULL, totp_ultimo = NULL, totp_respaldo = '{}' WHERE id = $1",
+    [req.admin.id]);
+  await anotar(req.admin, "2 pasos", "usuarios", req.admin.id, "Desactivó la verificación en dos pasos");
   res.json({ ok: true });
 }));
 

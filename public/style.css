@@ -3302,3 +3302,41 @@ a.card-img-wrap {
     height: 220px;
   }
 }
+
+/* ================= NECUTOOLS: VERIFICACIÓN EN DOS PASOS ================= */
+.pasos-2fa {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  max-width: 68ch;
+}
+
+.pasos-2fa li + li {
+  margin-top: 0.5rem;
+}
+
+.clave-2fa {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  color: var(--tinta);
+}
+
+.lista-respaldo {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+.lista-respaldo li {
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  background: var(--hoja);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--tinta);
+}

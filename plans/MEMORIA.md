@@ -19,7 +19,8 @@ Cómo se usa:
 | `2026-10-17-catalogo-multitienda.md` | Aplicado y subido (fases 1 a 7). Faltan revisar las 2 decisiones de diseño pendientes | 2026-10-17 |
 | `2026-10-19-ofertas-temporada-y-resenas.md` | Aplicado y subido (commit + push del 2026-10-19) | 2026-10-19 |
 | `2026-10-20-barra-lateral-login-animaciones.md` | Aplicado, probado con el servidor real y subido (commit + push del 2026-10-20) | 2026-10-20 |
-| `2026-10-20-dashboard-necutools.md` | Aplicado y probado en local (prompts 1 a 6). Falta commit + push | 2026-10-20 |
+| `2026-10-20-dashboard-necutools.md` | Aplicado, probado en local y con commit `c2830ab`. Falta el push (token de `gh` vencido) | 2026-10-20 |
+| `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado, probado en local y con commit en la rama `seguridad`. Falta el push (token de `gh` vencido), el merge a `main` y los pasos de Render | 2026-10-20 |
 
 ---
 
@@ -49,8 +50,9 @@ Cómo se usa:
 17. **En esta máquina no hay Node ni servidor de PostgreSQL instalados** (solo el cliente `psql`). Para probar el 2026-10-20 se bajaron Node 22.23.3 (nodejs.org, con su checksum) y PostgreSQL 18.4 (paquete npm `embedded-postgres`) a la carpeta temporal de la sesión. Para correr `npm run dev` aquí hay que instalar Node 22 y PostgreSQL.
 
 18. **Dashboard de Necutools, decisiones por confirmar (plan `2026-10-20-dashboard-necutools.md`):** el usuario pidió correr todo sin detenerse, así que en el prompt 4 no se le preguntó por las excepciones. Se aplicó lo que cumple `plans/CLAUDE.md`: las gráficas **no** se animan al cargar, solo al cambiar tienda o periodo (y nunca con movimiento reducido); los indicadores no cuentan hacia arriba. El menú propio de Necutools sí se hizo (lo implica "rediseñar todo Necutools"). Si quiere la animación al cargar, se cambia `animar` en `renderResumen` (`public/js/necutools.js`).
-19. **Subir el dashboard:** hacer commit + push. En Render, `npm install` instala `chart.js` solo; la tabla `pedidos` se crea sola al arrancar. Después de desplegar, revisar `/vendor/chart.umd.js` y Necutools → Resumen.
+19. **Subir el dashboard:** commit `c2830ab` hecho; falta el push (el token de `gh` de la cuenta Mor4l3sAx3l04 está vencido: `gh auth login -h github.com` y `git push origin main`). En Render, `npm install` instala `chart.js` solo; la tabla `pedidos` se crea sola al arrancar. Después de desplegar, revisar `/vendor/chart.umd.js` y Necutools → Resumen.
 20. **Pedidos que no se cierran:** el pedido se guarda al tocar "Enviar pedido por WhatsApp", aunque el cliente no lo mande en WhatsApp. Por eso "Ventas" solo cuenta los que el vendedor marca como vendidos; los demás se quedan pendientes hasta que alguien los cancele.
+21. **Seguridad (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`):** commit hecho en la rama `seguridad` (encima del commit del dashboard `c2830ab`). El push falló porque el token de `gh` sigue vencido: `gh auth login -h github.com` y luego `git push -u origin seguridad`. Render despliega `main`: para publicarlo hay que hacer merge de `seguridad` a `main` y push de `main` (eso también sube el dashboard, pendiente 19). Después, en Render: borrar `ADMIN_PASSWORD` (pendiente 2), restringir la IP de la base (pendiente 4), activar los 2 pasos en los dueños y leer en Logs las líneas "Revisión de proxy" (deben decir 1 dirección). Al desplegar, todos tendrán que volver a iniciar sesión una vez (la cookie cambia a `__Host-necutla.sid`). Informe: `plans/auditorias/2026-10-20-seguridad.md`.
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -97,6 +99,28 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-20: auditoría de seguridad y endurecimiento (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`, prompts 1 a 6, rama `seguridad`)
+
+Informe completo con hallazgos, evidencia y estado: `plans/auditorias/2026-10-20-seguridad.md`.
+
+- **Auditoría** (prompt 1): OWASP Top 10 y ASVS 2 ruta por ruta; pruebas de ataque repetibles en `scripts/seguridad/ataques.js` (solo localhost); XSS en navegador. Lo que ya existía resistió: SQLi, IDOR entre encargados, CSRF, sesión, archivos privados, XSS. Se encontraron 21 hallazgos (H1–H21); ninguno crítico en el código.
+- **Entrada y cabeceras** (`server/index.js`): 20 KB de JSON (2 MB solo al subir imágenes), `Sec-Fetch-Site`, `Permissions-Policy`, `noindex` en Necutools y `/api`, `no-store` en lo privado, `/.well-known/security.txt`, registro "Revisión de proxy".
+- **Sesión** (`server/auth.js`, `server/clientes.js`): cookie `__Host-necutla.sid` en producción, id nuevo al entrar y al salir, 24 h máximas, el servidor no arranca en Render sin `NODE_ENV=production`.
+- **Cuentas**: `server/intentos.js` (10 fallos frenan la cuenta 15 min, tabla `intentos_login`), `server/contrasenas.js` (72 bytes, comunes, sin usuario; cliente 10 caracteres), registro sin bcrypt para correos repetidos y 409 contados.
+- **Verificación en dos pasos** opcional (`server/totp.js`, rutas `/api/auth/login/codigo` y `/api/admin/2fa/*`, columnas `totp_*` en `admins`): Necutools → Mi cuenta; códigos de respaldo; el dueño la quita en Usuarios.
+- **Pedidos** (`server/pedidos.js`): 30 piezas y 15 productos máximo, sin duplicados en 10 minutos (columna `huella`), 500 por hora, "Cancelar pendientes de más de 7 días".
+- **Imágenes**: `server/imagenes.js` quita GPS y metadatos (JPEG conserva la orientación) y limpió una vez las ya guardadas (migración `2026-10-20-imagenes-sin-metadatos`, sin borrar ninguna). Las de lo oculto dan 404 al público (`server/api.js`); paquetes con algo oculto ya no se venden.
+- **Bitácora** (`server/bitacora.js`, tabla `bitacora`, pestaña "Bitácora" solo dueños, icono `history`).
+- **Base**: `DATABASE_SSL=true` verifica el certificado; `no-verify` aparte (`server/db.js`, README, `.env.example` explica `no-verify`).
+- `render.yaml` y `README.md` (sección "Seguridad" con la checklist de Render).
+- **Verificación**: ataques 184 de 184, XSS 44 de 44, UI nueva 36 de 36, baterías anteriores 9 + 34 + 95 sin fallas, cero errores de consola o CSP, `/security-review` sin vulnerabilidades, `npm audit` 0. Detalle en el informe.
+- **Desviaciones**: `/code-review max` se cortó por el límite de uso y no se repitió; el secreto TOTP va sin cifrar en la base; `security.txt` apunta a los avisos privados de GitHub en vez de un correo.
+
+### 2026-10-20: plan de auditoría de seguridad y endurecimiento
+- Nuevo plan `plans/planes/2026-10-20-seguridad-auditoria-y-endurecimiento.md` y sus 6 prompts en `plans/prompts/` (mismo nombre). El usuario pidió revisar la página como experto en ciberseguridad con una skill y dejarla lo más segura posible.
+- Skills elegidas: `/security-review` (revisa el diff de la rama contra `main`, por eso se trabaja en la rama `seguridad`) y `/code-review max <carpeta>` para auditar el código que ya existe. Además, pruebas de ataque propias en `scripts/seguridad/` y un informe en `plans/auditorias/`.
+- Revisión preliminar: SQL parametrizado, CSP, sesión, CSRF y permisos están bien; `npm audit` sin vulnerabilidades; `.env` nunca entró a git. 15 hallazgos (H1–H15), los más graves de configuración en Render (base abierta, `ADMIN_PASSWORD`). No se cambió código.
 
 ### 2026-10-20: dashboard de Necutools con pedidos y gráficas (plan `2026-10-20-dashboard-necutools.md`, prompts 1 a 6)
 

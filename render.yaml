@@ -39,7 +39,10 @@ databases:
     region: oregon
     databaseName: necutla
     user: necutla
-    # Quién puede conectarse desde fuera (pgAdmin). Cámbialo por tu IP: "TU.IP.PUBLICA/32"
+    # Quién puede conectarse desde fuera (pgAdmin). 0.0.0.0/0 = cualquier IP de internet: solo la
+    # protege la contraseña. Restríngelo en el panel de Render (necutla-db → Networking → Access Control)
+    # a tu IP con /32 (búscala en https://ifconfig.me). No la escribas aquí: este archivo es público.
+    # Si lo dejas vacío ([]), nadie se conecta desde fuera y el sitio sigue funcionando (usa la red interna).
     ipAllowList:
       - source: 0.0.0.0/0
-        description: Acceso externo (restringir a tu IP)
+        description: Acceso externo (restringir a tu IP desde el panel de Render)

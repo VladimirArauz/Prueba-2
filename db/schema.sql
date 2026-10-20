@@ -283,3 +283,41 @@ CREATE TABLE IF NOT EXISTS pedidos (
 );
 CREATE INDEX IF NOT EXISTS pedidos_stand_fecha_idx ON pedidos (stand_id, creado_en DESC);
 CREATE INDEX IF NOT EXISTS pedidos_fecha_idx ON pedidos (creado_en DESC);
+
+-- =========================================================
+-- Seguridad (plan 2026-10-20-seguridad-auditoria-y-endurecimiento)
+-- =========================================================
+
+-- Intentos fallidos por cuenta (login de admin y de cliente, contraseña actual, código de 2 pasos)
+CREATE TABLE IF NOT EXISTS intentos_login (
+  tipo            VARCHAR(12) NOT NULL,
+  cuenta          VARCHAR(120) NOT NULL,
+  fallos          SMALLINT NOT NULL DEFAULT 0,
+  bloqueado_hasta TIMESTAMPTZ,
+  actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (tipo, cuenta)
+);
+
+-- Verificación en dos pasos de Necutools (opcional por usuario)
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_secreto VARCHAR(64);
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_activo BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_ultimo BIGINT;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_respaldo TEXT[] NOT NULL DEFAULT '{}';
+
+-- Pedidos repetidos: huella (HMAC de IP + grupo + productos, sin guardar la IP) para no duplicar en 10 minutos
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS huella CHAR(64);
+CREATE INDEX IF NOT EXISTS pedidos_huella_idx ON pedidos (huella, creado_en DESC) WHERE huella IS NOT NULL;
+
+-- Bitácora de Necutools
+CREATE TABLE IF NOT EXISTS bitacora (
+  id           SERIAL PRIMARY KEY,
+  creado_en    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  admin_id     INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+  usuario      VARCHAR(50) NOT NULL,
+  accion       VARCHAR(20) NOT NULL,
+  tabla        VARCHAR(30) NOT NULL,
+  registro_id  INTEGER,
+  resumen      VARCHAR(200) NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS bitacora_fecha_idx ON bitacora (creado_en DESC);
+CREATE INDEX IF NOT EXISTS bitacora_admin_idx ON bitacora (admin_id, creado_en DESC);

@@ -17,7 +17,12 @@ const NOMBRE_ESTADO = { pendiente: "Pendiente", vendido: "Vendido", cancelado: "
 const TITULOS_PANEL = {
   resumen: "Resumen", pedidos: "Pedidos", tiendas: "Tiendas", productos: "Productos y servicios",
   ofertas: "Ofertas de la tienda", resenas: "Opiniones", promociones: "Promociones generales",
-  usuarios: "Usuarios", cuenta: "Mi cuenta"
+  usuarios: "Usuarios", bitacora: "Bitácora", cuenta: "Mi cuenta"
+};
+
+const NOMBRE_TABLA = {
+  tiendas: "Tienda", subcategorias: "Subcategoría", productos: "Producto", ofertas: "Oferta", opiniones: "Opinión",
+  promociones: "Promoción", usuarios: "Usuario", pedidos: "Pedido", sesiones: "Sesión"
 };
 
 const st = {
@@ -27,6 +32,9 @@ const st = {
   pedidos: { pedidos: [], pagina: 1, paginas: 1, total: 0, pendientes: 0 },
   pedidosEstado: "",
   pedidosPagina: 1,
+  bitacora: { registros: [], pagina: 1, paginas: 1, total: 0 },
+  bitacoraUsuario: "",
+  bitacoraPagina: 1,
   iconos: [],
   tiendas: [],
   productos: [],
@@ -139,14 +147,46 @@ async function iniciarSesion(event) {
   event.preventDefault();
   const form = event.currentTarget;
   await enviar(form, async () => {
-    await api("/auth/login", {
+    const r = await api("/auth/login", {
       method: "POST",
       body: { usuario: $("admin-login-user").value, password: $("admin-login-password").value }
     });
     form.reset();
+    if (r.segundoPaso) {
+      mostrarCodigo(true);
+      return;
+    }
     await cargarTodo();
     showToast(`Sesión iniciada: ${st.sesion.usuario}`);
   });
+}
+
+// Segundo paso del login: el código de la app de autenticación
+function mostrarCodigo(visible) {
+  $("admin-login-form").hidden = visible;
+  $("admin-codigo-form").hidden = !visible;
+  $(visible ? "admin-codigo" : "admin-login-user").focus();
+}
+
+async function enviarCodigo(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const boton = form.querySelector('[type="submit"]');
+  boton.disabled = true;
+  try {
+    await api("/auth/login/codigo", { method: "POST", body: { codigo: $("admin-codigo").value } });
+    form.reset();
+    mostrarCodigo(false);
+    await cargarTodo();
+    showToast(`Sesión iniciada: ${st.sesion.usuario}`);
+  } catch (error) {
+    alert(error.message);
+    // Si el primer paso venció, se vuelve a pedir usuario y contraseña
+    const sesion = await api("/auth/sesion").catch(() => ({}));
+    if (!sesion.segundoPaso) mostrarCodigo(false);
+  } finally {
+    boton.disabled = false;
+  }
 }
 
 async function cerrarSesion() {
@@ -172,6 +212,7 @@ function mostrarPanel(panel) {
   $("dash-filtros").hidden = panel !== "resumen" && panel !== "pedidos";
   // Las gráficas se dibujan con el panel visible para que tomen su tamaño real
   if (panel === "resumen" && st.resumen) renderGraficas();
+  if (panel === "bitacora") cargarBitacora();
 }
 
 // ================= Carga de datos =================
@@ -179,6 +220,7 @@ async function cargarTodo() {
   try {
     const sesion = await api("/auth/sesion");
     st.sesion = sesion.autenticado ? await api("/admin/yo") : null;
+    if (!st.sesion && sesion.segundoPaso) mostrarCodigo(true);
   } catch (error) {
     st.sesion = null;
   }
@@ -187,6 +229,7 @@ async function cargarTodo() {
     return;
   }
   renderAcceso();
+  render2fa();
   try {
     const [iconos, tiendas, productos, ofertas, resenas, resumen, pedidos] = await Promise.all([
       api("/admin/iconos"), api("/admin/tiendas"), api("/admin/productos"), api("/admin/ofertas"), api("/admin/resenas"),
@@ -1073,7 +1116,7 @@ function renderUsuarios() {
       <td><div class="cell-title">${escapeHTML(u.usuario)}</div>${u.id === st.sesion.id ? `<div class="cell-sub">Tú</div>` : ""}</td>
       <td>${u.rol === "dueno" ? "Dueño" : "Encargado"}</td>
       <td>${u.rol === "dueno" ? "Todas" : escapeHTML(u.tiendas.map(id => (tiendaPorId(id) || {}).nombre).filter(Boolean).join(", ") || "Ninguna")}</td>
-      <td>${estadoBadge(u.activo, "Activa", "Desactivada")}</td>
+      <td>${estadoBadge(u.activo, "Activa", "Desactivada")}${u.totp_activo ? `<div class="cell-sub">Con verificación en dos pasos</div>` : ""}</td>
       <td class="col-actions">${botonesFila("usuario", u.id, u.usuario, { borrar: false })}</td>
     </tr>`).join("");
 }
@@ -1090,6 +1133,8 @@ function editarUsuario(id) {
   $("usuario-password-label").textContent = "Contraseña nueva (opcional)";
   campo(form, "rol").value = u.rol;
   campo(form, "activo").checked = u.activo;
+  campo(form, "quitar_2fa").checked = false;
+  $("usuario-2fa-group").hidden = !u.totp_activo || u.id === st.sesion.id;
   renderUsuarios();
   modoEdicion(form, "usuario", true, "Crear usuario", `Editar usuario: ${u.usuario}`);
   form.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1102,6 +1147,7 @@ function cancelarUsuario() {
   campo(form, "usuario").disabled = false;
   campo(form, "password").required = true;
   $("usuario-password-label").textContent = "Contraseña";
+  $("usuario-2fa-group").hidden = true;
   modoEdicion(form, "usuario", false, "Crear usuario", "");
   renderUsuarios();
 }
@@ -1117,7 +1163,9 @@ async function guardarUsuario(event) {
       password: campo(form, "password").value || undefined
     };
     const guardado = editando
-      ? await api(`/admin/usuarios/${editando.id}`, { method: "PUT", body: { ...body, activo: campo(form, "activo").checked } })
+      ? await api(`/admin/usuarios/${editando.id}`, {
+        method: "PUT", body: { ...body, activo: campo(form, "activo").checked, quitar_2fa: campo(form, "quitar_2fa").checked }
+      })
       : await api("/admin/usuarios", { method: "POST", body: { ...body, usuario: campo(form, "usuario").value } });
     cancelarUsuario();
     await recargar("usuarios");
@@ -1142,6 +1190,103 @@ async function cambiarPassword(event) {
   });
 }
 
+// ================= Bitácora (solo dueños) =================
+async function cargarBitacora() {
+  try {
+    const params = new URLSearchParams({ pagina: st.bitacoraPagina });
+    if (st.bitacoraUsuario) params.set("usuario", st.bitacoraUsuario);
+    st.bitacora = await api(`/admin/bitacora?${params}`);
+    renderBitacora();
+  } catch (error) {
+    manejarError(error);
+  }
+}
+
+function renderBitacora() {
+  const select = $("bitacora-usuario");
+  select.innerHTML = `<option value="">Todos</option>` + (st.usuarios || []).map(u =>
+    `<option value="${u.id}"${String(u.id) === st.bitacoraUsuario ? " selected" : ""}>${escapeHTML(u.usuario)}</option>`).join("");
+  const { registros, pagina, paginas, total } = st.bitacora;
+  $("bitacora-tbody").innerHTML = registros.length ? registros.map(r => `
+    <tr>
+      <td>${escapeHTML(fechaPedido(r.creado_en))}</td>
+      <td>${escapeHTML(r.usuario)}</td>
+      <td>${escapeHTML(r.accion.charAt(0).toUpperCase() + r.accion.slice(1))} · ${escapeHTML(NOMBRE_TABLA[r.tabla] || r.tabla)}${r.registro_id ? ` ${r.registro_id}` : ""}</td>
+      <td>${escapeHTML(r.resumen)}</td>
+    </tr>`).join("") : filaVacia(4, "Aún no hay movimientos registrados.");
+  $("bitacora-paginas").innerHTML = paginas > 1 ? `
+    <button type="button" class="btn secondary btn-sm" data-action="bitacora-pagina" data-pagina="${pagina - 1}" ${pagina <= 1 ? "disabled" : ""}>${icon("arrow-left")}Anteriores</button>
+    <span>Página ${pagina} de ${paginas} · ${total} movimientos</span>
+    <button type="button" class="btn secondary btn-sm" data-action="bitacora-pagina" data-pagina="${pagina + 1}" ${pagina >= paginas ? "disabled" : ""}>Siguientes${icon("chevron-right")}</button>` : "";
+}
+
+async function cancelarPedidosViejos() {
+  if (!confirm("¿Cancelar todos los pedidos pendientes de más de 7 días? Puedes volver a ponerlos como pendientes uno por uno.")) return;
+  try {
+    const { cancelados } = await api("/admin/pedidos/cancelar-viejos", { method: "POST" });
+    await recargar("pedidos");
+    showToast(cancelados ? `Pedidos cancelados: ${cancelados}` : "No había pedidos pendientes de más de 7 días.");
+  } catch (error) {
+    manejarError(error);
+  }
+}
+
+// ================= Verificación en dos pasos =================
+function render2fa() {
+  const activa = Boolean(st.sesion && st.sesion.totp_activo);
+  $("estado-2fa").textContent = activa
+    ? "Está activa: al entrar, Necutools te pide el código de tu celular. Para quitarla escribe tu contraseña y un código."
+    : "Además de tu contraseña, Necutools te pedirá un código de tu celular. Así nadie entra aunque sepa tu contraseña.";
+  $("form-2fa-iniciar").hidden = activa;
+  $("form-2fa-desactivar").hidden = !activa;
+  $("form-2fa-activar").hidden = true;
+  $("tfa-respaldo").hidden = true;
+}
+
+async function iniciar2fa(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  await enviar(form, async () => {
+    const { secreto, enlace } = await api("/admin/2fa/iniciar", { method: "POST", body: { password: campo(form, "password").value } });
+    form.reset();
+    form.hidden = true;
+    $("tfa-secreto").textContent = secreto.match(/.{1,4}/g).join(" ");
+    $("tfa-enlace").href = enlace;
+    $("form-2fa-activar").hidden = false;
+    $("tfa-codigo").focus();
+  });
+}
+
+async function activar2fa(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  await enviar(form, async () => {
+    const { respaldo } = await api("/admin/2fa/activar", { method: "POST", body: { codigo: campo(form, "codigo").value } });
+    form.reset();
+    form.hidden = true;
+    st.sesion.totp_activo = true;
+    $("estado-2fa").textContent = "Está activa: al entrar, Necutools te pedirá el código de tu celular.";
+    $("tfa-respaldo-lista").innerHTML = respaldo.map(c => `<li>${escapeHTML(c)}</li>`).join("");
+    $("tfa-respaldo").hidden = false;
+    showToast("Verificación en dos pasos activada.");
+  });
+}
+
+async function desactivar2fa(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!confirm("¿Desactivar la verificación en dos pasos? Tu cuenta quedará protegida solo con la contraseña.")) return;
+  await enviar(form, async () => {
+    await api("/admin/2fa/desactivar", {
+      method: "POST", body: { password: campo(form, "password").value, codigo: campo(form, "codigo").value }
+    });
+    form.reset();
+    st.sesion.totp_activo = false;
+    render2fa();
+    showToast("Verificación en dos pasos desactivada.");
+  });
+}
+
 // ================= Eventos =================
 const EDITAR = { tienda: editarTienda, producto: editarProducto, oferta: editarOferta, resena: editarResena, promo: editarPromo, usuario: editarUsuario };
 const BORRAR = { tienda: borrarTienda, producto: borrarProducto, oferta: borrarOferta, promo: borrarPromo };
@@ -1149,6 +1294,12 @@ const CANCELAR = { tienda: cancelarTienda, producto: cancelarProducto, oferta: c
 
 Object.assign(ACCIONES, {
   logout: () => cerrarSesion(),
+  "codigo-volver": () => mostrarCodigo(false),
+  "2fa-cancelar": () => render2fa(),
+  "2fa-guardados": () => {
+    $("tfa-respaldo-lista").innerHTML = "";
+    render2fa();
+  },
   panel: el => mostrarPanel(el.dataset.panel),
   "pedidos-estado": el => {
     st.pedidosEstado = el.dataset.estado;
@@ -1167,6 +1318,11 @@ Object.assign(ACCIONES, {
     guardarPedido(id, { estado }, `${avisos[estado]}: ${id}`);
   },
   "pedido-nota": el => notaPedido(Number(el.dataset.id)),
+  "pedidos-cancelar-viejos": () => cancelarPedidosViejos(),
+  "bitacora-pagina": el => {
+    st.bitacoraPagina = Number(el.dataset.pagina);
+    cargarBitacora();
+  },
   editar: el => EDITAR[el.dataset.tipo](Number(el.dataset.id)),
   borrar: el => BORRAR[el.dataset.tipo](Number(el.dataset.id)),
   cancelar: el => CANCELAR[el.dataset.form](),
@@ -1188,6 +1344,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("form-promo").addEventListener("submit", guardarPromo);
   $("form-usuario").addEventListener("submit", guardarUsuario);
   $("form-cuenta").addEventListener("submit", cambiarPassword);
+  $("admin-codigo-form").addEventListener("submit", enviarCodigo);
+  $("form-2fa-iniciar").addEventListener("submit", iniciar2fa);
+  $("form-2fa-activar").addEventListener("submit", activar2fa);
+  $("form-2fa-desactivar").addEventListener("submit", desactivar2fa);
 
   $("sub-tienda").addEventListener("change", renderSubcategorias);
   $("prod-filtro").addEventListener("change", renderProductos);
@@ -1213,6 +1373,11 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarFormOferta();
   }));
   $("usuario-rol").addEventListener("change", actualizarFormUsuario);
+  $("bitacora-usuario").addEventListener("change", event => {
+    st.bitacoraUsuario = event.target.value;
+    st.bitacoraPagina = 1;
+    cargarBitacora();
+  });
   $("tienda-nombre").addEventListener("input", event => {
     if (!st.editando.tienda) {
       $("tienda-slug").placeholder = event.target.value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")

@@ -1,0 +1,6 @@
+# Necutla: cómo reportar una falla de seguridad (RFC 9116)
+# Si encuentras una vulnerabilidad, repórtala en privado en el enlace de abajo, sin publicarla
+# y sin tocar datos de otras personas. Gracias por ayudar a cuidar a la comunidad estudiantil.
+Contact: https://github.com/VladimirArauz/Prueba-2/security/advisories/new
+Expires: 2027-10-20T00:00:00.000Z
+Preferred-Languages: es, en

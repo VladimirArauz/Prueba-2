@@ -91,6 +91,16 @@
         </div>
         <div class="form-actions"><button class="btn" type="submit">Iniciar sesión</button></div>
       </form>
+      <form id="admin-codigo-form" hidden>
+        <p>Abre tu app de autenticación y escribe el código de 6 números de Necutla. Si no tienes tu celular, usa uno de tus códigos de respaldo.</p>
+        <div class="admin-form-grid">
+          <div class="form-group"><label for="admin-codigo">Código</label><input id="admin-codigo" autocomplete="one-time-code" inputmode="text" maxlength="20" required></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Confirmar código</button>
+          <button class="btn secondary" type="button" data-action="codigo-volver">Usar otra cuenta</button>
+        </div>
+      </form>
     </div>
 
     <div id="admin-workspace" class="dash" hidden>
@@ -104,6 +114,7 @@
           <li><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="resenas" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-star"></use></svg><span>Opiniones</span><span class="cart-pill is-cero" id="nav-resenas" aria-label="opiniones sin responder">0</span></button></li>
           <li data-solo-dueno hidden><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="promociones" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-gift"></use></svg><span>Promociones generales</span></button></li>
           <li data-solo-dueno hidden><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="usuarios" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg><span>Usuarios</span></button></li>
+          <li data-solo-dueno hidden><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="bitacora" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-history"></use></svg><span>Bitácora</span></button></li>
           <li><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="cuenta" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-key-round"></use></svg><span>Mi cuenta</span></button></li>
         </ul>
       </nav>
@@ -205,6 +216,9 @@
               </table>
             </div>
             <div class="dash-paginas" id="pedidos-paginas"></div>
+            <div class="form-actions" data-solo-dueno hidden>
+              <button type="button" class="btn secondary btn-sm" data-action="pedidos-cancelar-viejos">Cancelar pendientes de más de 7 días</button>
+            </div>
           </div>
         </section>
 
@@ -531,7 +545,7 @@
                 <div class="form-group"><label for="usuario-nombre">Usuario</label><input id="usuario-nombre" name="usuario" maxlength="50" placeholder="Ej. fer" autocomplete="off" required></div>
                 <div class="form-group">
                   <label for="usuario-password" id="usuario-password-label">Contraseña</label>
-                  <input id="usuario-password" name="password" type="password" minlength="12" maxlength="200" autocomplete="new-password">
+                  <input id="usuario-password" name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password">
                   <span class="form-hint">12 caracteres o más. Pásasela en persona, no por el grupo.</span>
                 </div>
                 <div class="form-group">
@@ -547,6 +561,9 @@
                 </fieldset>
                 <div class="form-group full-width" data-solo-edicion hidden>
                   <div class="check-group"><label><input type="checkbox" name="activo" checked> Cuenta activa</label></div>
+                </div>
+                <div class="form-group full-width" id="usuario-2fa-group" hidden>
+                  <div class="check-group"><label><input type="checkbox" name="quitar_2fa"> Quitar la verificación en dos pasos (perdió su celular)</label></div>
                 </div>
               </div>
               <div class="form-actions">
@@ -567,6 +584,27 @@
           </div>
         </section>
 
+        <!-- ================= BITÁCORA ================= -->
+        <section class="admin-panel" id="panel-bitacora" hidden>
+          <div class="admin-card">
+            <h3>Bitácora</h3>
+            <p>Quién entró a Necutools y qué cambió: tiendas, productos, ofertas, promociones, usuarios, pedidos y opiniones. No se puede editar ni borrar.</p>
+            <div class="admin-form-grid">
+              <div class="form-group">
+                <label for="bitacora-usuario">Usuario</label>
+                <select id="bitacora-usuario"><option value="">Todos</option></select>
+              </div>
+            </div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+                <tbody id="bitacora-tbody"></tbody>
+              </table>
+            </div>
+            <div class="dash-paginas" id="bitacora-paginas"></div>
+          </div>
+        </section>
+
         <!-- ================= MI CUENTA ================= -->
         <section class="admin-panel" id="panel-cuenta" hidden>
           <div class="admin-card">
@@ -575,10 +613,51 @@
             <form id="form-cuenta">
               <div class="admin-form-grid">
                 <div class="form-group full-width"><label for="cuenta-actual">Contraseña actual</label><input id="cuenta-actual" name="actual" type="password" autocomplete="current-password" maxlength="200" required></div>
-                <div class="form-group"><label for="cuenta-nueva">Contraseña nueva</label><input id="cuenta-nueva" name="nueva" type="password" autocomplete="new-password" minlength="12" maxlength="200" required></div>
-                <div class="form-group"><label for="cuenta-confirmar">Repite la contraseña nueva</label><input id="cuenta-confirmar" name="confirmar" type="password" autocomplete="new-password" minlength="12" maxlength="200" required></div>
+                <div class="form-group"><label for="cuenta-nueva">Contraseña nueva</label><input id="cuenta-nueva" name="nueva" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
+                <div class="form-group"><label for="cuenta-confirmar">Repite la contraseña nueva</label><input id="cuenta-confirmar" name="confirmar" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
               </div>
               <div class="form-actions"><button type="submit" class="btn">Cambiar contraseña</button></div>
+            </form>
+          </div>
+
+          <div class="admin-card" id="card-2fa">
+            <h3>Verificación en dos pasos</h3>
+            <p id="estado-2fa">Además de tu contraseña, Necutools te pedirá un código de tu celular. Así nadie entra aunque sepa tu contraseña.</p>
+
+            <form id="form-2fa-iniciar" hidden>
+              <div class="admin-form-grid">
+                <div class="form-group full-width"><label for="tfa-password">Tu contraseña</label><input id="tfa-password" name="password" type="password" autocomplete="current-password" maxlength="200" required></div>
+              </div>
+              <div class="form-actions"><button type="submit" class="btn">Activar verificación en dos pasos</button></div>
+            </form>
+
+            <form id="form-2fa-activar" hidden>
+              <ol class="pasos-2fa">
+                <li>Instala Google Authenticator, Microsoft Authenticator o una app parecida.</li>
+                <li>En la app, agrega una cuenta con esta clave: <strong class="clave-2fa" id="tfa-secreto"></strong>. Si abres Necutools en tu celular, también puedes usar <a id="tfa-enlace" href="#">abrir en la app de autenticación</a>.</li>
+                <li>Escribe el código de 6 números que te muestra la app.</li>
+              </ol>
+              <div class="admin-form-grid">
+                <div class="form-group"><label for="tfa-codigo">Código de la app</label><input id="tfa-codigo" name="codigo" autocomplete="one-time-code" inputmode="numeric" maxlength="6" required></div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn">Confirmar código</button>
+                <button type="button" class="btn secondary" data-action="2fa-cancelar">Cancelar</button>
+              </div>
+            </form>
+
+            <div id="tfa-respaldo" hidden>
+              <p>Listo. Guarda estos códigos de respaldo en un lugar seguro: cada uno sirve una sola vez si pierdes tu celular. No los volverás a ver.</p>
+              <ul class="lista-respaldo" id="tfa-respaldo-lista"></ul>
+              <div class="form-actions"><button type="button" class="btn" data-action="2fa-guardados">Ya los guardé</button></div>
+            </div>
+
+            <form id="form-2fa-desactivar" hidden>
+              <div class="admin-form-grid">
+                <div class="form-group"><label for="tfa-off-password">Tu contraseña</label><input id="tfa-off-password" name="password" type="password" autocomplete="current-password" maxlength="200" required></div>
+                <div class="form-group"><label for="tfa-off-codigo">Código de la app o de respaldo</label><input id="tfa-off-codigo" name="codigo" autocomplete="one-time-code" maxlength="20" required></div>
+              </div>
+              <div class="form-actions"><button type="submit" class="btn danger">Desactivar verificación en dos pasos</button></div>
             </form>
           </div>
         </section>

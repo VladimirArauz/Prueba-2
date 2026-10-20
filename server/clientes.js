@@ -7,11 +7,13 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const { pool } = require("./db");
-const { BCRYPT_COST, DUMMY_HASH } = require("./auth");
+const { BCRYPT_COST, DUMMY_HASH, renovarSesion, destruirSesion } = require("./auth");
+const { validarContrasena } = require("./contrasenas");
+const { exigirNoFrenada, registrarFallo, limpiarFallos } = require("./intentos");
 const v = require("./validar");
 const { ErrorDeDatos, ErrorHttp, handle } = v;
 
-const MIN_PASSWORD = 8;
+const MIN_PASSWORD = 10;
 
 // Carga al cliente en cada petición: si desactivan su cuenta, se nota de inmediato
 async function cargarCliente(req) {
@@ -40,20 +42,15 @@ function correoValido(valor) {
   return correo;
 }
 
-function passwordValida(valor) {
-  if (typeof valor !== "string" || valor.length < MIN_PASSWORD || valor.length > 200) {
-    throw new ErrorDeDatos(`La contraseña debe tener de ${MIN_PASSWORD} a 200 caracteres.`);
-  }
-  return valor;
-}
+const passwordValida = (valor, nombre, correo) =>
+  validarContrasena(valor, { minimo: MIN_PASSWORD, contiene: [nombre, correo.split("@")[0]] });
 
 // Nueva sesión al entrar (evita fijación de sesión). Si ya había un admin en este navegador, se conserva.
 function iniciarSesion(req, res, next, cliente) {
-  const { adminId, usuario } = req.session;
-  req.session.regenerate(err => {
+  renovarSesion(req, ["adminId", "usuario"], err => {
     if (err) return next(err);
-    if (adminId) Object.assign(req.session, { adminId, usuario });
     req.session.clienteId = cliente.id;
+    req.session.creada = Date.now();
     req.session.save(saveErr => {
       if (saveErr) return next(saveErr);
       res.json({ autenticado: true, nombre: cliente.nombre, correo: cliente.correo });
@@ -70,13 +67,16 @@ const loginLimiter = rateLimit({
   message: { error: "Demasiados intentos. Espera 15 minutos y vuelve a intentar." }
 });
 
-// Holgado porque en la escuela muchos estudiantes salen a internet con la misma IP
+// Holgado porque en la escuela muchos estudiantes salen a internet con la misma IP.
+// No cuentan los errores de captura (400), pero sí los correos que ya tienen cuenta (409): si no,
+// se podrían probar correos sin límite.
 const registroLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 30,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   skipFailedRequests: true,
+  requestWasSuccessful: (req, res) => res.statusCode < 400 || res.statusCode === 409,
   message: { error: "Se crearon muchas cuentas desde esta conexión. Espera una hora y vuelve a intentar." }
 });
 
@@ -92,7 +92,11 @@ router.post("/registro", registroLimiter, handle(async (req, res, next) => {
   const nombre = v.texto(req.body.nombre, "tu nombre", { max: 60, requerido: true });
   if (nombre.length < 2) throw new ErrorDeDatos("Escribe tu nombre con al menos 2 letras.");
   const correo = correoValido(req.body.correo);
-  const hash = await bcrypt.hash(passwordValida(req.body.password), BCRYPT_COST);
+  const password = passwordValida(req.body.password, nombre, correo);
+  // Antes del bcrypt: un correo repetido no debe gastar CPU
+  const { rows: existe } = await pool.query("SELECT 1 FROM clientes WHERE lower(correo) = $1", [correo]);
+  if (existe[0]) throw new ErrorHttp(409, "Ya hay una cuenta con ese correo. Inicia sesión.");
+  const hash = await bcrypt.hash(password, BCRYPT_COST);
   let cliente;
   try {
     const { rows } = await pool.query(
@@ -112,26 +116,26 @@ router.post("/login", loginLimiter, handle(async (req, res, next) => {
   if (!correo || !password || correo.length > 120 || password.length > 200) {
     throw new ErrorDeDatos("Escribe tu correo y tu contraseña.");
   }
+  await exigirNoFrenada("cliente", correo);
   const { rows } = await pool.query(
     "SELECT id, nombre, correo, password_hash, activo FROM clientes WHERE lower(correo) = $1", [correo]);
   const cliente = rows[0];
   const valido = await bcrypt.compare(password, cliente ? cliente.password_hash : DUMMY_HASH);
-  if (!cliente || !valido) throw new ErrorHttp(401, "Correo o contraseña incorrectos.");
+  if (!cliente || !valido) {
+    await registrarFallo("cliente", correo);
+    throw new ErrorHttp(401, "Correo o contraseña incorrectos.");
+  }
+  await limpiarFallos("cliente", correo);
   if (!cliente.activo) throw new ErrorHttp(403, "Esta cuenta está desactivada.");
   iniciarSesion(req, res, next, cliente);
 }));
 
-// Si en este navegador también hay una sesión de Necutools, solo se cierra la del cliente
+// Si en este navegador también hay una sesión de Necutools, solo se cierra la del cliente (con otro id de sesión)
 router.post("/logout", (req, res, next) => {
   if (req.session.adminId) {
-    delete req.session.clienteId;
-    return req.session.save(err => (err ? next(err) : res.json({ autenticado: false })));
+    return renovarSesion(req, ["adminId", "usuario", "creada"], err => (err ? next(err) : res.json({ autenticado: false })));
   }
-  req.session.destroy(err => {
-    if (err) return next(err);
-    res.clearCookie("necutla.sid");
-    res.json({ autenticado: false });
-  });
+  destruirSesion(req, res, next, { autenticado: false });
 });
 
 module.exports = { router, requireCliente, cargarCliente };

@@ -4,13 +4,15 @@
  * (precios del servidor, sin datos del cliente).
  * Necutools (/api/admin): lista de pedidos, cambio de estado y resumen del dashboard.
  */
+const crypto = require("crypto");
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const { pool } = require("./db");
 const { calcularCarrito, leerCarrito } = require("./api");
-const { requireAdmin, puedeEditarStand } = require("./auth");
+const { requireAdmin, requireDueno, puedeEditarStand } = require("./auth");
 const { hoy, redondear } = require("./ofertas");
 const v = require("./validar");
+const { anotar } = require("./bitacora");
 const { ErrorDeDatos, ErrorHttp, handle } = v;
 
 const router = express.Router();
@@ -21,6 +23,12 @@ const ESTADOS = ["pendiente", "vendido", "cancelado"];
 const PERIODOS = [7, 30, 90];
 const POR_PAGINA = 20;
 const ZONA = "America/Mexico_City";
+// Un pedido de estudiante no pasa de esto; más grande huele a pedido inventado
+const MAX_PIEZAS = 30;
+const MAX_PRODUCTOS = 15;
+// Más pedidos que esto en una hora (todas las IP juntas) ya no se guardan; WhatsApp se abre igual
+const MAX_POR_HORA = 500;
+const REPETIDO = "10 minutes";
 
 // Holgado porque muchos estudiantes entran desde la misma IP de la escuela
 const pedidoLimiter = rateLimit({
@@ -43,11 +51,27 @@ router.post("/pedidos", pedidoLimiter, handle(async (req, res) => {
 
   const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, nombre: i.nombre, cantidad: i.cantidad, subtotal: i.subtotal }));
   const piezas = items.reduce((suma, i) => suma + i.cantidad, 0);
+  if (piezas > MAX_PIEZAS || items.length > MAX_PRODUCTOS) {
+    throw new ErrorDeDatos(`Un pedido puede tener hasta ${MAX_PIEZAS} piezas y ${MAX_PRODUCTOS} productos. Para más, escríbele a la tienda.`);
+  }
+
+  // El mismo pedido desde la misma conexión en 10 minutos es el mismo (se tocó dos veces el botón).
+  // Se guarda una huella con HMAC, no la IP.
+  const huella = crypto.createHmac("sha256", process.env.SESSION_SECRET)
+    .update(JSON.stringify([req.ip, clave, items.map(i => [i.tipo, i.id, i.cantidad])])).digest("hex");
+  const { rows: previo } = await pool.query(
+    "SELECT id FROM pedidos WHERE huella = $1 AND creado_en > now() - $2::interval ORDER BY id DESC LIMIT 1", [huella, REPETIDO]);
+  if (previo[0]) return res.status(200).json({ id: previo[0].id, repetido: true });
+
+  const { rows: [{ ultimaHora }] } = await pool.query(
+    "SELECT count(*)::int AS \"ultimaHora\" FROM pedidos WHERE creado_en > now() - interval '1 hour'");
+  if (ultimaHora >= MAX_POR_HORA) throw new ErrorHttp(429, "Hay demasiados pedidos en este momento. Tu pedido se manda igual por WhatsApp.");
+
   const id = Number(match[2]);
   const { rows } = await pool.query(
-    `INSERT INTO pedidos (stand_id, promocion_id, items, total, piezas)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [match[1] === "tienda" ? id : null, match[1] === "paquete" ? id : null, JSON.stringify(items), grupo.total, piezas]);
+    `INSERT INTO pedidos (stand_id, promocion_id, items, total, piezas, huella)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [match[1] === "tienda" ? id : null, match[1] === "paquete" ? id : null, JSON.stringify(items), grupo.total, piezas, huella]);
   res.status(201).json({ id: rows[0].id });
 }));
 
@@ -115,7 +139,19 @@ adminRouter.put("/pedidos/:id", requireAdmin, handle(async (req, res) => {
   const estado = req.body.estado === undefined ? pedido.estado : v.opcion(req.body.estado, ESTADOS, "un estado");
   const nota = req.body.nota === undefined ? pedido.nota : (v.texto(req.body.nota, "la nota", { max: 200 }) || null);
   await pool.query("UPDATE pedidos SET estado = $1, nota = $2, actualizado_en = now() WHERE id = $3", [estado, nota, id]);
+  await anotar(req.admin, "editar", "pedidos", id, `${estado}${nota ? `, nota: ${nota}` : ""}`);
   res.json({ id, estado, nota });
+}));
+
+// ================= Necutools: cancelar pendientes viejos (solo dueños) =================
+// Los pedidos que nadie cerró en WhatsApp (o inventados) se quedan pendientes para siempre
+adminRouter.post("/pedidos/cancelar-viejos", requireAdmin, requireDueno, handle(async (req, res) => {
+  const { rowCount } = await pool.query(
+    `UPDATE pedidos SET estado = 'cancelado', nota = COALESCE(nota, 'Cancelado por tener más de 7 días pendiente'),
+       actualizado_en = now()
+     WHERE estado = 'pendiente' AND creado_en < now() - interval '7 days'`);
+  await anotar(req.admin, "editar", "pedidos", null, `Canceló ${rowCount} pedidos pendientes de más de 7 días`);
+  res.json({ cancelados: rowCount });
 }));
 
 // ================= Necutools: resumen del dashboard =================

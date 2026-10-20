@@ -4,6 +4,7 @@
  */
 const express = require("express");
 const { pool } = require("./db");
+const { cargarAdmin, puedeEditarStand } = require("./auth");
 const { ErrorDeDatos, idValido, handle, numerosRespaldo } = require("./validar");
 const {
   hoy, ofertasDeHoy, vigenteHoy, mejorPrecio, ofertaParaTarjeta, ofertaPublica, redondear, COLUMNAS_OFERTA, VIGENTE_HOY
@@ -111,25 +112,36 @@ router.get("/stands/:slug", handle(async (req, res) => {
   });
 }));
 
+// ================= Imágenes guardadas en la base =================
+// La de algo oculto solo la ve en Necutools quien puede editarlo, y sin caché pública
+async function servirImagen(req, res, fila, puedeVerla) {
+  if (!fila || !fila.imagen) return res.status(404).end();
+  if (fila.publica) {
+    res.set("Cache-Control", "public, max-age=86400");
+  } else {
+    req.admin = await cargarAdmin(req);
+    if (!req.admin || !puedeVerla(req)) return res.status(404).end();
+    res.set("Cache-Control", "private, no-store");
+  }
+  res.set("Content-Type", fila.tipo);
+  res.send(fila.imagen);
+}
+
 router.get("/stands/:id/portada", handle(async (req, res) => {
   const id = idValido(req.params.id);
   if (!id) return res.status(404).end();
-  const { rows } = await pool.query("SELECT portada, portada_tipo FROM stands WHERE id = $1", [id]);
-  if (!rows[0] || !rows[0].portada) return res.status(404).end();
-  res.set("Content-Type", rows[0].portada_tipo);
-  res.set("Cache-Control", "public, max-age=86400");
-  res.send(rows[0].portada);
+  const { rows } = await pool.query(
+    "SELECT portada AS imagen, portada_tipo AS tipo, visible AS publica FROM stands WHERE id = $1", [id]);
+  await servirImagen(req, res, rows[0], r => puedeEditarStand(r, id));
 }));
 
-// ================= Imágenes de productos =================
 router.get("/productos/:id/imagen", handle(async (req, res) => {
   const id = idValido(req.params.id);
   if (!id) return res.status(404).end();
-  const { rows } = await pool.query("SELECT imagen, imagen_tipo FROM productos WHERE id = $1", [id]);
-  if (!rows[0] || !rows[0].imagen) return res.status(404).end();
-  res.set("Content-Type", rows[0].imagen_tipo);
-  res.set("Cache-Control", "public, max-age=86400");
-  res.send(rows[0].imagen);
+  const { rows } = await pool.query(
+    `SELECT p.imagen, p.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+     FROM productos p JOIN stands s ON s.id = p.stand_id WHERE p.id = $1`, [id]);
+  await servirImagen(req, res, rows[0], r => puedeEditarStand(r, rows[0].stand_id));
 }));
 
 // ================= Detalle de un producto o servicio =================
@@ -218,7 +230,7 @@ async function promocionesVigentes({ ids = null, soloDestacadas = false } = {}) 
 
   const { rows: items } = await pool.query(
     `SELECT i.promocion_id, i.cantidad, p.id AS producto_id, p.nombre, p.precio::float AS precio, p.precio_modo,
-            s.id AS stand_id, s.nombre AS tienda, s.slug, s.whatsapp
+            s.id AS stand_id, s.nombre AS tienda, s.slug, s.whatsapp, (p.visible AND s.visible) AS publico
      FROM promocion_items i
      JOIN productos p ON p.id = i.producto_id
      JOIN stands s ON s.id = p.stand_id
@@ -242,7 +254,8 @@ async function promocionesVigentes({ ids = null, soloDestacadas = false } = {}) 
       tiendas: tiendas.map(t => t.tienda),
       whatsapp: [...new Set(tiendas.flatMap(t => numerosDe(t)))]
     };
-  }).filter(promo => promo.incluye.length);
+  // Un paquete con un producto o una tienda oculta no se vende (ni muestra sus WhatsApp)
+  }).filter(promo => promo.incluye.length && items.every(i => i.promocion_id !== promo.id || i.publico));
 }
 
 router.get("/promociones", handle(async (req, res) => {
@@ -253,11 +266,8 @@ router.get("/promociones", handle(async (req, res) => {
 router.get("/promociones/:id/imagen", handle(async (req, res) => {
   const id = idValido(req.params.id);
   if (!id) return res.status(404).end();
-  const { rows } = await pool.query("SELECT imagen, imagen_tipo FROM promociones WHERE id = $1", [id]);
-  if (!rows[0] || !rows[0].imagen) return res.status(404).end();
-  res.set("Content-Type", rows[0].imagen_tipo);
-  res.set("Cache-Control", "public, max-age=86400");
-  res.send(rows[0].imagen);
+  const { rows } = await pool.query("SELECT imagen, imagen_tipo AS tipo, activa AS publica FROM promociones WHERE id = $1", [id]);
+  await servirImagen(req, res, rows[0], r => r.admin.rol === "dueno");
 }));
 
 // ================= Búsqueda =================
