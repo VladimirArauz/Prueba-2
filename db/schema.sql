@@ -216,3 +216,52 @@ BEGIN
     INSERT INTO migraciones (nombre) VALUES ('2026-10-17-multitienda');
   END IF;
 END $$;
+
+
+-- =========================================================
+-- Ofertas de temporada, remates, clientes y opiniones
+-- (plan 2026-10-19-ofertas-temporada-y-resenas)
+-- =========================================================
+
+-- ---------- Clase de oferta: semanal (por días), temporada (por fechas) o remate ----------
+ALTER TABLE ofertas ADD COLUMN IF NOT EXISTS clase VARCHAR(10) NOT NULL DEFAULT 'semanal';
+ALTER TABLE ofertas ADD COLUMN IF NOT EXISTS temporada VARCHAR(40);
+ALTER TABLE ofertas ADD COLUMN IF NOT EXISTS inicio DATE;
+ALTER TABLE ofertas ADD COLUMN IF NOT EXISTS fin DATE;
+ALTER TABLE ofertas ADD COLUMN IF NOT EXISTS piezas SMALLINT;
+ALTER TABLE ofertas DROP CONSTRAINT IF EXISTS ofertas_clase_valida;
+ALTER TABLE ofertas ADD CONSTRAINT ofertas_clase_valida CHECK (
+  (clase = 'semanal')
+  OR (clase = 'temporada' AND temporada IS NOT NULL AND inicio IS NOT NULL AND fin IS NOT NULL)
+  OR (clase = 'remate'));
+ALTER TABLE ofertas DROP CONSTRAINT IF EXISTS ofertas_fechas_validas;
+ALTER TABLE ofertas ADD CONSTRAINT ofertas_fechas_validas CHECK (inicio IS NULL OR fin IS NULL OR fin >= inicio);
+ALTER TABLE ofertas DROP CONSTRAINT IF EXISTS ofertas_piezas_validas;
+ALTER TABLE ofertas ADD CONSTRAINT ofertas_piezas_validas CHECK (piezas IS NULL OR piezas BETWEEN 1 AND 9999);
+
+-- ---------- Cuentas de cliente (para opinar) ----------
+CREATE TABLE IF NOT EXISTS clientes (
+  id             SERIAL PRIMARY KEY,
+  correo         VARCHAR(120) NOT NULL,
+  nombre         VARCHAR(60) NOT NULL,
+  password_hash  VARCHAR(100) NOT NULL,
+  activo         BOOLEAN NOT NULL DEFAULT true,
+  creado_en      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS clientes_correo_idx ON clientes (lower(correo));
+
+-- ---------- Opiniones: una por cliente y producto ----------
+CREATE TABLE IF NOT EXISTS resenas (
+  id              SERIAL PRIMARY KEY,
+  producto_id     INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  cliente_id      INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  calificacion    SMALLINT NOT NULL CHECK (calificacion BETWEEN 1 AND 5),
+  comentario      VARCHAR(500) NOT NULL,
+  respuesta       VARCHAR(500),
+  respondida_en   TIMESTAMPTZ,
+  visible         BOOLEAN NOT NULL DEFAULT true,
+  creado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (producto_id, cliente_id)
+);
+CREATE INDEX IF NOT EXISTS resenas_producto_idx ON resenas (producto_id) WHERE visible;

@@ -165,46 +165,128 @@ function abrirWhatsApp(numeros, mensaje, contenedor) {
   return true;
 }
 
-// ================= Tarjetas de producto y servicio =================
-// opciones.conTienda: muestra la tienda (búsqueda); los servicios llevan a su tienda
-function tarjetaProducto(p, opciones = {}) {
-  const esServicio = p.tipo === "servicio";
-  const oferta = p.oferta;
-  const etiquetas = [
-    oferta ? `<span class="tag-oferta">${icon("tag")}${escapeHTML(oferta.titulo)}</span>` : "",
-    p.disponibilidad && p.disponibilidad !== "Disponible" ? `<span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""
-  ].join("");
-  const precio = oferta && oferta.precio_oferta !== null
-    ? `<div class="price-row"><span class="price">${money(oferta.precio_oferta)}</span><s class="price-old">${money(p.precio)}</s></div>`
-    : `<div class="price">${escapeHTML(textoPrecio(p))}</div>`;
-
-  let accion;
-  if (esServicio && opciones.conTienda) {
-    accion = `<a class="btn secondary" href="/t/${escapeHTML(p.slug)}?tab=servicios">${icon("store")}Ver en ${escapeHTML(p.tienda)}</a>`;
-  } else if (esServicio) {
-    accion = `<button type="button" class="btn wa" data-action="pedir-servicio" data-id="${Number(p.id)}">${icon("message-circle")}Pedir información por WhatsApp</button>`;
-  } else {
-    accion = `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}">${icon("shopping-cart")}Agregar al carrito</button>`;
-  }
-
-  return `
-    <article class="card">
-      <div class="card-img-wrap"><img src="${escapeHTML(imagenDe(p))}" alt="${escapeHTML(p.nombre)}" loading="lazy"></div>
-      ${opciones.conTienda ? `<a class="card-sub" href="/t/${escapeHTML(p.slug)}">${escapeHTML(p.tienda)}</a>` : ""}
-      <h3>${escapeHTML(p.nombre)}</h3>
-      ${etiquetas ? `<div class="card-tags">${etiquetas}</div>` : ""}
-      <p>${escapeHTML(p.descripcion)}</p>
-      ${precio}
-      ${accion}
-      <div data-wa-for="${Number(p.id)}"></div>
-    </article>`;
+// ================= Calificaciones =================
+// Estrellas rellenas según el promedio redondeado. Sin opiniones, un texto corto.
+function estrellas(promedio, total) {
+  if (!total) return `<div class="rating rating-none">Sin opiniones todavía</div>`;
+  const llenas = Math.round(promedio);
+  const iconos = [1, 2, 3, 4, 5].map(i => (i <= llenas ? icon("star-fill", "star is-on") : icon("star", "star"))).join("");
+  const texto = `${Number(promedio).toFixed(1)} de 5 estrellas, ${total} ${total === 1 ? "opinión" : "opiniones"}`;
+  return `<div class="rating" role="img" aria-label="${texto}">${iconos}<span>${Number(promedio).toFixed(1)} (${total})</span></div>`;
 }
 
-// ================= Promociones de temporada (paquetes) =================
+// ================= Ofertas en tarjetas =================
+const DIAS_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
 function fechaCorta(iso) {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("es-MX", { day: "numeric", month: "long", timeZone: "UTC" });
 }
 
+// "Temporada de Navidad · Hasta el 25 de diciembre", "Remate · Quedan 3 piezas"
+function detalleOferta(oferta) {
+  const partes = [];
+  if (oferta.clase === "temporada") partes.push(`Temporada de ${oferta.temporada}`);
+  if (oferta.clase === "remate") partes.push("Remate");
+  if (oferta.piezas) partes.push(oferta.piezas === 1 ? "Queda 1 pieza" : `Quedan ${oferta.piezas} piezas`);
+  if (oferta.fin) partes.push(`Hasta el ${fechaCorta(oferta.fin)}`);
+  return partes.join(" · ");
+}
+
+// ================= Tarjetas de producto y servicio =================
+// Partes que comparten la tarjeta y la página del producto
+function etiquetasProducto(p) {
+  const oferta = p.oferta;
+  return [
+    oferta ? `<span class="tag-oferta${oferta.clase === "remate" ? " is-remate" : ""}">${icon("tag")}${escapeHTML(oferta.titulo)}</span>` : "",
+    p.disponibilidad && p.disponibilidad !== "Disponible" ? `<span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""
+  ].join("");
+}
+
+function precioProducto(p) {
+  const oferta = p.oferta;
+  if (!oferta || oferta.precio_oferta === null) return `<div class="price">${escapeHTML(textoPrecio(p))}</div>`;
+  return `<div class="price-row"><span class="price">${money(oferta.precio_oferta)}</span><s class="price-old">${money(p.precio)}</s>${oferta.descuento ? `<span class="price-off">Ahorras ${oferta.descuento}%</span>` : ""}</div>`;
+}
+
+// opciones.conTienda: en búsqueda y vitrina los servicios llevan a su tienda
+function accionProducto(p, opciones = {}) {
+  if (p.tipo === "servicio" && opciones.conTienda) {
+    return `<a class="btn secondary" href="/t/${escapeHTML(p.slug)}?tab=servicios">${icon("store")}Ver en ${escapeHTML(p.tienda)}</a>`;
+  }
+  if (p.tipo === "servicio") {
+    return `<button type="button" class="btn wa" data-action="pedir-servicio" data-id="${Number(p.id)}">${icon("message-circle")}Pedir información por WhatsApp</button>`;
+  }
+  return `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}">${icon("shopping-cart")}Agregar al carrito</button>`;
+}
+
+// opciones.conTienda: muestra la tienda (búsqueda y vitrina)
+function tarjetaProducto(p, opciones = {}) {
+  const enlace = `/p/${Number(p.id)}`;
+  const etiquetas = etiquetasProducto(p);
+  const detalle = p.oferta ? detalleOferta(p.oferta) : "";
+  return `
+    <article class="card">
+      <a class="card-img-wrap" href="${enlace}" tabindex="-1" aria-hidden="true"><img src="${escapeHTML(imagenDe(p))}" alt="" loading="lazy"></a>
+      ${opciones.conTienda ? `<a class="card-sub" href="/t/${escapeHTML(p.slug)}">${escapeHTML(p.tienda)}</a>` : ""}
+      <h3><a class="card-link" href="${enlace}">${escapeHTML(p.nombre)}</a></h3>
+      ${estrellas(p.calificacion, p.resenas)}
+      ${etiquetas ? `<div class="card-tags">${etiquetas}</div>` : ""}
+      ${detalle ? `<div class="offer-detail">${escapeHTML(detalle)}</div>` : ""}
+      <p>${escapeHTML(p.descripcion)}</p>
+      ${precioProducto(p)}
+      ${accionProducto(p, opciones)}
+      <div data-wa-for="${Number(p.id)}"></div>
+    </article>`;
+}
+
+// ================= Vitrina de ofertas (final de la portada y de cada tienda) =================
+const VITRINA_INICIAL = 6;
+
+function textosBloque(bloque, dia, deTienda) {
+  if (bloque.clase === "temporada") {
+    return {
+      titulo: `Temporada de ${bloque.temporada}`,
+      desc: deTienda ? "Descuentos de temporada en esta tienda, por tiempo limitado." : "Descuentos de temporada en las tiendas de Necutla, por tiempo limitado."
+    };
+  }
+  if (bloque.clase === "semanal") {
+    return { titulo: `Ofertas de este ${DIAS_SEMANA[dia]}`, desc: "Ofertas que se repiten cada semana y hoy sí aplican." };
+  }
+  return { titulo: "Remates", desc: "Liquidación de piezas: se venden hasta que se acaben." };
+}
+
+function bloqueVitrina(bloque, i, dia, deTienda) {
+  const { titulo, desc } = textosBloque(bloque, dia, deTienda);
+  const tarjetas = bloque.productos.map((p, j) => tarjetaProducto(p, { conTienda: !deTienda })
+    .replace('<article class="card">', `<article class="card"${j >= VITRINA_INICIAL ? " hidden" : ""}>`)).join("");
+  const ocultas = bloque.productos.length - VITRINA_INICIAL;
+  return `
+    <section class="vitrina-bloque" aria-labelledby="vitrina-${i}">
+      <div class="vitrina-head">
+        <h3 id="vitrina-${i}">${escapeHTML(titulo)}</h3>
+        <p>${escapeHTML(desc)}</p>
+      </div>
+      <div class="grid">${tarjetas}</div>
+      ${ocultas > 0 ? `
+        <div class="list-more">
+          <button type="button" class="btn secondary" data-action="vitrina-mas">${icon("chevron-down")}Mostrar ${ocultas} más</button>
+        </div>` : ""}
+    </section>`;
+}
+
+// Llena la sección #vitrina; si no hay ofertas vigentes, se queda oculta
+async function cargarVitrina(slugTienda = "") {
+  const seccion = document.getElementById("vitrina");
+  if (!seccion) return;
+  try {
+    const { dia, bloques } = await api(`/vitrina${slugTienda ? `?tienda=${encodeURIComponent(slugTienda)}` : ""}`);
+    if (!bloques.length) return;
+    document.getElementById("vitrina-bloques").innerHTML = bloques.map((b, i) => bloqueVitrina(b, i, dia, Boolean(slugTienda))).join("");
+    seccion.hidden = false;
+  } catch (e) { /* sin vitrina, la página sigue igual */ }
+}
+
+// ================= Promociones de temporada (paquetes) =================
 function tarjetaPromocion(promo) {
   const vigencia = promo.inicio === promo.fin ? `Solo el ${fechaCorta(promo.fin)}` : `Hasta el ${fechaCorta(promo.fin)}`;
   return `
@@ -228,7 +310,12 @@ function tarjetaPromocion(promo) {
 
 // ================= Eventos (delegados, sin onclick en el HTML) =================
 const ACCIONES = {
-  agregar: el => agregarAlCarrito(el.dataset.tipo, Number(el.dataset.id), el.dataset.nombre)
+  agregar: el => agregarAlCarrito(el.dataset.tipo, Number(el.dataset.id), el.dataset.nombre),
+  "vitrina-mas": el => {
+    const bloque = el.closest(".vitrina-bloque");
+    bloque.querySelectorAll(".card[hidden]").forEach(card => { card.hidden = false; });
+    el.closest(".list-more").remove();
+  }
 };
 
 document.addEventListener("click", event => {

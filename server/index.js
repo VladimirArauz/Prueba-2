@@ -10,6 +10,8 @@ const { pool, migrate } = require("./db");
 const auth = require("./auth");
 const api = require("./api");
 const admin = require("./admin");
+const clientes = require("./clientes");
+const resenas = require("./resenas");
 const { importarEjemplos } = require("./ejemplos");
 
 const app = express();
@@ -75,6 +77,8 @@ function sameOrigin(req, res, next) {
 app.use("/api", apiLimiter, express.json({ limit: "2mb" }), sameOrigin, auth.sessionMiddleware());
 app.use("/api/auth", auth.router);
 app.use("/api/admin", admin.router);
+app.use("/api/clientes", clientes.router);
+app.use("/api", resenas.router);
 app.use("/api", api.router);
 app.use("/api", (req, res) => res.status(404).json({ error: "Ruta no encontrada." }));
 
@@ -83,6 +87,12 @@ app.use("/api", (req, res) => res.status(404).json({ error: "Ruta no encontrada.
 app.get("/t/:slug", (req, res, next) => {
   if (!/^[a-z0-9-]{1,60}$/.test(req.params.slug)) return next();
   res.sendFile(path.join(PUBLIC_DIR, "tienda.html"));
+});
+
+// Página de un producto o servicio con sus opiniones: /p/12
+app.get("/p/:id", (req, res, next) => {
+  if (!/^[1-9][0-9]{0,9}$/.test(req.params.id)) return next();
+  res.sendFile(path.join(PUBLIC_DIR, "producto.html"));
 });
 
 // Las direcciones de las páginas fijas que había antes siguen funcionando

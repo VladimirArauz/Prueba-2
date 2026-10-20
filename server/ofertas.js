@@ -30,15 +30,28 @@ function redondear(n) {
   return Math.round(n * 100) / 100;
 }
 
-// Ofertas activas de hoy, opcionalmente solo de algunas tiendas
+// Columnas de una oferta para la parte pública
+const COLUMNAS_OFERTA = `
+  o.id, o.stand_id, o.producto_id, o.subcategoria_id, o.titulo, o.descripcion, o.tipo, o.valor::float AS valor,
+  o.dias, o.clase, o.temporada, o.inicio::text AS inicio, o.fin::text AS fin, o.piezas`;
+
+// Condición SQL de "vigente hoy" para la tabla ofertas con alias o ($1 = día de la semana, $2 = fecha)
+const VIGENTE_HOY = `o.activa AND $1 = ANY(o.dias)
+  AND (o.inicio IS NULL OR o.inicio <= $2::date) AND (o.fin IS NULL OR o.fin >= $2::date)`;
+
+// Ofertas vigentes hoy (por día y por fechas), opcionalmente solo de algunas tiendas
 async function ofertasDeHoy(standIds = null) {
-  const { dia } = hoy();
+  const { dia, fecha } = hoy();
   const { rows } = await pool.query(
-    `SELECT id, stand_id, producto_id, subcategoria_id, titulo, descripcion, tipo, valor::float AS valor, dias
-     FROM ofertas
-     WHERE activa AND $1 = ANY(dias) AND ($2::int[] IS NULL OR stand_id = ANY($2))`,
-    [dia, standIds]);
+    `SELECT ${COLUMNAS_OFERTA} FROM ofertas o
+     WHERE ${VIGENTE_HOY} AND ($3::int[] IS NULL OR o.stand_id = ANY($3))`,
+    [dia, fecha, standIds]);
   return rows;
+}
+
+// ¿Aplica hoy? (para ofertas ya leídas de la base)
+function vigenteHoy(oferta, { dia, fecha }) {
+  return oferta.dias.includes(dia) && (!oferta.inicio || oferta.inicio <= fecha) && (!oferta.fin || oferta.fin >= fecha);
 }
 
 function aplicaA(oferta, producto) {
@@ -72,14 +85,22 @@ function ofertaParaTarjeta(producto, ofertas) {
   const aplicables = ofertas.filter(o => aplicaA(o, producto));
   if (!aplicables.length || producto.precio === null) return null;
   const unidad = mejorPrecio(producto, aplicables, 1);
-  if (unidad.oferta) {
-    return { titulo: unidad.oferta.titulo, tipo: unidad.oferta.tipo, precio_oferta: unidad.total };
-  }
-  const dosPorUno = aplicables.find(o => o.tipo === "dos_por_uno");
-  return dosPorUno ? { titulo: dosPorUno.titulo, tipo: "dos_por_uno", precio_oferta: null } : null;
+  const elegida = unidad.oferta || aplicables.find(o => o.tipo === "dos_por_uno");
+  if (!elegida) return null;
+  return {
+    id: elegida.id,
+    titulo: elegida.titulo,
+    tipo: elegida.tipo,
+    clase: elegida.clase,
+    temporada: elegida.temporada,
+    fin: elegida.fin,
+    piezas: elegida.piezas,
+    descuento: unidad.oferta ? Math.round((1 - unidad.total / producto.precio) * 100) : null,
+    precio_oferta: unidad.oferta ? unidad.total : null
+  };
 }
 
-function ofertaPublica(oferta, diaHoy) {
+function ofertaPublica(oferta, cuando = hoy()) {
   return {
     id: oferta.id,
     titulo: oferta.titulo,
@@ -88,10 +109,18 @@ function ofertaPublica(oferta, diaHoy) {
     valor: oferta.valor,
     dias: oferta.dias,
     dias_texto: textoDias(oferta.dias),
-    hoy: oferta.dias.includes(diaHoy),
+    hoy: vigenteHoy(oferta, cuando),
+    clase: oferta.clase,
+    temporada: oferta.temporada,
+    inicio: oferta.inicio,
+    fin: oferta.fin,
+    piezas: oferta.piezas,
     producto_id: oferta.producto_id,
     subcategoria_id: oferta.subcategoria_id
   };
 }
 
-module.exports = { hoy, textoDias, ofertasDeHoy, mejorPrecio, ofertaParaTarjeta, ofertaPublica, redondear, DIAS };
+module.exports = {
+  hoy, textoDias, ofertasDeHoy, vigenteHoy, mejorPrecio, ofertaParaTarjeta, ofertaPublica, redondear,
+  COLUMNAS_OFERTA, VIGENTE_HOY, DIAS
+};

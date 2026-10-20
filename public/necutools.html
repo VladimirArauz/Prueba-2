@@ -35,6 +35,10 @@
           <span>Carrito</span>
           <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
         </a>
+        <a class="nav-btn" href="/cuenta.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+          <span>Cuenta</span>
+        </a>
       </div>
 
     </div>
@@ -76,6 +80,7 @@
         <button type="button" class="btn btn-sm" data-action="panel" data-panel="tiendas" aria-pressed="true">Tiendas</button>
         <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="productos" aria-pressed="false">Productos y servicios</button>
         <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="ofertas" aria-pressed="false">Ofertas de la tienda</button>
+        <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="resenas" aria-pressed="false">Opiniones</button>
         <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="promociones" aria-pressed="false" data-solo-dueno hidden>Promociones generales</button>
         <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="usuarios" aria-pressed="false" data-solo-dueno hidden>Usuarios</button>
         <button type="button" class="btn secondary btn-sm" data-action="panel" data-panel="cuenta" aria-pressed="false">Mi cuenta</button>
@@ -213,11 +218,40 @@
       <section class="admin-panel" id="panel-ofertas" hidden>
         <div class="admin-card">
           <h3 id="form-oferta-title">Crear oferta de la tienda</h3>
-          <p>Ofertas que se repiten cada semana, como "los lunes 2x1 en barritas". El descuento se aplica solo en el carrito los días elegidos.</p>
+          <p>Elige la clase de oferta: semanal (se repite, como "los lunes 2x1 en barritas"), de temporada (por fechas, como Navidad) o remate (liquidación hasta que se acabe). El descuento se aplica solo en el carrito mientras la oferta está vigente, y las ofertas vigentes aparecen al final de la portada y de la tienda.</p>
           <form id="form-oferta">
             <div class="admin-form-grid">
               <div class="form-group"><label for="oferta-tienda">Tienda</label><select id="oferta-tienda" name="stand_id" required></select></div>
               <div class="form-group"><label for="oferta-titulo">Título</label><input id="oferta-titulo" name="titulo" maxlength="80" placeholder="Ej. Lunes de barritas 2x1" required></div>
+              <div class="form-group">
+                <label for="oferta-clase">Clase de oferta</label>
+                <select id="oferta-clase" name="clase">
+                  <option value="semanal">Semanal (se repite cada semana)</option>
+                  <option value="temporada">De temporada (por fechas)</option>
+                  <option value="remate">Remate (liquidación)</option>
+                </select>
+              </div>
+              <div class="form-group" id="oferta-temporada-group" hidden>
+                <label for="oferta-temporada">Temporada</label>
+                <select id="oferta-temporada">
+                  <option value="Navidad">Navidad</option>
+                  <option value="Año Nuevo">Año Nuevo</option>
+                  <option value="Día de Reyes">Día de Reyes</option>
+                  <option value="San Valentín">San Valentín</option>
+                  <option value="Día del Niño">Día del Niño</option>
+                  <option value="Día de las Madres">Día de las Madres</option>
+                  <option value="Día del Padre">Día del Padre</option>
+                  <option value="Regreso a clases">Regreso a clases</option>
+                  <option value="Fiestas Patrias">Fiestas Patrias</option>
+                  <option value="Día de Muertos">Día de Muertos</option>
+                  <option value="Buen Fin">Buen Fin</option>
+                  <option value="otra">Otra</option>
+                </select>
+              </div>
+              <div class="form-group" id="oferta-temporada-otra-group" hidden><label for="oferta-temporada-otra">Nombre de la temporada</label><input id="oferta-temporada-otra" maxlength="40" placeholder="Ej. Semana de exámenes"></div>
+              <div class="form-group" id="oferta-inicio-group" hidden><label for="oferta-inicio">Fecha de inicio</label><input id="oferta-inicio" name="inicio" type="date"></div>
+              <div class="form-group" id="oferta-fin-group" hidden><label for="oferta-fin" id="oferta-fin-label">Fecha de fin</label><input id="oferta-fin" name="fin" type="date"></div>
+              <div class="form-group" id="oferta-piezas-group" hidden><label for="oferta-piezas">Piezas en remate (opcional)</label><input id="oferta-piezas" name="piezas" type="number" min="1" max="9999" step="1" placeholder="Ej. 5"></div>
               <div class="form-group">
                 <label for="oferta-aplica">Aplica a</label>
                 <select id="oferta-aplica" name="aplica">
@@ -237,7 +271,7 @@
                 </select>
               </div>
               <div class="form-group" id="oferta-valor-group"><label for="oferta-valor" id="oferta-valor-label">Descuento (%)</label><input id="oferta-valor" name="valor" type="number" min="1" max="90" step="1" placeholder="Ej. 15"></div>
-              <fieldset class="form-group full-width">
+              <fieldset class="form-group full-width" id="oferta-dias-group">
                 <legend>Días de la semana</legend>
                 <div class="check-group" id="oferta-dias">
                   <label><input type="checkbox" name="dias" value="1"> Lunes</label>
@@ -265,11 +299,55 @@
           <h3>Ofertas registradas</h3>
           <div class="admin-filter">
             <div class="form-group"><label for="oferta-filtro">Ver tienda</label><select id="oferta-filtro"></select></div>
+            <div class="form-group">
+              <label for="oferta-clase-filtro">Ver clase</label>
+              <select id="oferta-clase-filtro">
+                <option value="">Todas las clases</option>
+                <option value="semanal">Semanales</option>
+                <option value="temporada">De temporada</option>
+                <option value="remate">Remates</option>
+              </select>
+            </div>
           </div>
           <div class="admin-table-wrap">
             <table class="admin-table">
-              <thead><tr><th>Oferta</th><th>Tienda</th><th>Aplica a</th><th>Días</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+              <thead><tr><th>Oferta</th><th>Tienda</th><th>Aplica a</th><th>Cuándo</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
               <tbody id="ofertas-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= OPINIONES DE LOS CLIENTES ================= -->
+      <section class="admin-panel" id="panel-resenas" hidden>
+        <div class="admin-card" id="resena-card" hidden>
+          <h3 id="form-resena-title">Responder opinión</h3>
+          <div class="opinion" id="resena-detalle"></div>
+          <form id="form-resena">
+            <div class="admin-form-grid">
+              <div class="form-group full-width"><label for="resena-respuesta">Tu respuesta (opcional)</label><textarea id="resena-respuesta" name="respuesta" rows="3" maxlength="500" placeholder="Ej. Gracias por tu compra, ya tenemos más tallas."></textarea><span class="form-hint">Se publica debajo de la opinión con el nombre de la tienda. Déjala vacía para quitarla.</span></div>
+              <div class="form-group full-width">
+                <div class="check-group"><label><input type="checkbox" name="visible" checked> Mostrar la opinión en el sitio</label></div>
+                <span class="form-hint">Oculta solo opiniones con groserías, datos personales o publicidad. Las opiniones no se pueden borrar ni cambiar.</span>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Guardar respuesta</button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="resena">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Opiniones de los clientes</h3>
+          <p>Las calificaciones y comentarios que dejan los clientes con cuenta en los productos de tus tiendas.</p>
+          <div class="admin-filter">
+            <div class="form-group"><label for="resena-filtro">Ver tienda</label><select id="resena-filtro"></select></div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Opinión</th><th>Producto</th><th>Cliente</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+              <tbody id="resenas-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -403,6 +481,7 @@
             <li><a href="/">Tiendas</a></li>
             <li><a href="/promociones.html">Promociones</a></li>
             <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/cuenta.html">Mi cuenta</a></li>
             <li><a href="/necutools.html">Necutools</a></li>
           </ul>
         </div>

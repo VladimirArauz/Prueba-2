@@ -35,6 +35,10 @@
           <span>Carrito</span>
           <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
         </a>
+        <a class="nav-btn" href="/cuenta.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+          <span>Cuenta</span>
+        </a>
       </div>
 
     </div>
@@ -77,16 +81,6 @@
       <div class="letrero-grid" id="promos-grid"></div>
     </section>
 
-    <section class="home-block" id="hoy" aria-labelledby="hoy-title" hidden>
-      <div class="section-header-row">
-        <div>
-          <h2 class="section-title" id="hoy-title">Ofertas de hoy</h2>
-          <p class="section-desc" id="hoy-desc">Lo que cada tienda tiene en oferta hoy.</p>
-        </div>
-      </div>
-      <ul class="today-list" id="hoy-list"></ul>
-    </section>
-
     <section id="directorio" aria-labelledby="tiendas-title">
       <div class="section-header-row" id="tiendas-head">
         <div>
@@ -121,6 +115,16 @@
 
       <div class="grid" id="stores-grid" aria-live="polite"></div>
     </section>
+
+    <section class="vitrina" id="vitrina" aria-labelledby="vitrina-title" hidden>
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="vitrina-title">Ofertas de temporada, de hoy y remates</h2>
+          <p class="section-desc">Lo que las tiendas tienen con descuento hoy. El precio de oferta se aplica solo en tu carrito.</p>
+        </div>
+      </div>
+      <div id="vitrina-bloques"></div>
+    </section>
   </main>
 
   <footer class="site-footer on-tinta">
@@ -141,6 +145,7 @@
             <li><a href="/">Tiendas</a></li>
             <li><a href="/promociones.html">Promociones</a></li>
             <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/cuenta.html">Mi cuenta</a></li>
             <li><a href="/necutools.html">Necutools</a></li>
           </ul>
         </div>

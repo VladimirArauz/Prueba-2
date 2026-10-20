@@ -5,11 +5,14 @@
 const express = require("express");
 const { pool } = require("./db");
 const { ErrorDeDatos, idValido, handle, numerosRespaldo } = require("./validar");
-const { hoy, ofertasDeHoy, mejorPrecio, ofertaParaTarjeta, ofertaPublica, redondear } = require("./ofertas");
+const {
+  hoy, ofertasDeHoy, vigenteHoy, mejorPrecio, ofertaParaTarjeta, ofertaPublica, redondear, COLUMNAS_OFERTA, VIGENTE_HOY
+} = require("./ofertas");
 
 const router = express.Router();
 
 const MAX_ITEMS_CARRITO = 60;
+const MAX_POR_BLOQUE_VITRINA = 12;
 
 // ================= Formato de salida =================
 function version(fecha) {
@@ -42,13 +45,17 @@ function productoPublico(fila, ofertas = []) {
     disponibilidad: fila.disponibilidad,
     descripcion: fila.descripcion,
     imagen_url: imagenProducto(fila),
+    calificacion: fila.calificacion ?? null,
+    resenas: fila.total_resenas || 0,
     oferta: fila.tipo === "producto" && fila.precio_modo === "fijo" ? ofertaParaTarjeta(fila, ofertas) : null
   };
 }
 
 const COLUMNAS_PRODUCTO = `
   p.id, p.stand_id, p.subcategoria_id, p.tipo, p.nombre, p.precio::float AS precio, p.precio_modo,
-  p.disponibilidad, p.descripcion, (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.actualizado_en`;
+  p.disponibilidad, p.descripcion, (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.actualizado_en,
+  (SELECT round(avg(r.calificacion), 1)::float FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS calificacion,
+  (SELECT count(*)::int FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS total_resenas`;
 
 // ================= Configuración pública =================
 router.get("/config", (req, res) => {
@@ -57,14 +64,14 @@ router.get("/config", (req, res) => {
 
 // ================= Tiendas =================
 router.get("/stands", handle(async (req, res) => {
-  const { dia } = hoy();
+  const { dia, fecha } = hoy();
   const { rows } = await pool.query(
     `SELECT s.id, s.nombre, s.slug, s.descripcion, s.icono, s.imagen_ruta, s.actualizado_en,
             (s.portada IS NOT NULL) AS tiene_portada,
             (SELECT count(*)::int FROM productos p WHERE p.stand_id = s.id AND p.visible AND p.tipo = 'producto') AS productos,
             (SELECT count(*)::int FROM productos p WHERE p.stand_id = s.id AND p.visible AND p.tipo = 'servicio') AS servicios,
-            (SELECT count(*)::int FROM ofertas o WHERE o.stand_id = s.id AND o.activa AND $1 = ANY(o.dias)) AS ofertas_hoy
-     FROM stands s WHERE s.visible ORDER BY s.orden, s.nombre`, [dia]);
+            (SELECT count(*)::int FROM ofertas o WHERE o.stand_id = s.id AND ${VIGENTE_HOY}) AS ofertas_hoy
+     FROM stands s WHERE s.visible ORDER BY s.orden, s.nombre`, [dia, fecha]);
   res.json(rows.map(s => ({
     id: s.id, nombre: s.nombre, slug: s.slug, descripcion: s.descripcion, icono: s.icono,
     imagen_url: imagenTienda(s), productos: s.productos, servicios: s.servicios, ofertas_hoy: s.ofertas_hoy
@@ -80,15 +87,17 @@ router.get("/stands/:slug", handle(async (req, res) => {
   const stand = rows[0];
   if (!stand) return res.status(404).json({ error: "Esta tienda no existe o ya no está disponible." });
 
-  const { dia } = hoy();
+  const cuando = hoy();
   const [subcategorias, productos, ofertas] = await Promise.all([
     pool.query("SELECT id, nombre, slug FROM subcategorias WHERE stand_id = $1 ORDER BY orden, nombre", [stand.id]),
     pool.query(`SELECT ${COLUMNAS_PRODUCTO} FROM productos p
                 WHERE p.stand_id = $1 AND p.visible ORDER BY p.orden, p.creado_en DESC, p.id DESC`, [stand.id]),
-    pool.query(`SELECT id, stand_id, producto_id, subcategoria_id, titulo, descripcion, tipo, valor::float AS valor, dias
-                FROM ofertas WHERE stand_id = $1 AND activa ORDER BY id`, [stand.id])
+    // Las activas que no han vencido (las de temporada que aún no empiezan se ven como "próximamente")
+    pool.query(`SELECT ${COLUMNAS_OFERTA} FROM ofertas o
+                WHERE o.stand_id = $1 AND o.activa AND (o.fin IS NULL OR o.fin >= $2::date) ORDER BY o.id`,
+               [stand.id, cuando.fecha])
   ]);
-  const deHoy = ofertas.rows.filter(o => o.dias.includes(dia));
+  const deHoy = ofertas.rows.filter(o => vigenteHoy(o, cuando));
 
   res.json({
     tienda: {
@@ -98,7 +107,7 @@ router.get("/stands/:slug", handle(async (req, res) => {
     subcategorias: subcategorias.rows,
     productos: productos.rows.filter(p => p.tipo === "producto").map(p => productoPublico(p, deHoy)),
     servicios: productos.rows.filter(p => p.tipo === "servicio").map(p => productoPublico(p)),
-    ofertas: ofertas.rows.map(o => ofertaPublica(o, dia))
+    ofertas: ofertas.rows.map(o => ofertaPublica(o, cuando))
   });
 }));
 
@@ -123,15 +132,76 @@ router.get("/productos/:id/imagen", handle(async (req, res) => {
   res.send(rows[0].imagen);
 }));
 
+// ================= Detalle de un producto o servicio =================
+router.get("/productos/:id", handle(async (req, res) => {
+  const id = idValido(req.params.id);
+  if (!id) return res.status(404).json({ error: "Este producto no existe o ya no está disponible." });
+  const { rows } = await pool.query(
+    `SELECT ${COLUMNAS_PRODUCTO}, s.nombre AS tienda, s.slug, s.icono, s.whatsapp, sc.nombre AS subcategoria
+     FROM productos p JOIN stands s ON s.id = p.stand_id
+     LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
+     WHERE p.id = $1 AND p.visible AND s.visible`, [id]);
+  const fila = rows[0];
+  if (!fila) return res.status(404).json({ error: "Este producto no existe o ya no está disponible." });
+  const ofertas = fila.tipo === "producto" ? await ofertasDeHoy([fila.stand_id]) : [];
+  res.json({
+    ...productoPublico(fila, ofertas),
+    tienda: fila.tienda, slug: fila.slug, icono: fila.icono, subcategoria: fila.subcategoria,
+    whatsapp: fila.tipo === "servicio" ? numerosDe(fila) : []
+  });
+}));
+
 // ================= Ofertas de hoy (portada) =================
 router.get("/hoy", handle(async (req, res) => {
   const { dia, fecha } = hoy();
   const { rows } = await pool.query(
-    `SELECT o.id, o.titulo, o.descripcion, s.nombre AS tienda, s.slug, s.icono
+    `SELECT o.id, o.titulo, o.descripcion, o.clase, s.nombre AS tienda, s.slug, s.icono
      FROM ofertas o JOIN stands s ON s.id = o.stand_id
-     WHERE o.activa AND s.visible AND $1 = ANY(o.dias)
-     ORDER BY s.orden, s.nombre, o.id`, [dia]);
+     WHERE ${VIGENTE_HOY} AND s.visible
+     ORDER BY s.orden, s.nombre, o.id`, [dia, fecha]);
   res.json({ fecha, dia, ofertas: rows });
+}));
+
+// ================= Vitrina de ofertas (final de la portada y de cada tienda) =================
+// Productos con oferta vigente hoy, en bloques: uno por temporada, las semanales de hoy y los remates.
+const ORDEN_CLASES = { temporada: 0, semanal: 1, remate: 2 };
+
+router.get("/vitrina", handle(async (req, res) => {
+  const cuando = hoy();
+  const slug = typeof req.query.tienda === "string" && req.query.tienda ? req.query.tienda.slice(0, 60) : null;
+  const { rows: ofertas } = await pool.query(
+    `SELECT ${COLUMNAS_OFERTA} FROM ofertas o JOIN stands s ON s.id = o.stand_id
+     WHERE ${VIGENTE_HOY} AND s.visible AND ($3::text IS NULL OR s.slug = $3)`,
+    [cuando.dia, cuando.fecha, slug]);
+  if (!ofertas.length) return res.json({ dia: cuando.dia, bloques: [] });
+
+  const { rows: productos } = await pool.query(
+    `SELECT ${COLUMNAS_PRODUCTO}, s.nombre AS tienda, s.slug, s.icono
+     FROM productos p JOIN stands s ON s.id = p.stand_id
+     WHERE p.stand_id = ANY($1) AND p.visible AND p.tipo = 'producto' AND p.precio_modo = 'fijo'
+     ORDER BY s.orden, p.orden, p.creado_en DESC, p.id DESC`,
+    [[...new Set(ofertas.map(o => o.stand_id))]]);
+
+  // Cada producto va al bloque de la oferta que le da el mejor precio
+  const bloques = new Map();
+  for (const fila of productos) {
+    const producto = productoPublico(fila, ofertas);
+    const oferta = producto.oferta;
+    if (!oferta) continue;
+    const clave = oferta.clase === "temporada" ? `temporada-${oferta.temporada.toLowerCase()}` : oferta.clase;
+    if (!bloques.has(clave)) bloques.set(clave, { clave, clase: oferta.clase, temporada: oferta.temporada, total: 0, productos: [] });
+    const bloque = bloques.get(clave);
+    bloque.total += 1;
+    if (bloque.productos.length < MAX_POR_BLOQUE_VITRINA) {
+      bloque.productos.push({ ...producto, tienda: fila.tienda, slug: fila.slug, icono: fila.icono });
+    }
+  }
+
+  res.json({
+    dia: cuando.dia,
+    bloques: [...bloques.values()].sort((a, b) =>
+      ORDEN_CLASES[a.clase] - ORDEN_CLASES[b.clase] || String(a.temporada).localeCompare(String(b.temporada)))
+  });
 }));
 
 // ================= Promociones generales (paquetes) =================

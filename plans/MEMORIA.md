@@ -16,7 +16,8 @@ Cómo se usa:
 |---|---|---|
 | `2026-10-16-rediseno-visual-profesional.md` | Terminado (fases 1 a 5 aplicadas) | 2026-10-16 |
 | `2026-10-16-hosting-render-postgres.md` | Desplegado en Render; faltan los pasos 3 y 5 de la checklist | 2026-10-16 |
-| `2026-10-17-catalogo-multitienda.md` | Aplicado (fases 1 a 7). **Falta subirlo** (commit + push) y revisar las 2 decisiones de diseño pendientes | 2026-10-17 |
+| `2026-10-17-catalogo-multitienda.md` | Aplicado y subido (fases 1 a 7). Faltan revisar las 2 decisiones de diseño pendientes | 2026-10-17 |
+| `2026-10-19-ofertas-temporada-y-resenas.md` | Aplicado y subido (commit + push del 2026-10-19) | 2026-10-19 |
 
 ---
 
@@ -39,6 +40,9 @@ Cómo se usa:
 10. **Diseño por confirmar (plan 2026-10-17):** (a) el letrero azul de "Promociones de temporada" debajo del hero, que compite un poco con el tablero (choque con `plans/CLAUDE.md`, "la única pieza llamativa es el tablero"); (b) la etiqueta de oferta `.tag-oferta` (relleno `--senal`, borde `--tinta`). Se hicieron dentro de las reglas, pero el usuario no las ha visto.
 11. **`plans/CLAUDE.md` desactualizado:** la sección 1 todavía dice que son 7 tiendas fijas con carpetas propias y que Necutools es una sección de `index.html`. Solo se puede corregir si el usuario lo pide.
 12. **Límite de peticiones a la API:** 300 cada 15 minutos por IP. Si muchos estudiantes entran desde la misma red de la escuela (misma IP), podrían toparse con el límite. Vigilar y subirlo en `server/index.js` si pasa.
+13. **Ofertas de ejemplo de temporada:** no se agregaron a la base de Render (serían datos falsos). Para verlas, crear en Necutools una oferta "De temporada" (ej. Navidad, del 1 al 25 de diciembre) y un "Remate".
+14. **Moderación de opiniones:** el vendedor solo puede responder u ocultar (no borrar). No hay "compra verificada" porque los pedidos se cierran por WhatsApp y no quedan registrados. Tampoco hay todavía "olvidé mi contraseña" para clientes (no hay servicio de correo); si un cliente la olvida, puede crear otra cuenta.
+15. **Las piezas del remate no bajan solas:** el vendedor actualiza el número en Necutools cuando vende.
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -85,6 +89,34 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-19: ofertas de temporada, remates, cuentas de cliente y opiniones (plan `2026-10-19-ofertas-temporada-y-resenas.md`)
+
+Pedido del usuario: ver hasta abajo las ofertas de temporada ("Temporada de Navidad" con camisas al 30%, chocolates…), que el vendedor marque cada oferta como de temporada, semanal o remate, y calificaciones con comentarios por producto. Decisión del usuario: opinar requiere **cuenta de cliente**.
+
+**Base de datos** (`db/schema.sql`, idempotente; probado 2 veces seguidas sobre el esquema anterior con ofertas existentes: quedan como `semanal`)
+- `ofertas`: `clase` (semanal/temporada/remate), `temporada`, `inicio`, `fin`, `piezas`, con restricciones.
+- Tablas nuevas `clientes` (correo único sin importar mayúsculas, bcrypt) y `resenas` (una por cliente y producto, 1 a 5, comentario ≤ 500, respuesta del vendedor, `visible`).
+
+**Servidor**
+- `server/ofertas.js`: una oferta aplica si está activa, hoy es uno de sus días y la fecha cae entre inicio y fin (`VIGENTE_HOY`, `vigenteHoy`). La tarjeta trae clase, temporada, fin, piezas y % de ahorro.
+- `server/api.js`: `/api/vitrina[?tienda=slug]` (bloques: uno por temporada, "semanal" de hoy y remates; máx. 12 por bloque), `/api/productos/:id` (detalle), calificación promedio y total en todas las tarjetas; tienda, portada y carrito ya respetan fechas.
+- `server/clientes.js` (nuevo): `/api/clientes/sesion|registro|login|logout`; límites: 10 logins fallidos / 15 min, 30 registros por hora por IP (holgado por la IP compartida de la escuela). La sesión de cliente y la de Necutools conviven en el mismo navegador (`server/auth.js` ya no borra una al entrar o salir de la otra).
+- `server/resenas.js` (nuevo): leer opiniones (resumen, distribución, orden recientes/mejores, 10 por página), escribir/editar/borrar la propia; sin enlaces en el comentario; 30 escrituras por hora por IP.
+- `server/admin.js`: validación de clase/temporada/fechas/piezas; `/api/admin/resenas` (lista por tiendas del admin) y `PUT /api/admin/resenas/:id` (responder y ocultar; no hay borrar).
+- `server/index.js`: `/p/:id` sirve `producto.html`.
+
+**Frontend**
+- Portada: la lista "Ofertas de hoy" de arriba se cambió por la sección **"Ofertas de temporada, de hoy y remates" al final**, con tarjetas de producto (6 visibles y "Mostrar N más"). La tienda tiene la misma sección al final, solo con sus productos.
+- Tarjetas (`comun.js`): estrellas y número de opiniones, nombre e imagen llevan a `/p/<id>`, "Temporada de Navidad · Hasta el 25 de diciembre", "Quedan 3 piezas", "Ahorras 30%". Etiqueta de remate invertida (texto `--senal` sobre `--tinta`).
+- Páginas nuevas: `producto.html` + `js/producto.js` (detalle, resumen con barras, lista paginada, formulario de estrellas, editar/borrar la propia) y `cuenta.html` + `js/cuenta.js` (entrar, crear cuenta, cerrar sesión; `?volver=` regresa al producto).
+- Enlace "Cuenta" en la barra y "Mi cuenta" en el pie de todas las páginas. Iconos nuevos: `star`, `star-fill`, `user`.
+- Necutools: el formulario de ofertas tiene "Clase de oferta" (semanal muestra días; temporada pide nombre de una lista u "Otra" y fechas; remate pide fecha límite y piezas opcionales), columna "Cuándo", estado "Vencida" y filtro por clase. Pestaña nueva **Opiniones** para responder y ocultar.
+
+**Verificación** (PostgreSQL 17 de prueba en el puerto 54329 + Edge sin ventana; nunca contra Render)
+- 87 pruebas de API: validaciones de ofertas, vigencia por fecha (vencidas y futuras fuera), vitrina por bloques y por tienda, precios del carrito (temporada, 2x1, remate), registro/login/logout, 401/403/409, opiniones (límites, enlaces, una por cliente, promedio, orden, ocultas fuera del promedio), permisos del encargado, sesiones de cliente y admin juntas.
+- 66 pruebas en navegador: portada, tienda, producto, cuenta, carrito, promociones y Necutools sin errores de consola ni de CSP; flujo completo de crear cuenta → opinar → editar → respuesta del vendedor visible; 360px sin scroll horizontal en todas.
+- Se confirmó en las pruebas el pendiente 12: correr las dos baterías seguidas desde una IP pasa de 300 peticiones en 15 min.
 
 ### 2026-10-17: catálogo de varias tiendas (plan `2026-10-17-catalogo-multitienda.md`, fases 1 a 7)
 

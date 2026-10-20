@@ -133,9 +133,11 @@ router.post("/login", loginLimiter, async (req, res, next) => {
     if (!admin.activo) {
       return res.status(403).json({ error: "Tu cuenta está desactivada. Pídele a un dueño de Necutla que la active." });
     }
-    // Nueva sesión al iniciar (evita fijación de sesión)
+    // Nueva sesión al iniciar (evita fijación de sesión). Si había un cliente en este navegador, se conserva.
+    const { clienteId } = req.session;
     req.session.regenerate(err => {
       if (err) return next(err);
+      if (clienteId) req.session.clienteId = clienteId;
       req.session.adminId = admin.id;
       req.session.usuario = admin.usuario;
       req.session.save(saveErr => {
@@ -148,7 +150,13 @@ router.post("/login", loginLimiter, async (req, res, next) => {
   }
 });
 
+// Si en este navegador también hay una cuenta de cliente, solo se cierra la de Necutools
 router.post("/logout", (req, res, next) => {
+  if (req.session.clienteId) {
+    delete req.session.adminId;
+    delete req.session.usuario;
+    return req.session.save(err => (err ? next(err) : res.json({ autenticado: false })));
+  }
   req.session.destroy(err => {
     if (err) return next(err);
     res.clearCookie("necutla.sid");
@@ -158,5 +166,5 @@ router.post("/logout", (req, res, next) => {
 
 module.exports = {
   sessionMiddleware, ensureInitialAdmin, requireAdmin, requireDueno, puedeEditarStand, cerrarSesionesDe,
-  BCRYPT_COST, router
+  BCRYPT_COST, DUMMY_HASH, router
 };

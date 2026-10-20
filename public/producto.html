@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Producto | Necutla</title>
+  <meta name="description" content="Producto de una tienda de Necutla: precio, ofertas y opiniones de otros estudiantes.">
+  <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <nav class="site-navbar" id="main-navbar" aria-label="Principal">
+    <div class="container navbar-container">
+
+      <a class="nav-brand" href="/">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <a class="nav-btn active" href="/" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+          <span>Tiendas</span>
+        </a>
+        <a class="nav-btn" href="/promociones.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg>
+          <span>Promociones</span>
+        </a>
+        <a class="nav-btn" href="/carrito.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span>Carrito</span>
+          <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
+        </a>
+        <a class="nav-btn" href="/cuenta.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+          <span>Cuenta</span>
+        </a>
+      </div>
+
+    </div>
+  </nav>
+
+  <main class="main-content container" id="contenido">
+
+    <a class="btn ghost btn-sm producto-volver" id="producto-volver" href="/">
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+      Ver tiendas
+    </a>
+
+    <article class="producto-detalle" id="producto" aria-live="polite">
+      <div class="producto-img"><img id="producto-img" src="/imagenes/producto.svg" alt=""></div>
+      <div class="producto-info">
+        <a class="card-sub" id="producto-tienda" href="/"></a>
+        <h1 id="producto-nombre">Cargando producto</h1>
+        <div id="producto-rating"></div>
+        <div class="card-tags" id="producto-tags"></div>
+        <div class="offer-detail" id="producto-oferta"></div>
+        <p id="producto-desc"></p>
+        <div id="producto-precio"></div>
+        <div id="producto-accion"></div>
+        <div id="producto-wa"></div>
+      </div>
+    </article>
+
+    <section class="opiniones" id="opiniones" aria-labelledby="opiniones-title" hidden>
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="opiniones-title">Opiniones</h2>
+          <p class="section-desc">Lo que opinan otros estudiantes de Necutla.</p>
+        </div>
+      </div>
+
+      <div class="opiniones-layout">
+        <div class="opiniones-resumen">
+          <div id="resumen"></div>
+          <div class="admin-card" id="opinar"></div>
+        </div>
+
+        <div>
+          <div class="opiniones-orden" id="opiniones-orden" hidden>
+            <label for="orden">Ordenar</label>
+            <select id="orden">
+              <option value="recientes">Más recientes</option>
+              <option value="mejores">Mejor calificadas</option>
+            </select>
+          </div>
+          <ul class="opinion-list" id="opinion-list"></ul>
+          <div id="opiniones-vacio"></div>
+          <div class="paginacion" id="paginacion" hidden>
+            <button type="button" class="btn secondary btn-sm" data-action="pagina" data-delta="-1">
+              <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+              Anteriores
+            </button>
+            <span id="paginacion-texto"></span>
+            <button type="button" class="btn secondary btn-sm" data-action="pagina" data-delta="1">
+              Siguientes
+              <svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer on-tinta">
+    <div class="container footer-main">
+      <div class="footer-grid">
+
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="brand-emblem" aria-hidden="true">N</span>
+            <h3>Necutla</h3>
+          </div>
+          <p>Los stands de la comunidad estudiantil en un solo lugar. Arma tu pedido y cada tienda lo confirma por WhatsApp.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegación</h4>
+          <ul class="footer-links">
+            <li><a href="/">Tiendas</a></li>
+            <li><a href="/promociones.html">Promociones</a></li>
+            <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/cuenta.html">Mi cuenta</a></li>
+            <li><a href="/necutools.html">Necutools</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Tiendas</h4>
+          <ul class="footer-links" id="footer-stores"></ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pedidos</h4>
+          <p>Cada tienda tiene sus propios vendedores: tu pedido les llega directo por WhatsApp.</p>
+          <p class="footer-hours">
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+            Lun a sáb, 8:00 a 20:00
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+    </div>
+  </footer>
+
+  <script src="/iconos.js"></script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/producto.js"></script>
+</body>
+</html>

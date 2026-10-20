@@ -17,6 +17,8 @@ const DISPONIBILIDAD = ["Disponible", "Pocas piezas", "Por pedido"];
 const TIPOS = ["producto", "servicio"];
 const PRECIO_MODOS = ["fijo", "desde", "cotizar"];
 const TIPOS_OFERTA = ["porcentaje", "precio_especial", "dos_por_uno"];
+const CLASES_OFERTA = ["semanal", "temporada", "remate"];
+const TODOS_LOS_DIAS = [0, 1, 2, 3, 4, 5, 6];
 const ROLES = ["dueno", "encargado"];
 // Deben existir en public/iconos.js
 const ICONOS_TIENDA = [
@@ -271,7 +273,8 @@ router.get("/ofertas", handle(async (req, res) => {
   const stand = standFiltro(req, req.query.stand);
   const { rows } = await pool.query(
     `SELECT o.id, o.stand_id, s.nombre AS stand, o.producto_id, p.nombre AS producto, o.subcategoria_id,
-            sc.nombre AS subcategoria, o.titulo, o.descripcion, o.tipo, o.valor::float AS valor, o.dias, o.activa
+            sc.nombre AS subcategoria, o.titulo, o.descripcion, o.tipo, o.valor::float AS valor, o.dias, o.activa,
+            o.clase, o.temporada, o.inicio::text AS inicio, o.fin::text AS fin, o.piezas
      FROM ofertas o JOIN stands s ON s.id = o.stand_id
      LEFT JOIN productos p ON p.id = o.producto_id
      LEFT JOIN subcategorias sc ON sc.id = o.subcategoria_id
@@ -313,11 +316,28 @@ async function datosOferta(req) {
     if (Number(valor) >= precioProducto) throw new ErrorDeDatos("El precio especial debe ser menor al precio normal del producto.");
   }
 
-  const dias = Array.isArray(body.dias) ? [...new Set(body.dias.map(Number))].filter(d => Number.isInteger(d) && d >= 0 && d <= 6) : [];
-  if (!dias.length) throw new ErrorDeDatos("Elige al menos un día de la semana.");
+  // Semanal: por días de la semana. Temporada: por fechas, todos los días. Remate: hasta que se acabe o hasta una fecha.
+  const clase = v.opcion(body.clase === undefined ? "semanal" : body.clase, CLASES_OFERTA, "la clase de oferta");
+  let dias = TODOS_LOS_DIAS;
+  let temporada = null;
+  let inicio = null;
+  let fin = null;
+  let piezas = null;
+  if (clase === "semanal") {
+    dias = Array.isArray(body.dias) ? [...new Set(body.dias.map(Number))].filter(d => Number.isInteger(d) && d >= 0 && d <= 6) : [];
+    if (!dias.length) throw new ErrorDeDatos("Elige al menos un día de la semana.");
+  } else if (clase === "temporada") {
+    temporada = v.texto(body.temporada, "la temporada", { max: 40, requerido: true });
+    inicio = v.fecha(body.inicio, "la fecha de inicio");
+    fin = v.fecha(body.fin, "la fecha de fin");
+  } else {
+    fin = body.fin ? v.fecha(body.fin, "la fecha límite") : null;
+    piezas = v.entero(body.piezas, "Las piezas del remate", { min: 1, max: 9999, defecto: null });
+  }
+  if (inicio && fin && fin < inicio) throw new ErrorDeDatos("La fecha de fin debe ser igual o posterior a la de inicio.");
 
   return {
-    standId: stand.id, productoId, subcategoriaId, tipo, valor, dias: dias.sort(),
+    standId: stand.id, productoId, subcategoriaId, tipo, valor, dias: [...dias].sort(), clase, temporada, inicio, fin, piezas,
     titulo: v.texto(body.titulo, "el título de la oferta", { max: 80, requerido: true }),
     descripcion: v.texto(body.descripcion, "la descripción", { max: 300 }),
     activa: v.booleano(body.activa, true)
@@ -327,9 +347,11 @@ async function datosOferta(req) {
 router.post("/ofertas", handle(async (req, res) => {
   const d = await datosOferta(req);
   const { rows } = await pool.query(
-    `INSERT INTO ofertas (stand_id, producto_id, subcategoria_id, titulo, descripcion, tipo, valor, dias, activa)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, titulo`,
-    [d.standId, d.productoId, d.subcategoriaId, d.titulo, d.descripcion, d.tipo, d.valor, d.dias, d.activa]);
+    `INSERT INTO ofertas (stand_id, producto_id, subcategoria_id, titulo, descripcion, tipo, valor, dias, activa,
+                         clase, temporada, inicio, fin, piezas)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id, titulo`,
+    [d.standId, d.productoId, d.subcategoriaId, d.titulo, d.descripcion, d.tipo, d.valor, d.dias, d.activa,
+     d.clase, d.temporada, d.inicio, d.fin, d.piezas]);
   res.status(201).json(rows[0]);
 }));
 
@@ -346,8 +368,10 @@ router.put("/ofertas/:id", handle(async (req, res) => {
   const d = await datosOferta(req);
   await pool.query(
     `UPDATE ofertas SET stand_id = $1, producto_id = $2, subcategoria_id = $3, titulo = $4, descripcion = $5,
-       tipo = $6, valor = $7, dias = $8, activa = $9 WHERE id = $10`,
-    [d.standId, d.productoId, d.subcategoriaId, d.titulo, d.descripcion, d.tipo, d.valor, d.dias, d.activa, oferta.id]);
+       tipo = $6, valor = $7, dias = $8, activa = $9, clase = $10, temporada = $11, inicio = $12, fin = $13, piezas = $14
+     WHERE id = $15`,
+    [d.standId, d.productoId, d.subcategoriaId, d.titulo, d.descripcion, d.tipo, d.valor, d.dias, d.activa,
+     d.clase, d.temporada, d.inicio, d.fin, d.piezas, oferta.id]);
   res.json({ id: oferta.id, titulo: d.titulo });
 }));
 
@@ -355,6 +379,38 @@ router.delete("/ofertas/:id", handle(async (req, res) => {
   const oferta = await exigirOferta(req, req.params.id);
   await pool.query("DELETE FROM ofertas WHERE id = $1", [oferta.id]);
   res.status(204).end();
+}));
+
+// ================= Opiniones de los clientes =================
+// El vendedor responde y puede ocultar una opinión inapropiada; no puede borrarla ni cambiarla.
+router.get("/resenas", handle(async (req, res) => {
+  const stand = standFiltro(req, req.query.stand);
+  const { rows } = await pool.query(
+    `SELECT r.id, r.producto_id, p.nombre AS producto, p.stand_id, s.nombre AS stand, c.nombre AS cliente,
+            r.calificacion, r.comentario, r.respuesta, r.visible, r.creado_en
+     FROM resenas r
+     JOIN productos p ON p.id = r.producto_id
+     JOIN stands s ON s.id = p.stand_id
+     JOIN clientes c ON c.id = r.cliente_id
+     WHERE ($1::int IS NULL OR p.stand_id = $1) AND ($2::int[] IS NULL OR p.stand_id = ANY($2))
+     ORDER BY r.creado_en DESC, r.id DESC LIMIT 300`, [stand, tiendasDe(req)]);
+  res.json(rows);
+}));
+
+router.put("/resenas/:id", handle(async (req, res) => {
+  const id = v.idValido(req.params.id);
+  const { rows } = id ? await pool.query(
+    "SELECT r.id, p.stand_id FROM resenas r JOIN productos p ON p.id = r.producto_id WHERE r.id = $1", [id]) : { rows: [] };
+  if (!rows[0]) throw new ErrorHttp(404, "Esa opinión no existe.");
+  await exigirStand(req, rows[0].stand_id);
+  const respuesta = v.texto(req.body.respuesta, "la respuesta", { max: 500 }) || null;
+  const visible = v.booleano(req.body.visible, true);
+  await pool.query(
+    `UPDATE resenas SET respuesta = $1::text, visible = $2,
+       respondida_en = CASE WHEN $1::text IS NULL THEN NULL
+                            WHEN $1::text IS DISTINCT FROM respuesta THEN now() ELSE respondida_en END
+     WHERE id = $3`, [respuesta, visible, id]);
+  res.json({ id });
 }));
 
 // ================= Promociones generales (solo dueños) =================

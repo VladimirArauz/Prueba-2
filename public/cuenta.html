@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi cuenta | Necutla</title>
+  <meta name="description" content="Tu cuenta de Necutla para calificar y opinar sobre los productos de las tiendas.">
+  <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <nav class="site-navbar" id="main-navbar" aria-label="Principal">
+    <div class="container navbar-container">
+
+      <a class="nav-brand" href="/">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <a class="nav-btn" href="/">
+          <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
+          <span>Tiendas</span>
+        </a>
+        <a class="nav-btn" href="/promociones.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg>
+          <span>Promociones</span>
+        </a>
+        <a class="nav-btn" href="/carrito.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span>Carrito</span>
+          <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
+        </a>
+        <a class="nav-btn active" href="/cuenta.html" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+          <span>Cuenta</span>
+        </a>
+      </div>
+
+    </div>
+  </nav>
+
+  <main class="main-content container" id="contenido">
+
+    <div class="page-head">
+      <h1>Mi cuenta</h1>
+      <p>Con tu cuenta puedes calificar y opinar sobre los productos. Para comprar no la necesitas: tu pedido se envía por WhatsApp.</p>
+    </div>
+
+    <div class="cuenta-grid" id="cuenta-fuera" hidden>
+      <section class="admin-card" aria-labelledby="entrar-title">
+        <h2 id="entrar-title">Iniciar sesión</h2>
+        <p class="section-desc">Entra con el correo y la contraseña de tu cuenta.</p>
+        <form id="form-entrar">
+          <div class="admin-form-grid">
+            <div class="form-group"><label for="entrar-correo">Correo</label><input id="entrar-correo" name="correo" type="email" autocomplete="email" maxlength="120" required></div>
+            <div class="form-group"><label for="entrar-password">Contraseña</label><input id="entrar-password" name="password" type="password" autocomplete="current-password" maxlength="200" required></div>
+          </div>
+          <div class="form-actions"><button class="btn" type="submit">Iniciar sesión</button></div>
+        </form>
+      </section>
+
+      <section class="admin-card" aria-labelledby="registro-title">
+        <h2 id="registro-title">Crear cuenta</h2>
+        <p class="section-desc">Solo te pedimos un nombre para mostrar en tus opiniones, tu correo y una contraseña.</p>
+        <form id="form-registro">
+          <div class="admin-form-grid">
+            <div class="form-group"><label for="registro-nombre">Nombre que verán los demás</label><input id="registro-nombre" name="nombre" autocomplete="nickname" minlength="2" maxlength="60" placeholder="Ej. Ana G." required></div>
+            <div class="form-group"><label for="registro-correo">Correo</label><input id="registro-correo" name="correo" type="email" autocomplete="email" maxlength="120" required></div>
+            <div class="form-group"><label for="registro-password">Contraseña</label><input id="registro-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required><span class="form-hint">Mínimo 8 caracteres.</span></div>
+          </div>
+          <div class="form-actions"><button class="btn secondary" type="submit">Crear cuenta</button></div>
+        </form>
+      </section>
+    </div>
+
+    <section class="admin-card admin-auth" id="cuenta-dentro" aria-labelledby="dentro-title" hidden>
+      <h2 id="dentro-title">Hola</h2>
+      <p class="section-desc" id="dentro-correo"></p>
+      <p>Para opinar, entra a un producto desde su tienda y baja hasta "Opiniones".</p>
+      <div class="form-actions">
+        <a class="btn" id="dentro-seguir" href="/">Ver tiendas</a>
+        <button type="button" class="btn secondary" data-action="salir">
+          <svg class="icon" aria-hidden="true"><use href="#i-log-out"></use></svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer on-tinta">
+    <div class="container footer-main">
+      <div class="footer-grid">
+
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="brand-emblem" aria-hidden="true">N</span>
+            <h3>Necutla</h3>
+          </div>
+          <p>Los stands de la comunidad estudiantil en un solo lugar. Arma tu pedido y cada tienda lo confirma por WhatsApp.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegación</h4>
+          <ul class="footer-links">
+            <li><a href="/">Tiendas</a></li>
+            <li><a href="/promociones.html">Promociones</a></li>
+            <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/cuenta.html">Mi cuenta</a></li>
+            <li><a href="/necutools.html">Necutools</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Tiendas</h4>
+          <ul class="footer-links" id="footer-stores"></ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pedidos</h4>
+          <p>Cada tienda tiene sus propios vendedores: tu pedido les llega directo por WhatsApp.</p>
+          <p class="footer-hours">
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+            Lun a sáb, 8:00 a 20:00
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+    </div>
+  </footer>
+
+  <script src="/iconos.js"></script>
+  <script src="/js/comun.js"></script>
+  <script src="/js/cuenta.js"></script>
+</body>
+</html>

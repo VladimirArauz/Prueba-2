@@ -75,6 +75,16 @@ function vacio(mensaje, accion = "") {
     </div>`;
 }
 
+// "Lunes y miércoles", "Temporada de Navidad: del 1 al 25 de diciembre", "Remate · Quedan 3 piezas"
+function cuandoAplica(oferta) {
+  if (oferta.clase === "temporada") {
+    const rango = `del ${fechaCorta(oferta.inicio)} al ${fechaCorta(oferta.fin)}`;
+    return `Temporada de ${oferta.temporada}: ${oferta.hoy ? rango : `empieza el ${fechaCorta(oferta.inicio)}`}`;
+  }
+  if (oferta.clase === "remate") return detalleOferta(oferta) + (oferta.fin || oferta.piezas ? "" : " · Hasta que se acabe");
+  return oferta.dias_texto;
+}
+
 function tarjetaOferta(oferta) {
   const { productos, subcategorias, tienda } = estado.datos;
   let aplica = `Toda la tienda ${tienda.nombre}`;
@@ -88,12 +98,16 @@ function tarjetaOferta(oferta) {
   const detalle = oferta.tipo === "porcentaje" ? `${oferta.valor}% de descuento`
     : oferta.tipo === "precio_especial" ? `Precio especial: ${money(oferta.valor)}`
     : "Lleva 2 y paga 1";
+  const etiquetas = [
+    oferta.hoy ? `<span class="tag-oferta">${icon("tag")}Hoy</span>` : "",
+    oferta.clase === "remate" ? `<span class="tag-oferta is-remate">${icon("tag")}Remate</span>` : ""
+  ].join("");
   return `
     <article class="card offer-card">
-      ${oferta.hoy ? `<span class="tag-oferta">${icon("tag")}Hoy</span>` : ""}
+      ${etiquetas ? `<div class="card-tags">${etiquetas}</div>` : ""}
       <h3>${escapeHTML(oferta.titulo)}</h3>
       <p>${escapeHTML(oferta.descripcion || detalle)}</p>
-      <div class="offer-days">${icon("calendar")} ${escapeHTML(oferta.dias_texto)}</div>
+      <div class="offer-days">${icon("calendar")} ${escapeHTML(cuandoAplica(oferta))}</div>
       <div class="card-sub">${escapeHTML(aplica)}${oferta.descripcion ? `. ${escapeHTML(detalle)}` : ""}</div>
     </article>`;
 }
@@ -178,4 +192,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   estado.sub = params.get("sub") || "";
   renderEncabezado();
   cambiarTab(params.get("tab") || "productos");
+  cargarVitrina(estado.datos.tienda.slug);
 });

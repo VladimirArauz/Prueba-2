@@ -12,6 +12,7 @@ const NOMBRES_ICONOS = {
   "party-popper": "Fiestas"
 };
 const NOMBRE_TIPO_OFERTA = { porcentaje: "Descuento", precio_especial: "Precio especial", dos_por_uno: "2x1" };
+const NOMBRE_CLASE_OFERTA = { semanal: "Semanal", temporada: "De temporada", remate: "Remate" };
 
 const st = {
   sesion: null,
@@ -20,9 +21,10 @@ const st = {
   tiendas: [],
   productos: [],
   ofertas: [],
+  resenas: [],
   promos: [],
   usuarios: [],
-  editando: { tienda: null, producto: null, oferta: null, promo: null, usuario: null }
+  editando: { tienda: null, producto: null, oferta: null, resena: null, promo: null, usuario: null }
 };
 
 const $ = id => document.getElementById(id);
@@ -169,10 +171,10 @@ async function cargarTodo() {
   }
   renderAcceso();
   try {
-    const [iconos, tiendas, productos, ofertas] = await Promise.all([
-      api("/admin/iconos"), api("/admin/tiendas"), api("/admin/productos"), api("/admin/ofertas")
+    const [iconos, tiendas, productos, ofertas, resenas] = await Promise.all([
+      api("/admin/iconos"), api("/admin/tiendas"), api("/admin/productos"), api("/admin/ofertas"), api("/admin/resenas")
     ]);
-    Object.assign(st, { iconos, tiendas, productos, ofertas });
+    Object.assign(st, { iconos, tiendas, productos, ofertas, resenas });
     if (esDueno()) {
       [st.promos, st.usuarios] = await Promise.all([api("/admin/promociones"), api("/admin/usuarios")]);
     }
@@ -184,7 +186,7 @@ async function cargarTodo() {
 }
 
 async function recargar(...que) {
-  const rutas = { tiendas: "/admin/tiendas", productos: "/admin/productos", ofertas: "/admin/ofertas",
+  const rutas = { tiendas: "/admin/tiendas", productos: "/admin/productos", ofertas: "/admin/ofertas", resenas: "/admin/resenas",
     promos: "/admin/promociones", usuarios: "/admin/usuarios" };
   const datos = await Promise.all(que.map(clave => api(rutas[clave])));
   que.forEach((clave, i) => { st[clave] = datos[i]; });
@@ -197,6 +199,7 @@ function renderTodo() {
   renderSubcategorias();
   renderProductos();
   renderOfertas();
+  renderResenas();
   if (esDueno()) {
     renderPromos();
     renderUsuarios();
@@ -219,7 +222,7 @@ function renderTiendas() {
     </tr>`).join("") : filaVacia(5, esDueno() ? "Todavía no hay tiendas. Crea la primera abajo." : "No tienes tiendas asignadas. Pídele a un dueño que te asigne una.");
 
   // Selects de tienda en todos los formularios
-  const selects = [["sub-tienda", false], ["prod-tienda", false], ["prod-filtro", true], ["oferta-tienda", false], ["oferta-filtro", true]];
+  const selects = [["sub-tienda", false], ["prod-tienda", false], ["prod-filtro", true], ["oferta-tienda", false], ["oferta-filtro", true], ["resena-filtro", true]];
   for (const [id, todas] of selects) {
     const select = $(id);
     const actual = select.value;
@@ -471,6 +474,19 @@ function actualizarFormOferta() {
     .filter(p => p.stand_id === Number(standId) && p.tipo === "producto")
     .map(p => `<option value="${p.id}"${Number(prodActual) === p.id ? " selected" : ""}>${escapeHTML(p.nombre)} (${money(p.precio)})</option>`).join("");
 
+  // Semanal: días. Temporada: nombre y fechas. Remate: fecha límite y piezas (opcionales).
+  const clase = campo(form, "clase").value;
+  $("oferta-dias-group").hidden = clase !== "semanal";
+  $("oferta-temporada-group").hidden = clase !== "temporada";
+  $("oferta-temporada-otra-group").hidden = clase !== "temporada" || $("oferta-temporada").value !== "otra";
+  $("oferta-inicio-group").hidden = clase !== "temporada";
+  $("oferta-fin-group").hidden = clase === "semanal";
+  $("oferta-piezas-group").hidden = clase !== "remate";
+  $("oferta-fin-label").textContent = clase === "remate" ? "Fecha límite (opcional)" : "Fecha de fin";
+  campo(form, "inicio").required = clase === "temporada";
+  campo(form, "fin").required = clase === "temporada";
+  $("oferta-temporada-otra").required = !$("oferta-temporada-otra-group").hidden;
+
   const valor = campo(form, "valor");
   $("oferta-valor-group").hidden = tipo === "dos_por_uno";
   if (tipo === "porcentaje") {
@@ -495,19 +511,34 @@ function textoValor(o) {
   return "2x1";
 }
 
+// "Lunes y miércoles", "Navidad: 1 de diciembre al 25 de diciembre", "Hasta que se acabe · 5 piezas"
+function textoCuando(o) {
+  if (o.clase === "temporada") return `${o.temporada}: ${fechaCorta(o.inicio)} al ${fechaCorta(o.fin)}`;
+  if (o.clase === "remate") {
+    return [o.fin ? `Hasta el ${fechaCorta(o.fin)}` : "Hasta que se acabe", o.piezas ? `${o.piezas} piezas` : ""].filter(Boolean).join(" · ");
+  }
+  return o.dias_texto;
+}
+
+function estadoOferta(o) {
+  if (o.fin && o.fin < hoyISO()) return estadoBadge(false, "", "Vencida");
+  return estadoBadge(o.activa, "Activa", "Pausada");
+}
+
 function renderOfertas() {
   actualizarFormOferta();
   const filtro = Number($("oferta-filtro").value) || null;
-  const lista = st.ofertas.filter(o => !filtro || o.stand_id === filtro);
+  const clase = $("oferta-clase-filtro").value;
+  const lista = st.ofertas.filter(o => (!filtro || o.stand_id === filtro) && (!clase || o.clase === clase));
   $("ofertas-tbody").innerHTML = lista.length ? lista.map(o => `
     <tr>
-      <td><div class="cell-title">${escapeHTML(o.titulo)}</div><div class="cell-sub">${escapeHTML(textoValor(o))}</div></td>
+      <td><div class="cell-title">${escapeHTML(o.titulo)}</div><div class="cell-sub">${escapeHTML(NOMBRE_CLASE_OFERTA[o.clase])} · ${escapeHTML(textoValor(o))}</div></td>
       <td>${escapeHTML(o.stand)}</td>
       <td>${escapeHTML(textoAplica(o))}</td>
-      <td>${escapeHTML(o.dias_texto)}</td>
-      <td>${estadoBadge(o.activa, "Activa", "Pausada")}</td>
+      <td>${escapeHTML(textoCuando(o))}</td>
+      <td>${estadoOferta(o)}</td>
       <td class="col-actions">${botonesFila("oferta", o.id, o.titulo)}</td>
-    </tr>`).join("") : filaVacia(6, "Todavía no hay ofertas. Crea la primera con el formulario de arriba.");
+    </tr>`).join("") : filaVacia(6, st.ofertas.length ? "No hay ofertas con ese filtro." : "Todavía no hay ofertas. Crea la primera con el formulario de arriba.");
 }
 
 function editarOferta(id) {
@@ -519,6 +550,13 @@ function editarOferta(id) {
   campo(form, "titulo").value = o.titulo;
   campo(form, "aplica").value = o.producto_id ? "producto" : o.subcategoria_id ? "subcategoria" : "tienda";
   campo(form, "tipo").value = o.tipo;
+  campo(form, "clase").value = o.clase;
+  const conocida = [...$("oferta-temporada").options].some(op => op.value === o.temporada);
+  $("oferta-temporada").value = !o.temporada || conocida ? (o.temporada || "Navidad") : "otra";
+  $("oferta-temporada-otra").value = o.temporada && !conocida ? o.temporada : "";
+  campo(form, "inicio").value = o.inicio || "";
+  campo(form, "fin").value = o.fin || "";
+  campo(form, "piezas").value = o.piezas ?? "";
   campo(form, "valor").value = o.valor ?? "";
   campo(form, "descripcion").value = o.descripcion;
   campo(form, "activa").checked = o.activa;
@@ -550,6 +588,11 @@ async function guardarOferta(event) {
       producto_id: campo(form, "producto_id").value,
       tipo: campo(form, "tipo").value,
       valor: campo(form, "valor").value,
+      clase: campo(form, "clase").value,
+      temporada: $("oferta-temporada").value === "otra" ? $("oferta-temporada-otra").value : $("oferta-temporada").value,
+      inicio: campo(form, "inicio").value,
+      fin: campo(form, "fin").value,
+      piezas: campo(form, "piezas").value,
       dias: marcados(form, "dias").map(Number),
       descripcion: campo(form, "descripcion").value,
       activa: campo(form, "activa").checked
@@ -575,6 +618,76 @@ async function borrarOferta(id) {
   } catch (error) {
     manejarError(error);
   }
+}
+
+// ================= Opiniones de los clientes =================
+function estrellasFila(n) {
+  const iconos = [1, 2, 3, 4, 5].map(i => (i <= n ? icon("star-fill", "star is-on") : icon("star", "star"))).join("");
+  return `<span class="rating" role="img" aria-label="${n} de 5 estrellas">${iconos}</span>`;
+}
+
+function fechaOpinion(iso) {
+  return new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function recortar(texto, max) {
+  return texto.length > max ? `${texto.slice(0, max - 1)}…` : texto;
+}
+
+function renderResenas() {
+  const filtro = Number($("resena-filtro").value) || null;
+  const lista = st.resenas.filter(r => !filtro || r.stand_id === filtro);
+  $("resenas-tbody").innerHTML = lista.length ? lista.map(r => `
+    <tr>
+      <td>${estrellasFila(r.calificacion)}<div class="cell-sub">${escapeHTML(recortar(r.comentario, 140))}</div></td>
+      <td><div class="cell-title"><a href="/p/${Number(r.producto_id)}">${escapeHTML(r.producto)}</a></div><div class="cell-sub">${escapeHTML(r.stand)}</div></td>
+      <td><div class="cell-title">${escapeHTML(r.cliente)}</div><div class="cell-sub">${escapeHTML(fechaOpinion(r.creado_en))}</div></td>
+      <td>${estadoBadge(r.visible, "Visible", "Oculta")}${r.respuesta ? `<div class="cell-sub">Respondida</div>` : ""}</td>
+      <td class="col-actions">
+        <button type="button" class="btn secondary btn-sm btn-icon" data-action="editar" data-tipo="resena" data-id="${r.id}" aria-label="Responder la opinión de ${escapeHTML(r.cliente)}" title="Responder">${icon("message-circle")}</button>
+      </td>
+    </tr>`).join("") : filaVacia(5, "Todavía no hay opiniones de clientes en tus tiendas.");
+}
+
+function editarResena(id) {
+  const r = st.resenas.find(x => x.id === id);
+  if (!r) return;
+  st.editando.resena = r;
+  const form = $("form-resena");
+  $("resena-detalle").innerHTML = `
+    <div class="opinion-head">
+      <span class="opinion-autor">${escapeHTML(r.cliente)}</span>
+      ${estrellasFila(r.calificacion)}
+      <span class="opinion-fecha">${escapeHTML(r.producto)} · ${escapeHTML(fechaOpinion(r.creado_en))}</span>
+    </div>
+    <p>${escapeHTML(r.comentario)}</p>`;
+  campo(form, "respuesta").value = r.respuesta || "";
+  campo(form, "visible").checked = r.visible;
+  $("resena-card").hidden = false;
+  $("resena-card").scrollIntoView({ behavior: "smooth", block: "start" });
+  campo(form, "respuesta").focus({ preventScroll: true });
+}
+
+function cancelarResena() {
+  st.editando.resena = null;
+  $("form-resena").reset();
+  $("resena-card").hidden = true;
+}
+
+async function guardarResena(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const r = st.editando.resena;
+  if (!r) return;
+  await enviar(form, async () => {
+    await api(`/admin/resenas/${r.id}`, {
+      method: "PUT",
+      body: { respuesta: campo(form, "respuesta").value, visible: campo(form, "visible").checked }
+    });
+    cancelarResena();
+    await recargar("resenas");
+    showToast(`Opinión de ${r.cliente} guardada`);
+  });
 }
 
 // ================= Promociones generales =================
@@ -779,9 +892,9 @@ async function cambiarPassword(event) {
 }
 
 // ================= Eventos =================
-const EDITAR = { tienda: editarTienda, producto: editarProducto, oferta: editarOferta, promo: editarPromo, usuario: editarUsuario };
+const EDITAR = { tienda: editarTienda, producto: editarProducto, oferta: editarOferta, resena: editarResena, promo: editarPromo, usuario: editarUsuario };
 const BORRAR = { tienda: borrarTienda, producto: borrarProducto, oferta: borrarOferta, promo: borrarPromo };
-const CANCELAR = { tienda: cancelarTienda, producto: cancelarProducto, oferta: cancelarOferta, promo: cancelarPromo, usuario: cancelarUsuario };
+const CANCELAR = { tienda: cancelarTienda, producto: cancelarProducto, oferta: cancelarOferta, resena: cancelarResena, promo: cancelarPromo, usuario: cancelarUsuario };
 
 Object.assign(ACCIONES, {
   logout: () => cerrarSesion(),
@@ -803,6 +916,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("form-subcategoria").addEventListener("submit", agregarSubcategoria);
   $("form-producto").addEventListener("submit", guardarProducto);
   $("form-oferta").addEventListener("submit", guardarOferta);
+  $("form-resena").addEventListener("submit", guardarResena);
   $("form-promo").addEventListener("submit", guardarPromo);
   $("form-usuario").addEventListener("submit", guardarUsuario);
   $("form-cuenta").addEventListener("submit", cambiarPassword);
@@ -810,6 +924,14 @@ document.addEventListener("DOMContentLoaded", () => {
   $("sub-tienda").addEventListener("change", renderSubcategorias);
   $("prod-filtro").addEventListener("change", renderProductos);
   $("oferta-filtro").addEventListener("change", renderOfertas);
+  $("oferta-clase-filtro").addEventListener("change", renderOfertas);
+  $("resena-filtro").addEventListener("change", renderResenas);
+  $("oferta-temporada").addEventListener("change", actualizarFormOferta);
+  $("oferta-clase").addEventListener("change", () => {
+    const form = $("form-oferta");
+    if (campo(form, "clase").value === "temporada" && !campo(form, "inicio").value) campo(form, "inicio").value = hoyISO();
+    actualizarFormOferta();
+  });
   $("prod-tienda").addEventListener("change", () => {
     if (st.editando.producto) st.editando.producto = { ...st.editando.producto, subcategoria_id: null };
     renderProductos();
