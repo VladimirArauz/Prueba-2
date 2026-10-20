@@ -103,7 +103,16 @@ app.get(new RegExp(`^/${TIENDAS_VIEJAS}/([a-z0-9-]+)(?:/(?:index\\.html)?)?$`), 
   res.redirect(301, `/t/${req.params[0]}?sub=${req.params[1]}`));
 
 // ================= Sitio estático (solo la carpeta public/) =================
-app.use(express.static(PUBLIC_DIR, { dotfiles: "ignore", maxAge: "1h" }));
+// HTML, CSS y JS se revalidan siempre (304 si no cambiaron): si no, tras un despliegue el
+// navegador mezcla el HTML nuevo con el style.css o comun.js viejo de su caché.
+const REVALIDAR = /\.(html|css|js)$/;
+app.use(express.static(PUBLIC_DIR, {
+  dotfiles: "ignore",
+  maxAge: "1h",
+  setHeaders: (res, ruta) => {
+    if (REVALIDAR.test(ruta)) res.setHeader("Cache-Control", "no-cache");
+  }
+}));
 
 app.use((req, res) => {
   res.status(404).type("text/plain").send("Página no encontrada.");

@@ -93,6 +93,12 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 
 ## Cambios hechos
 
+### 2026-10-20: caché de CSS y JS después de desplegar (`server/index.js`)
+- Problema que vio el usuario en producción justo después del push del plan de la barra lateral: la barra salió sin estilos, con el HTML nuevo pero el `style.css` y el `comun.js` viejos de la caché del navegador.
+- Causa: los estáticos se servían con `Cache-Control: max-age=3600`, así que el navegador podía usarlos hasta 1 hora sin preguntar.
+- Corrección: HTML, CSS y JS ahora van con `no-cache` (el navegador revalida con ETag y recibe 304 si no cambiaron); las imágenes siguen con 1 hora.
+- Verificado en local: cabeceras correctas, 304 al revalidar y 70 de 70 pruebas de API.
+
 ### 2026-10-20: barra lateral, login con panel deslizante y animaciones (plan `2026-10-20-barra-lateral-login-animaciones.md`, prompts 1 a 5)
 
 Excepciones a `plans/CLAUDE.md` autorizadas por el usuario solo para este plan: barra lateral, hover que levanta con sombra suave, zoom leve de imagen, secciones que aparecen al bajar y tarjetas escalonadas. `plans/CLAUDE.md` no se tocó.
