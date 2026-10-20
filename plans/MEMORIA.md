@@ -18,6 +18,7 @@ Cómo se usa:
 | `2026-10-16-hosting-render-postgres.md` | Desplegado en Render; faltan los pasos 3 y 5 de la checklist | 2026-10-16 |
 | `2026-10-17-catalogo-multitienda.md` | Aplicado y subido (fases 1 a 7). Faltan revisar las 2 decisiones de diseño pendientes | 2026-10-17 |
 | `2026-10-19-ofertas-temporada-y-resenas.md` | Aplicado y subido (commit + push del 2026-10-19) | 2026-10-19 |
+| `2026-10-20-barra-lateral-login-animaciones.md` | Aplicado, probado con el servidor real y subido (commit + push del 2026-10-20) | 2026-10-20 |
 
 ---
 
@@ -43,6 +44,8 @@ Cómo se usa:
 13. **Ofertas de ejemplo de temporada:** no se agregaron a la base de Render (serían datos falsos). Para verlas, crear en Necutools una oferta "De temporada" (ej. Navidad, del 1 al 25 de diciembre) y un "Remate".
 14. **Moderación de opiniones:** el vendedor solo puede responder u ocultar (no borrar). No hay "compra verificada" porque los pedidos se cierran por WhatsApp y no quedan registrados. Tampoco hay todavía "olvidé mi contraseña" para clientes (no hay servicio de correo); si un cliente la olvida, puede crear otra cuenta.
 15. **Las piezas del remate no bajan solas:** el vendedor actualiza el número en Necutools cuando vende.
+16. **Excepciones de diseño del plan `2026-10-20-barra-lateral-login-animaciones.md`:** el usuario autorizó la barra lateral, el hover que levanta con sombra suave, el zoom leve de imagen, las secciones que aparecen al bajar y las tarjetas escalonadas. Siguen prohibidos los colores nuevos, los degradados y `backdrop-filter`. Si el usuario quiere que esas excepciones sean regla permanente, tiene que pedir que se actualice `plans/CLAUDE.md`.
+17. **En esta máquina no hay Node ni servidor de PostgreSQL instalados** (solo el cliente `psql`). Para probar el 2026-10-20 se bajaron Node 22.23.3 (nodejs.org, con su checksum) y PostgreSQL 18.4 (paquete npm `embedded-postgres`) a la carpeta temporal de la sesión. Para correr `npm run dev` aquí hay que instalar Node 22 y PostgreSQL.
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -89,6 +92,59 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-20: barra lateral, login con panel deslizante y animaciones (plan `2026-10-20-barra-lateral-login-animaciones.md`, prompts 1 a 5)
+
+Excepciones a `plans/CLAUDE.md` autorizadas por el usuario solo para este plan: barra lateral, hover que levanta con sombra suave, zoom leve de imagen, secciones que aparecen al bajar y tarjetas escalonadas. `plans/CLAUDE.md` no se tocó.
+
+- **Tokens** (`public/style.css`, `:root`): `--t-media`, `--t-lenta`, `--t-panel`, `--sombra-1`, `--sombra-2` y `--velo` (fondo del cajón). Los tres últimos son `--tinta` con transparencia, no colores nuevos.
+- **Iconos** (`public/iconos.js`): `menu`, `house`, `mail`, `lock`, `eye` y `log-in`.
+- **Barra lateral** en las 7 páginas (`index`, `tienda`, `producto`, `carrito`, `promociones`, `cuenta`, `necutools`), en lugar de `site-navbar`:
+  - Mide 76px cerrada y 264px con hover o foco, y se abre encima del contenido.
+  - Lleva marca, buscador (`/?q=`), Inicio, Tiendas, Promociones, Carrito con contador, Mi cuenta y Necutools.
+  - **Submenú de Tiendas** con las tiendas de la base: se abre con hover, clic, Enter o →, y se cierra con Escape o ←.
+  - **≤ 860px:** barra superior con carrito y botón "Abrir menú", y cajón con foco atrapado. Tiendas entra como un segundo panel con "Volver al menú" (desviación del plan: era un acordeón).
+  - JS en `public/js/comun.js` (`initBarraLateral`). La portada (`js/portada.js`) busca con `?q=` y con el buscador de la barra sin recargar. El contador del carrito se oculta en 0 (`.is-cero`).
+- **Hover:**
+  - Tarjetas: suben 4px con `--sombra-1`, y su imagen hace zoom 1.04.
+  - Botones: suben 2px sobre un escalón plano y bajan al presionar; el icono se desliza.
+  - Enlaces: el subrayado aparece al pasar el mouse.
+  - Filas del tablero: el nombre y la flecha se deslizan.
+- **Entradas:**
+  - `comun.js` pone `.anim` en `<html>` (solo con JS y sin movimiento reducido).
+  - Un `IntersectionObserver` revela los bloques (`.revelar`) y escalona los hijos de los grids (`.revelar-grid`, `:nth-child`). Un `MutationObserver` anima lo que llega después de la API.
+- **Login** (`public/cuenta.html`, `public/js/cuenta.js`):
+  - Tarjeta `.auth` con los dos formularios y un panel `--tinta` con una ciudad plana en SVG. El panel se desliza al otro lado (0.65s).
+  - El formulario que no se ve queda `inert`. `#crear-cuenta` abre el registro.
+  - Campos con icono y botón para ver la contraseña.
+  - En celular, el panel va arriba y los formularios cambian de lado a lado.
+  - Se conservaron los `id` y `name` de los campos y la lógica de entrar, crear cuenta, salir y `?volver=`.
+- Se quitaron los estilos de la barra vieja (`.site-navbar`, `.nav-actions`, `.nav-btn`) y de `.cuenta-grid`.
+
+**Verificación**: primero con una API simulada en Python (misma CSP), y después con el **servidor real** (`server/index.js`, Node 22.23.3) contra un PostgreSQL 18.4 de prueba en el puerto 54329, nunca contra Render. Se usaron el Chrome del usuario y Chrome sin ventana.
+- **70 pruebas de API**, todas bien:
+  - Las 7 páginas con la barra lateral, CSP y sin `style=` ni `onclick`; 404 para `plans/`, `.env`, `server/` y `package.json`; redirección de las direcciones viejas.
+  - Tiendas con icono y descripción, búsqueda y carrito con precios del servidor; 403 sin Origin o con Origin ajeno.
+  - Registro, login (correo sin importar mayúsculas), logout, opiniones (sin enlaces, 401 sin sesión) y promedio.
+  - Necutools: login, crear y borrar producto, opiniones y las sesiones de cliente y admin juntas.
+- **Flujos en navegador con el servidor real:**
+  - Agregar al carrito y el contador.
+  - Botón de WhatsApp (abre `wa.me` con el número de la tienda y aparece "Ya lo envié").
+  - Crear cuenta con `?volver=` (regresa al producto) → publicar opinión → cerrar sesión.
+  - Necutools: login y sus 7 pestañas, sin errores.
+- 7 páginas a 1280px y 360px: cero errores de consola o de CSP y sin scroll horizontal a 360px.
+- Barra:
+  - Con mouse, el panel de Tiendas abre y cierra.
+  - Con teclado, → enfoca la primera tienda y Escape cierra y regresa el foco.
+  - En celular, el cajón y el panel de tiendas funcionan, y dos Escape lo cierran todo con el foco de vuelta en "Abrir menú".
+- Login: cambio con el panel, foco en el primer campo, ver contraseña, crear cuenta, cerrar sesión y `#crear-cuenta`.
+- `prefers-reduced-motion: reduce`: no se pone `.anim`, no se oculta nada y no hay desplazamientos.
+- El contador del carrito se oculta en 0 y aparece al agregar.
+- Sin hex sueltos, degradados, `backdrop-filter`, `style="`, `onclick` ni emojis nuevos.
+
+### 2026-10-20: plan de barra lateral, login deslizante y animaciones
+- Nuevo plan `plans/planes/2026-10-20-barra-lateral-login-animaciones.md` y sus 5 prompts en `plans/prompts/` (mismo nombre). Se basa en dos publicaciones de @frontendjoe: "CSS Sidebars Part 11" (DeVERjTgMRE) y "React Logins Part 13" (DejrmYrABU7).
+- Decisiones del usuario: barra lateral como la del post, con el submenú "Tiendas" al pasar el mouse; animaciones "más notorias" (hover con sombra y entradas al bajar); login con el panel deslizante, pero con colores de Necutla. No se cambió código.
 
 ### 2026-10-19: ofertas de temporada, remates, cuentas de cliente y opiniones (plan `2026-10-19-ofertas-temporada-y-resenas.md`)
 

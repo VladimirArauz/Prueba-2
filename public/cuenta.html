@@ -10,39 +10,74 @@
 </head>
 <body>
 
-  <nav class="site-navbar" id="main-navbar" aria-label="Principal">
-    <div class="container navbar-container">
+  <div class="topbar">
+    <a class="nav-brand" href="/">
+      <span class="brand-emblem" aria-hidden="true">N</span>
+      <span class="brand-title">Necutla</span>
+    </a>
+    <div class="topbar-actions">
+      <a class="btn secondary btn-icon side-carrito" href="/carrito.html" aria-label="Carrito">
+        <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+        <span class="cart-pill cart-count" aria-hidden="true">0</span>
+      </a>
+      <button type="button" class="btn secondary btn-icon" id="menu-abrir" data-action="menu-abrir" aria-label="Abrir menú" aria-controls="main-navbar" aria-expanded="false">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
+      </button>
+    </div>
+  </div>
 
-      <a class="nav-brand" href="/">
+  <nav class="sidebar" id="main-navbar" aria-label="Principal">
+    <div class="side-top">
+      <a class="side-brand" href="/">
         <span class="brand-emblem" aria-hidden="true">N</span>
-        <span class="brand-text-wrap">
+        <span class="brand-text-wrap side-text">
           <span class="brand-title">Necutla</span>
           <span class="brand-badge">Ciudad del Estudiante</span>
         </span>
       </a>
+      <button type="button" class="btn ghost btn-icon side-cerrar" data-action="menu-cerrar" aria-label="Cerrar menú">
+        <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </div>
 
-      <div class="nav-actions">
-        <a class="nav-btn" href="/">
-          <svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>
-          <span>Tiendas</span>
-        </a>
-        <a class="nav-btn" href="/promociones.html">
-          <svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg>
-          <span>Promociones</span>
-        </a>
-        <a class="nav-btn" href="/carrito.html">
-          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
-          <span>Carrito</span>
-          <span class="cart-pill cart-count" aria-label="productos en el carrito">0</span>
-        </a>
-        <a class="nav-btn active" href="/cuenta.html" aria-current="page">
-          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
-          <span>Cuenta</span>
-        </a>
+    <form class="side-search" action="/" method="get" role="search">
+      <label class="visually-hidden" for="side-q">Buscar productos</label>
+      <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+      <input id="side-q" name="q" type="search" placeholder="Buscar productos" minlength="2" maxlength="60" required>
+    </form>
+
+    <div class="side-scroll">
+      <ul class="side-nav">
+        <li><a class="side-link" href="/"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-house"></use></svg></span><span class="side-text">Inicio</span></a></li>
+        <li class="side-tiendas">
+          <a class="side-link" id="side-tiendas-btn" href="/#tiendas-head" aria-controls="side-tiendas-menu" aria-expanded="false" data-action="menu-tiendas">
+            <span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg></span>
+            <span class="side-text">Tiendas</span>
+            <svg class="icon side-caret" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+          </a>
+        </li>
+        <li><a class="side-link" href="/promociones.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg></span><span class="side-text">Promociones</span></a></li>
+        <li><a class="side-link" href="/carrito.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg><span class="cart-pill cart-count" aria-label="productos en el carrito">0</span></span><span class="side-text">Carrito</span></a></li>
+        <li><a class="side-link" href="/cuenta.html" aria-current="page"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg></span><span class="side-text">Mi cuenta</span></a></li>
+      </ul>
+      <ul class="side-nav side-abajo">
+        <li><a class="side-link" href="/necutools.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-wrench"></use></svg></span><span class="side-text">Necutools</span></a></li>
+      </ul>
+    </div>
+
+    <div class="side-flyout" id="side-tiendas-menu">
+      <button type="button" class="btn ghost btn-sm side-volver" data-action="menu-tiendas">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        Volver al menú
+      </button>
+      <div class="side-flyout-head">
+        <p class="side-flyout-title">Tiendas</p>
+        <a href="/#tiendas-head">Ver todas</a>
       </div>
-
+      <ul class="side-tiendas-list" id="side-tiendas-list"></ul>
     </div>
   </nav>
+  <div class="side-fondo" id="side-fondo" data-action="menu-cerrar"></div>
 
   <main class="main-content container" id="contenido">
 
@@ -51,31 +86,78 @@
       <p>Con tu cuenta puedes calificar y opinar sobre los productos. Para comprar no la necesitas: tu pedido se envía por WhatsApp.</p>
     </div>
 
-    <div class="cuenta-grid" id="cuenta-fuera" hidden>
-      <section class="admin-card" aria-labelledby="entrar-title">
+    <div class="auth" id="cuenta-fuera" hidden>
+      <section class="auth-form auth-entrar" id="auth-entrar" aria-labelledby="entrar-title">
         <h2 id="entrar-title">Iniciar sesión</h2>
         <p class="section-desc">Entra con el correo y la contraseña de tu cuenta.</p>
         <form id="form-entrar">
-          <div class="admin-form-grid">
-            <div class="form-group"><label for="entrar-correo">Correo</label><input id="entrar-correo" name="correo" type="email" autocomplete="email" maxlength="120" required></div>
-            <div class="form-group"><label for="entrar-password">Contraseña</label><input id="entrar-password" name="password" type="password" autocomplete="current-password" maxlength="200" required></div>
+          <div class="auth-campos">
+            <div class="form-group">
+              <label for="entrar-correo">Correo</label>
+              <div class="campo-icono">
+                <svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>
+                <input id="entrar-correo" name="correo" type="email" autocomplete="email" maxlength="120" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="entrar-password">Contraseña</label>
+              <div class="campo-icono con-ver">
+                <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+                <input id="entrar-password" name="password" type="password" autocomplete="current-password" maxlength="200" required>
+                <button type="button" class="campo-ver" data-action="ver-password" aria-controls="entrar-password" aria-label="Mostrar contraseña"><svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg></button>
+              </div>
+            </div>
           </div>
-          <div class="form-actions"><button class="btn" type="submit">Iniciar sesión</button></div>
+          <button class="btn btn-block" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-log-in"></use></svg>Iniciar sesión</button>
         </form>
       </section>
 
-      <section class="admin-card" aria-labelledby="registro-title">
+      <section class="auth-form auth-registro" id="auth-registro" aria-labelledby="registro-title">
         <h2 id="registro-title">Crear cuenta</h2>
         <p class="section-desc">Solo te pedimos un nombre para mostrar en tus opiniones, tu correo y una contraseña.</p>
         <form id="form-registro">
-          <div class="admin-form-grid">
-            <div class="form-group"><label for="registro-nombre">Nombre que verán los demás</label><input id="registro-nombre" name="nombre" autocomplete="nickname" minlength="2" maxlength="60" placeholder="Ej. Ana G." required></div>
-            <div class="form-group"><label for="registro-correo">Correo</label><input id="registro-correo" name="correo" type="email" autocomplete="email" maxlength="120" required></div>
-            <div class="form-group"><label for="registro-password">Contraseña</label><input id="registro-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required><span class="form-hint">Mínimo 8 caracteres.</span></div>
+          <div class="auth-campos">
+            <div class="form-group">
+              <label for="registro-nombre">Nombre que verán los demás</label>
+              <div class="campo-icono">
+                <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+                <input id="registro-nombre" name="nombre" type="text" autocomplete="nickname" minlength="2" maxlength="60" placeholder="Ej. Ana G." required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="registro-correo">Correo</label>
+              <div class="campo-icono">
+                <svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>
+                <input id="registro-correo" name="correo" type="email" autocomplete="email" maxlength="120" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="registro-password">Contraseña</label>
+              <div class="campo-icono con-ver">
+                <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+                <input id="registro-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required>
+                <button type="button" class="campo-ver" data-action="ver-password" aria-controls="registro-password" aria-label="Mostrar contraseña"><svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg></button>
+              </div>
+              <span class="form-hint">Mínimo 8 caracteres.</span>
+            </div>
           </div>
-          <div class="form-actions"><button class="btn secondary" type="submit">Crear cuenta</button></div>
+          <button class="btn btn-block" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Crear cuenta</button>
         </form>
       </section>
+
+      <div class="auth-panel on-tinta">
+        <svg class="auth-ciudad" viewBox="0 0 440 200" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false"><rect class="ed" x="0" y="130" width="34" height="70"/><rect class="ve" x="7" y="142" width="5" height="7"/><rect class="ve" x="18" y="162" width="5" height="7"/><rect class="ed" x="30" y="82" width="40" height="118"/><rect class="ve" x="59" y="94" width="5" height="7"/><rect class="ve" x="37" y="134" width="5" height="7"/><rect class="ve" x="48" y="154" width="5" height="7"/><rect class="ve" x="59" y="174" width="5" height="7"/><rect class="ed" x="66" y="112" width="26" height="88"/><rect class="ve" x="73" y="164" width="5" height="7"/><rect class="ed" x="88" y="50" width="46" height="150"/><rect class="ve" x="95" y="62" width="5" height="7"/><rect class="ve" x="106" y="82" width="5" height="7"/><rect class="ve" x="117" y="102" width="5" height="7"/><rect class="ve" x="95" y="142" width="5" height="7"/><rect class="ve" x="106" y="162" width="5" height="7"/><rect class="ve" x="117" y="182" width="5" height="7"/><rect class="ed" x="130" y="104" width="30" height="96"/><rect class="ve" x="137" y="156" width="5" height="7"/><rect class="ve" x="148" y="176" width="5" height="7"/><rect class="ed" x="156" y="72" width="52" height="128"/><rect class="ve" x="163" y="84" width="5" height="7"/><rect class="ve" x="174" y="104" width="5" height="7"/><rect class="ve" x="185" y="124" width="5" height="7"/><rect class="ve" x="196" y="144" width="5" height="7"/><rect class="ve" x="163" y="164" width="5" height="7"/><rect class="ve" x="174" y="184" width="5" height="7"/><rect class="ed" x="204" y="126" width="28" height="74"/><rect class="ve" x="211" y="138" width="5" height="7"/><rect class="ve" x="222" y="158" width="5" height="7"/><rect class="ed" x="228" y="40" width="44" height="160"/><rect class="ve" x="235" y="52" width="5" height="7"/><rect class="ve" x="246" y="72" width="5" height="7"/><rect class="ve" x="257" y="92" width="5" height="7"/><rect class="ve" x="235" y="132" width="5" height="7"/><rect class="ve" x="246" y="152" width="5" height="7"/><rect class="ve" x="257" y="172" width="5" height="7"/><rect class="ed" x="268" y="96" width="34" height="104"/><rect class="ve" x="275" y="108" width="5" height="7"/><rect class="ve" x="286" y="128" width="5" height="7"/><rect class="ve" x="275" y="188" width="5" height="7"/><rect class="ed" x="298" y="64" width="50" height="136"/><rect class="ve" x="327" y="76" width="5" height="7"/><rect class="ve" x="338" y="96" width="5" height="7"/><rect class="ve" x="305" y="116" width="5" height="7"/><rect class="ve" x="316" y="136" width="5" height="7"/><rect class="ve" x="327" y="156" width="5" height="7"/><rect class="ve" x="338" y="176" width="5" height="7"/><rect class="ed" x="344" y="118" width="26" height="82"/><rect class="ve" x="351" y="130" width="5" height="7"/><rect class="ed" x="366" y="84" width="40" height="116"/><rect class="ve" x="395" y="96" width="5" height="7"/><rect class="ve" x="373" y="136" width="5" height="7"/><rect class="ve" x="384" y="156" width="5" height="7"/><rect class="ve" x="395" y="176" width="5" height="7"/><rect class="ed" x="402" y="108" width="38" height="92"/><rect class="ve" x="431" y="120" width="5" height="7"/><rect class="ve" x="409" y="160" width="5" height="7"/><rect class="ve" x="420" y="180" width="5" height="7"/></svg>
+        <div class="auth-panel-texto" data-modo="entrar">
+          <p class="auth-panel-titulo">¿Primera vez en Necutla?</p>
+          <p>Crea tu cuenta para calificar y opinar sobre los productos de las tiendas.</p>
+          <button type="button" class="btn" data-action="auth-cambiar" aria-controls="auth-registro">Crear cuenta</button>
+        </div>
+        <div class="auth-panel-texto" data-modo="registro">
+          <p class="auth-panel-titulo">¿Ya tienes cuenta?</p>
+          <p>Entra para ver y editar tus opiniones.</p>
+          <button type="button" class="btn" data-action="auth-cambiar" aria-controls="auth-entrar">Iniciar sesión</button>
+        </div>
+      </div>
     </div>
 
     <section class="admin-card admin-auth" id="cuenta-dentro" aria-labelledby="dentro-title" hidden>

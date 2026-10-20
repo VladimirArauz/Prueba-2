@@ -79,8 +79,24 @@ Object.assign(ACCIONES, {
   }
 });
 
+// El buscador de la barra lateral manda a /?q=…; en la portada busca sin recargar
+function buscarDesdeBarra(q) {
+  document.getElementById("search-input").value = q;
+  buscar(new Event("submit"));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("search-form").addEventListener("submit", buscar);
+  const barra = document.querySelector(".side-search");
+  if (barra) {
+    barra.addEventListener("submit", event => {
+      event.preventDefault();
+      abrirCajon(false);
+      buscarDesdeBarra(barra.elements.q.value.trim());
+    });
+  }
+  const q = (new URLSearchParams(location.search).get("q") || "").trim();
+  if (q) buscarDesdeBarra(q);
   cargarTiendas();
   cargarPromociones();
   cargarVitrina();

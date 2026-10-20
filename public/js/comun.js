@@ -112,7 +112,10 @@ function quitarDelCarrito(claves) {
 
 function actualizarContador(pulso = false) {
   const total = leerCarrito().reduce((suma, i) => suma + i.cantidad, 0);
-  document.querySelectorAll(".cart-count").forEach(el => { el.textContent = total; });
+  document.querySelectorAll(".cart-count").forEach(el => {
+    el.textContent = total;
+    el.classList.toggle("is-cero", total === 0);
+  });
   if (!pulso) return;
   document.querySelectorAll(".cart-pill").forEach(pill => {
     pill.classList.remove("pulse");
@@ -340,8 +343,201 @@ async function cargarTiendasPie() {
   } catch (e) { /* el pie se queda sin la lista */ }
 }
 
+// ================= Entradas al bajar (plan 2026-10-20) =================
+// Sin JS o con movimiento reducido no se oculta nada: la clase .anim solo se pone aquí.
+const BLOQUES_REVELAR = ".page-head, .section-header-row, .hero-copy, .board, .letrero-head, .vitrina-head, "
+  + ".search-form, .filters, .store-meta, .admin-card, .cart-items-card, .cart-summary-card, .cart-group, "
+  + ".producto-detalle, .opiniones-resumen, .auth, .footer-grid";
+const GRIDS_REVELAR = ".grid, .board-list, .letrero-grid, .today-list, .opinion-list";
+const ANIMAR = "IntersectionObserver" in window
+  && window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
+let observadorEntradas = null;
+
+function marcarEntradas(raiz) {
+  const marcar = (selector, clase) => {
+    const encontrados = [...raiz.querySelectorAll(selector)];
+    if (raiz.matches && raiz.matches(selector)) encontrados.push(raiz);
+    encontrados.forEach(el => {
+      if (el.classList.contains(clase) || el.closest(".sidebar")) return;
+      el.classList.add(clase);
+      observadorEntradas.observe(el);
+    });
+  };
+  marcar(BLOQUES_REVELAR, "revelar");
+  marcar(GRIDS_REVELAR, "revelar-grid");
+}
+
+function initEntradas() {
+  if (!ANIMAR) return;
+  observadorEntradas = new IntersectionObserver(entradas => {
+    entradas.forEach(entrada => {
+      if (!entrada.isIntersecting) return;
+      entrada.target.classList.add("visible");
+      observadorEntradas.unobserve(entrada.target);
+    });
+  }, { rootMargin: "0px 0px -6% 0px", threshold: 0.05 });
+  marcarEntradas(document.body);
+  // Lo que llega después de la API (vitrina, tarjetas, resultados) también entra animado
+  new MutationObserver(cambios => {
+    cambios.forEach(c => c.addedNodes.forEach(nodo => {
+      if (nodo.nodeType === 1) marcarEntradas(nodo);
+    }));
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
+// comun.js se carga al final del <body>: se marca antes del primer pintado para que no parpadee
+if (ANIMAR) {
+  document.documentElement.classList.add("anim");
+  initEntradas();
+}
+
+// ================= Barra lateral (plan 2026-10-20) =================
+// Escritorio: se abre con hover o foco (CSS); "Tiendas" abre un panel con hover, clic, Enter o →.
+// ≤ 860px: cajón que abre el botón "Abrir menú"; "Tiendas" entra como segundo panel.
+const CON_MOUSE = window.matchMedia("(hover: hover) and (min-width: 861px)");
+const ES_CAJON = window.matchMedia("(max-width: 860px)");
+let cierreTiendas = null;
+
+function abrirTiendas(abrir, enfocar = false) {
+  const nav = document.getElementById("main-navbar");
+  const boton = document.getElementById("side-tiendas-btn");
+  if (!nav || !boton || !boton.dataset.action) return;
+  clearTimeout(cierreTiendas);
+  nav.classList.toggle("is-open", abrir);
+  boton.setAttribute("aria-expanded", String(abrir));
+  if (abrir && enfocar) {
+    const primero = document.querySelector(ES_CAJON.matches ? ".side-volver" : ".side-tienda");
+    if (primero) primero.focus();
+  }
+}
+
+function abrirCajon(abrir) {
+  const nav = document.getElementById("main-navbar");
+  const boton = document.getElementById("menu-abrir");
+  if (!nav) return;
+  nav.classList.toggle("is-drawer", abrir);
+  document.getElementById("side-fondo").classList.toggle("is-visible", abrir);
+  document.body.classList.toggle("sin-scroll", abrir);
+  if (boton) boton.setAttribute("aria-expanded", String(abrir));
+  if (abrir) {
+    nav.querySelector(".side-brand").focus();
+  } else {
+    abrirTiendas(false);
+    if (boton && ES_CAJON.matches) boton.focus();
+  }
+}
+
+// Lo que se puede enfocar dentro del cajón (para que Tab no salga de él)
+function enfocablesCajon(nav) {
+  return [...nav.querySelectorAll("a[href], button, input")]
+    .filter(el => el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : el.offsetParent !== null);
+}
+
+async function cargarTiendasMenu() {
+  const lista = document.getElementById("side-tiendas-list");
+  const boton = document.getElementById("side-tiendas-btn");
+  if (!lista || !boton) return;
+  try {
+    const tiendas = await obtenerTiendas();
+    const actual = (location.pathname.match(/^\/t\/([^/]+)/) || [])[1] || "";
+    lista.innerHTML = tiendas.map(t => `
+      <li><a class="side-tienda" href="/t/${escapeHTML(t.slug)}"${t.slug === actual ? ' aria-current="page"' : ""}>
+        <span class="side-ico">${icon(t.icono || "store")}</span>
+        <span><strong>${escapeHTML(t.nombre)}</strong>${t.descripcion ? `<small>${escapeHTML(t.descripcion)}</small>` : ""}</span>
+      </a></li>`).join("");
+  } catch (e) {
+    // Sin la lista, "Tiendas" funciona como enlace normal a las tiendas de la portada
+    boton.removeAttribute("data-action");
+    boton.removeAttribute("aria-expanded");
+  }
+}
+
+function initBarraLateral() {
+  const nav = document.getElementById("main-navbar");
+  if (!nav) return;
+  const boton = document.getElementById("side-tiendas-btn");
+
+  // Hover: abre al entrar a "Tiendas" o al panel; cierra con una pequeña tolerancia al salir
+  nav.addEventListener("mouseover", event => {
+    if (!CON_MOUSE.matches) return;
+    if (event.target.closest(".side-tiendas, .side-flyout")) {
+      abrirTiendas(true);
+    } else if (nav.classList.contains("is-open")) {
+      clearTimeout(cierreTiendas);
+      cierreTiendas = setTimeout(() => abrirTiendas(false), 150);
+    }
+  });
+  nav.addEventListener("mouseleave", () => {
+    if (!CON_MOUSE.matches || !nav.classList.contains("is-open")) return;
+    clearTimeout(cierreTiendas);
+    cierreTiendas = setTimeout(() => abrirTiendas(false), 150);
+  });
+
+  // Teclado fuera del cajón: al salir de la barra con Tab se cierra el panel
+  nav.addEventListener("focusout", event => {
+    if (!ES_CAJON.matches && !nav.contains(event.relatedTarget)) abrirTiendas(false);
+  });
+
+  nav.addEventListener("keydown", event => {
+    if (event.key === "ArrowRight" && event.target === boton) {
+      event.preventDefault();
+      abrirTiendas(true, true);
+    } else if (event.key === "ArrowLeft" && event.target.closest(".side-flyout")) {
+      event.preventDefault();
+      abrirTiendas(false);
+      boton.focus();
+    } else if (event.key === "Tab" && nav.classList.contains("is-drawer")) {
+      const enfocables = enfocablesCajon(nav);
+      const primero = enfocables[0];
+      const ultimo = enfocables[enfocables.length - 1];
+      if (event.shiftKey && document.activeElement === primero) {
+        event.preventDefault();
+        ultimo.focus();
+      } else if (!event.shiftKey && document.activeElement === ultimo) {
+        event.preventDefault();
+        primero.focus();
+      }
+    }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if (nav.classList.contains("is-open")) {
+      abrirTiendas(false);
+      boton.focus();
+    } else if (nav.classList.contains("is-drawer")) {
+      abrirCajon(false);
+    }
+  });
+
+  // Clic fuera de la barra cierra el panel
+  document.addEventListener("click", event => {
+    if (nav.classList.contains("is-open") && !nav.contains(event.target)) abrirTiendas(false);
+  });
+
+  // Al pasar de celular a escritorio, el cajón no se queda abierto
+  ES_CAJON.addEventListener("change", () => {
+    if (!ES_CAJON.matches && nav.classList.contains("is-drawer")) abrirCajon(false);
+  });
+
+  cargarTiendasMenu();
+}
+
+Object.assign(ACCIONES, {
+  "menu-tiendas": (el, event) => {
+    event.preventDefault();
+    const nav = document.getElementById("main-navbar");
+    const abrir = !nav.classList.contains("is-open");
+    abrirTiendas(abrir, abrir && event.detail === 0);
+    if (!abrir && ES_CAJON.matches) document.getElementById("side-tiendas-btn").focus();
+  },
+  "menu-abrir": () => abrirCajon(true),
+  "menu-cerrar": () => abrirCajon(false)
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   migrarCarritoViejo();
   actualizarContador();
   cargarTiendasPie();
+  initBarraLateral();
 });

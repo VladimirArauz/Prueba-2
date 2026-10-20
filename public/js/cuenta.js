@@ -11,11 +11,25 @@ function destinoDeVuelta() {
   return /^\/[a-z0-9/?=&_-]*$/i.test(volver) && !volver.startsWith("//") ? volver : "";
 }
 
+// Panel deslizante: muestra "Iniciar sesión" o "Crear cuenta"; el otro formulario queda inerte
+function modoAuth(registro, enfocar = false) {
+  $("cuenta-fuera").classList.toggle("is-registro", registro);
+  $("auth-entrar").inert = registro;
+  $("auth-registro").inert = !registro;
+  if (enfocar) {
+    const campo = registro ? $("registro-nombre") : $("entrar-correo");
+    campo.focus({ preventScroll: true });
+  }
+}
+
 function render(sesion) {
   const dentro = Boolean(sesion && sesion.autenticado);
   $("cuenta-fuera").hidden = dentro;
   $("cuenta-dentro").hidden = !dentro;
-  if (!dentro) return;
+  if (!dentro) {
+    modoAuth(location.hash === "#crear-cuenta");
+    return;
+  }
   $("dentro-title").textContent = `Hola, ${sesion.nombre}`;
   $("dentro-correo").textContent = `Entraste con ${sesion.correo}.`;
   const volver = destinoDeVuelta();
@@ -52,6 +66,14 @@ async function enviarForm(event, ruta, campos, mensaje) {
 }
 
 Object.assign(ACCIONES, {
+  "auth-cambiar": () => modoAuth(!$("cuenta-fuera").classList.contains("is-registro"), true),
+  "ver-password": el => {
+    const campo = $(el.getAttribute("aria-controls"));
+    const ver = campo.type === "password";
+    campo.type = ver ? "text" : "password";
+    el.setAttribute("aria-label", ver ? "Ocultar contraseña" : "Mostrar contraseña");
+    el.innerHTML = icon(ver ? "eye-off" : "eye");
+  },
   salir: async () => {
     try {
       await api("/clientes/logout", { method: "POST" });
@@ -59,6 +81,11 @@ Object.assign(ACCIONES, {
     render(null);
     showToast("Sesión cerrada.");
   }
+});
+
+// Un enlace a #crear-cuenta desde esta misma página también abre el registro
+window.addEventListener("hashchange", () => {
+  if (!$("cuenta-fuera").hidden) modoAuth(location.hash === "#crear-cuenta", true);
 });
 
 document.addEventListener("DOMContentLoaded", async () => {

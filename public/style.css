@@ -36,6 +36,13 @@
 
   /* Movimiento */
   --t-fast: 0.15s ease;
+  /* Plan 2026-10-20 (excepción autorizada por el usuario): movimiento suave y dos sombras de --tinta */
+  --t-media: 0.25s cubic-bezier(.2, .7, .2, 1);  /* hover y menús */
+  --t-lenta: 0.45s cubic-bezier(.2, .7, .2, 1);  /* barra lateral y entradas */
+  --t-panel: 0.65s cubic-bezier(.65, 0, .35, 1); /* panel del login */
+  --sombra-1: 0 6px 18px rgba(23, 41, 92, .10);  /* hover de tarjetas */
+  --sombra-2: 0 24px 60px rgba(23, 41, 92, .16); /* barra abierta, submenú, tarjeta de login */
+  --velo: rgba(23, 41, 92, .4);                  /* fondo detrás del cajón del menú */
 }
 
 /* ================= Reset ================= */
@@ -238,21 +245,25 @@ small, .text-sm {
   width: 100%;
 }
 
-/* ================= 1. NAVBAR ================= */
-.site-navbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: var(--hoja);
-  border-bottom: 1px solid var(--linea);
+/* ================= 1. BARRA LATERAL (plan 2026-10-20) =================
+   Cerrada solo muestra iconos; con hover o foco se abre encima del contenido.
+   ≤ 860px: barra superior + cajón que sale de la izquierda. */
+:root {
+  --side-w: 76px;
+  --side-w-abierta: 264px;
+  --side-margen: 16px;
+  --side-pad: 15px; /* (76 - 2 de borde - 44 del icono) / 2 */
 }
 
-.navbar-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  gap: 16px;
+body {
+  padding-left: calc(var(--side-w) + var(--side-margen));
+}
+
+.topbar,
+.side-cerrar,
+.side-volver,
+.side-fondo {
+  display: none;
 }
 
 .nav-brand {
@@ -261,6 +272,463 @@ small, .text-sm {
   gap: 12px;
   color: var(--tinta);
   text-decoration: none;
+}
+
+.sidebar {
+  position: fixed;
+  z-index: 1000;
+  top: var(--side-margen);
+  bottom: var(--side-margen);
+  left: var(--side-margen);
+  width: var(--side-w);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  transition: width var(--t-lenta), box-shadow var(--t-lenta);
+}
+
+.sidebar:hover,
+.sidebar:focus-within,
+.sidebar.is-open {
+  width: var(--side-w-abierta);
+  box-shadow: var(--sombra-2);
+}
+
+/* Textos: aparecen un poco después de que la barra se ensancha */
+.side-text {
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+
+.sidebar:hover .side-text,
+.sidebar:focus-within .side-text,
+.sidebar.is-open .side-text {
+  opacity: 1;
+  transition: opacity var(--t-media) 0.1s;
+}
+
+.side-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--side-pad);
+}
+
+.side-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tinta);
+  text-decoration: none;
+  border-radius: var(--r-btn);
+}
+
+.side-brand .brand-emblem {
+  width: 44px;
+  height: 44px;
+}
+
+.side-brand .brand-title {
+  font-size: 1.25rem;
+}
+
+/* Buscador: cerrado se ve como un botón de lupa */
+.side-search {
+  position: relative;
+  margin: 0 var(--side-pad);
+}
+
+.side-search > .icon {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  color: var(--texto-2);
+  pointer-events: none;
+}
+
+.side-search input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px 0 40px;
+  background: var(--gis);
+  border: 1px solid transparent;
+  border-radius: var(--r-btn);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.side-search input:hover {
+  border-color: var(--linea);
+}
+
+.side-search input:focus {
+  background: var(--hoja);
+  border-color: var(--tinta);
+  cursor: text;
+}
+
+.side-search input::placeholder {
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+
+.sidebar:hover .side-search input::placeholder,
+.sidebar:focus-within .side-search input::placeholder,
+.sidebar.is-open .side-search input::placeholder {
+  opacity: 1;
+}
+
+.side-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.side-nav {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 var(--side-pad);
+}
+
+.side-abajo {
+  margin: 0 var(--side-pad);
+  padding: 12px 0 0;
+  border-top: 1px solid var(--linea);
+}
+
+.side-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  border-radius: var(--r-btn);
+  color: var(--tinta);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--t-media), color var(--t-media);
+}
+
+.side-ico {
+  position: relative;
+  flex: 0 0 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  transition: transform var(--t-media);
+}
+
+.side-ico > .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.side-link:hover,
+.side-link[aria-expanded="true"] {
+  background: var(--gis);
+}
+
+.side-link:hover .side-ico {
+  transform: translateX(2px);
+}
+
+/* Opción activa: rellena de tinta con una marca señal a la izquierda */
+.side-link[aria-current="page"],
+.side-link.is-current {
+  background: var(--tinta);
+  color: var(--hoja);
+}
+
+.side-link[aria-current="page"]::before,
+.side-link.is-current::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: -9px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--senal);
+}
+
+.side-link[aria-current="page"]:hover,
+.side-link.is-current:hover,
+.side-link.is-current[aria-expanded="true"] {
+  background: var(--tinta-2);
+}
+
+.side-caret {
+  margin: 0 12px 0 auto;
+  color: var(--texto-2);
+  opacity: 0;
+  transition: transform var(--t-media), opacity var(--t-fast);
+}
+
+.sidebar:hover .side-caret,
+.sidebar:focus-within .side-caret,
+.sidebar.is-open .side-caret {
+  opacity: 1;
+}
+
+.side-link.is-current .side-caret {
+  color: var(--tinta-suave);
+}
+
+.side-link[aria-expanded="true"] .side-caret {
+  transform: translateX(3px);
+}
+
+/* Contador del carrito: punto rojo sobre el icono */
+.side-ico .cart-pill,
+.side-carrito .cart-pill {
+  position: absolute;
+  top: 1px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid var(--hoja);
+  font-size: 0.6875rem;
+}
+
+.cart-pill.is-cero {
+  display: none;
+}
+
+/* Submenú de tiendas: panel a la derecha de la barra */
+.side-flyout {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12px);
+  width: 320px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  box-shadow: var(--sombra-2);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-8px);
+  transition: opacity var(--t-media), transform var(--t-media), visibility 0s linear 0.25s;
+}
+
+.sidebar.is-open .side-flyout {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity var(--t-media), transform var(--t-media), visibility 0s;
+}
+
+.side-flyout-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.side-flyout-title {
+  color: var(--tinta);
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 112;
+}
+
+.side-flyout-head a {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.side-tiendas-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.side-tienda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--r-btn);
+  color: var(--tinta);
+  text-decoration: none;
+  transition: background-color var(--t-media);
+}
+
+.side-tienda .side-ico {
+  flex-basis: 40px;
+  height: 40px;
+  border-radius: var(--r-btn);
+  background: var(--gis);
+  transition: background-color var(--t-media), color var(--t-media), transform var(--t-media);
+}
+
+.side-tienda > span:last-child {
+  min-width: 0;
+}
+
+.side-tienda strong {
+  display: block;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.side-tienda small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--texto-2);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.side-tienda:hover,
+.side-tienda[aria-current="page"] {
+  background: var(--gis);
+}
+
+.side-tienda:hover .side-ico,
+.side-tienda[aria-current="page"] .side-ico {
+  background: var(--tinta);
+  color: var(--senal);
+}
+
+.side-tienda:hover .side-ico {
+  transform: translateX(2px);
+}
+
+/* Las tiendas entran escalonadas al abrir el panel */
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar.is-open .side-tiendas-list li {
+    animation: entrar-lado 0.35s cubic-bezier(.2, .7, .2, 1) both;
+  }
+  .sidebar.is-open .side-tiendas-list li:nth-child(2) { animation-delay: 30ms; }
+  .sidebar.is-open .side-tiendas-list li:nth-child(3) { animation-delay: 60ms; }
+  .sidebar.is-open .side-tiendas-list li:nth-child(4) { animation-delay: 90ms; }
+  .sidebar.is-open .side-tiendas-list li:nth-child(5) { animation-delay: 120ms; }
+  .sidebar.is-open .side-tiendas-list li:nth-child(6) { animation-delay: 150ms; }
+  .sidebar.is-open .side-tiendas-list li:nth-child(7) { animation-delay: 180ms; }
+  .sidebar.is-open .side-tiendas-list li:nth-child(n+8) { animation-delay: 210ms; }
+}
+
+@keyframes entrar-lado {
+  from { opacity: 0; transform: translateX(-10px); }
+}
+
+/* Celular y tableta: barra superior y cajón */
+@media (max-width: 860px) {
+  body {
+    padding-left: 0;
+  }
+  body.sin-scroll {
+    overflow: hidden;
+  }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--hoja);
+    border-bottom: 1px solid var(--linea);
+  }
+  .topbar .brand-title {
+    font-size: 1.25rem;
+  }
+  .topbar-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .topbar .btn.btn-icon {
+    position: relative;
+    width: 44px;
+  }
+  .sidebar,
+  .sidebar:hover,
+  .sidebar:focus-within,
+  .sidebar.is-open {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(300px, 86vw);
+    border-left: 0;
+    border-radius: 0 var(--r-card) var(--r-card) 0;
+    box-shadow: none;
+  }
+  .sidebar {
+    visibility: hidden;
+    transform: translateX(-105%);
+    transition: transform var(--t-lenta), visibility 0s linear 0.45s;
+  }
+  .sidebar.is-drawer {
+    visibility: visible;
+    transform: none;
+    box-shadow: var(--sombra-2);
+    transition: transform var(--t-lenta), visibility 0s;
+  }
+  .side-text,
+  .side-caret,
+  .side-search input::placeholder {
+    opacity: 1;
+  }
+  .side-cerrar {
+    display: inline-flex;
+  }
+  /* Tiendas: segundo panel que entra sobre el cajón, con "Volver al menú" */
+  .side-flyout {
+    inset: 0;
+    width: auto;
+    max-height: none;
+    border: 0;
+    border-radius: inherit;
+    box-shadow: none;
+    transform: translateX(24px);
+  }
+  .side-volver {
+    display: inline-flex;
+    margin-bottom: 12px;
+  }
+  .side-fondo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: var(--velo);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--t-lenta), visibility 0s linear 0.45s;
+  }
+  .side-fondo.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--t-lenta), visibility 0s;
+  }
 }
 
 .brand-emblem {
@@ -294,40 +762,6 @@ small, .text-sm {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--texto-2);
-}
-
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Botones de navegación: variante ghost con estado activo */
-.nav-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 2px solid transparent;
-  border-radius: var(--r-btn);
-  background: transparent;
-  color: var(--tinta);
-  font-family: var(--font);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color var(--t-fast), background-color var(--t-fast);
-}
-
-.nav-btn:hover {
-  border-color: var(--linea);
-}
-
-.nav-btn.active {
-  border-color: var(--tinta);
-  background: var(--gis);
 }
 
 .cart-pill {
@@ -1634,18 +2068,6 @@ legend {
   .hero-grid {
     grid-template-columns: 1fr;
   }
-  .navbar-container {
-    flex-wrap: wrap;
-  }
-  .nav-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .nav-btn {
-    flex: 1;
-    justify-content: center;
-    padding: 0 8px;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1713,25 +2135,21 @@ legend {
   }
 }
 
-/* Pantallas muy angostas: la barra conserva el texto y quita los iconos */
-@media (max-width: 400px) {
-  .nav-actions {
-    gap: 4px;
-  }
-  .nav-btn {
-    gap: 6px;
-    padding: 0 6px;
-  }
-  .nav-btn > .icon {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+  /* Sin desplazamientos de hover ni de entrada: solo cambian color y borde */
+  .card:hover, .card:hover img, .btn:hover, .btn:active, .btn:hover .icon,
+  .letrero-item:hover, .letrero-item:hover img, .board-row:hover .board-name,
+  .side-link:hover .side-ico, .side-tienda:hover .side-ico {
+    transform: none !important;
+  }
+  .revelar, .revelar-grid > * {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -2085,29 +2503,383 @@ a.card-img-wrap {
   outline-offset: 2px;
 }
 
-/* Cuenta de cliente */
-.cuenta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  align-items: start;
-}
-
-.cuenta-grid .admin-card + .admin-card {
-  margin-top: 0;
-}
-
-.cuenta-grid .admin-form-grid {
-  grid-template-columns: 1fr;
-}
-
 @media (max-width: 760px) {
   .producto-detalle,
-  .opiniones-layout,
-  .cuenta-grid {
+  .opiniones-layout {
     grid-template-columns: 1fr;
   }
   .producto-detalle {
     padding: 16px;
+  }
+}
+
+/* ================= MOVIMIENTO: HOVER Y ENTRADAS (plan 2026-10-20) =================
+   Excepción autorizada por el usuario: las cosas se levantan en hover y las secciones
+   aparecen al bajar. Solo se animan transform, opacity, sombra y colores.
+   Con prefers-reduced-motion: reduce, todo se apaga (bloque de arriba). */
+.card,
+.letrero-item {
+  transition: border-color var(--t-media), transform var(--t-media), box-shadow var(--t-media);
+}
+
+.card-img-wrap img,
+.letrero-item .letrero-img img {
+  transition: transform var(--t-lenta);
+}
+
+.btn {
+  transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast),
+    transform var(--t-media), box-shadow var(--t-media);
+}
+
+.btn .icon,
+.board-row .board-name,
+.board-row .board-go {
+  transition: transform var(--t-media), opacity var(--t-media);
+}
+
+/* Enlaces de texto: el subrayado aparece y se acerca al texto */
+.footer-links a,
+.letrero-head a,
+.side-flyout-head a,
+.card-link {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 6px;
+  transition: color var(--t-fast), text-decoration-color var(--t-media), text-underline-offset var(--t-media);
+}
+
+.footer-links a:hover,
+.letrero-head a:hover,
+.side-flyout-head a:hover,
+.card-link:hover {
+  text-decoration-color: currentColor;
+  text-underline-offset: 3px;
+}
+
+.board-row .board-go {
+  opacity: 0.5;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--sombra-1);
+    border-color: var(--tinta);
+  }
+  .letrero-item:hover {
+    transform: translateY(-4px);
+    border-color: var(--tinta-suave);
+  }
+  .card:hover .card-img-wrap img,
+  .letrero-item:hover .letrero-img img {
+    transform: scale(1.04);
+  }
+
+  /* Botones: suben 2px sobre un escalón plano del color de su borde y bajan al presionar */
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 0 var(--tinta);
+  }
+  .btn.wa:hover {
+    box-shadow: 0 3px 0 var(--wa-oscuro);
+  }
+  .btn.danger:hover {
+    box-shadow: 0 3px 0 var(--tinta);
+  }
+  .btn.ghost:hover,
+  .btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .btn:hover .icon {
+    transform: translateX(2px);
+  }
+  .btn:hover .icon:has(use[href="#i-arrow-left"]) {
+    transform: translateX(-2px);
+  }
+  .btn:hover .icon:has(use[href="#i-chevron-down"]) {
+    transform: translateY(2px);
+  }
+
+  .board-row:hover .board-name {
+    transform: translateX(4px);
+  }
+  .board-row:hover .board-go {
+    opacity: 1;
+    transform: translateX(4px);
+  }
+}
+
+.btn:active,
+.btn.wa:active,
+.btn.danger:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Entradas: comun.js pone .anim en <html> (solo con JS y sin movimiento reducido)
+   y .visible cuando el bloque entra a la pantalla */
+.anim .revelar {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity var(--t-lenta), transform var(--t-lenta);
+}
+
+.anim .revelar.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Grids: los hijos entran escalonados (60ms entre cada uno, máximo 8 pasos).
+   Animación sin "forwards": al terminar, el hover vuelve a controlar transform. */
+.anim .revelar-grid:not(.visible) > * {
+  opacity: 0;
+}
+
+.anim .revelar-grid.visible > * {
+  animation: subir 0.5s cubic-bezier(.2, .7, .2, 1) backwards;
+}
+
+.anim .revelar-grid.visible > :nth-child(2) { animation-delay: 60ms; }
+.anim .revelar-grid.visible > :nth-child(3) { animation-delay: 120ms; }
+.anim .revelar-grid.visible > :nth-child(4) { animation-delay: 180ms; }
+.anim .revelar-grid.visible > :nth-child(5) { animation-delay: 240ms; }
+.anim .revelar-grid.visible > :nth-child(6) { animation-delay: 300ms; }
+.anim .revelar-grid.visible > :nth-child(7) { animation-delay: 360ms; }
+.anim .revelar-grid.visible > :nth-child(n+8) { animation-delay: 420ms; }
+
+@keyframes subir {
+  from { opacity: 0; transform: translateY(18px); }
+}
+
+/* ================= CUENTA: LOGIN CON PANEL DESLIZANTE (plan 2026-10-20) =================
+   Iniciar sesión a la izquierda, crear cuenta a la derecha; el panel --tinta tapa el
+   formulario que no se usa y se desliza al otro lado al cambiar (.is-registro). */
+.auth {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 880px;
+  min-height: 560px;
+  padding: 8px;
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  box-shadow: var(--sombra-2);
+  overflow: hidden;
+}
+
+.auth-form {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 32px 36px;
+  transition: opacity 0.35s ease 0.25s, transform var(--t-panel);
+}
+
+.auth-entrar {
+  grid-column: 1;
+}
+
+.auth-registro {
+  grid-column: 2;
+}
+
+.auth-form h2 {
+  font-size: 1.75rem;
+  font-variation-settings: 'wdth' 112;
+}
+
+.auth-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 20px 0 24px;
+}
+
+/* El formulario que está debajo del panel se desvanece y se corre */
+.auth.is-registro .auth-entrar,
+.auth:not(.is-registro) .auth-registro {
+  opacity: 0;
+  transition: opacity 0.25s ease, transform var(--t-panel);
+}
+
+.auth.is-registro .auth-entrar {
+  transform: translateX(-32px);
+}
+
+.auth:not(.is-registro) .auth-registro {
+  transform: translateX(32px);
+}
+
+/* Campo con icono a la izquierda (y botón para ver la contraseña a la derecha) */
+.campo-icono {
+  position: relative;
+}
+
+.campo-icono > .icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--texto-2);
+  pointer-events: none;
+  transition: color var(--t-fast);
+}
+
+.campo-icono:focus-within > .icon {
+  color: var(--tinta);
+}
+
+.campo-icono input {
+  width: 100%;
+  padding-left: 42px;
+}
+
+.campo-icono.con-ver input {
+  padding-right: 48px;
+}
+
+.campo-ver {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: transparent;
+  color: var(--texto-2);
+  cursor: pointer;
+  transition: color var(--t-fast), background-color var(--t-fast);
+}
+
+.campo-ver:hover {
+  background: var(--gis);
+  color: var(--tinta);
+}
+
+/* Panel: tapa la mitad derecha; con .is-registro se desliza a la izquierda */
+.auth-panel {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  width: calc(50% - 8px);
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--r-btn);
+  background: var(--tinta);
+  color: var(--hoja);
+  transition: transform var(--t-panel);
+}
+
+.auth.is-registro .auth-panel {
+  transform: translateX(-100%);
+}
+
+.auth-ciudad {
+  position: absolute;
+  left: -6%;
+  bottom: 0;
+  width: 112%;
+  height: 46%;
+  transition: transform var(--t-panel);
+}
+
+.auth.is-registro .auth-ciudad {
+  transform: translateX(5%);
+}
+
+.auth-ciudad .ed {
+  fill: var(--tinta-2);
+}
+
+.auth-ciudad .ve {
+  fill: var(--senal);
+}
+
+/* Los dos textos ocupan el mismo lugar y cambian a la mitad del recorrido */
+.auth-panel-texto {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 72px 40px 0;
+  text-align: center;
+  transition: opacity 0.3s ease 0.3s, transform 0.3s ease 0.3s;
+}
+
+.auth-panel-titulo {
+  color: var(--hoja);
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 112;
+  line-height: 1.2;
+}
+
+.auth-panel-texto p:not(.auth-panel-titulo) {
+  color: var(--tinta-suave);
+  max-width: 32ch;
+}
+
+.auth-panel-texto .btn {
+  margin-top: 8px;
+}
+
+.auth:not(.is-registro) .auth-panel-texto[data-modo="registro"],
+.auth.is-registro .auth-panel-texto[data-modo="entrar"] {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+
+/* Celular: el panel queda arriba como franja y los formularios se cambian de lado a lado */
+@media (max-width: 760px) {
+  .auth {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    min-height: 0;
+  }
+  .auth-panel {
+    position: relative;
+    grid-row: 1;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    min-height: 200px;
+  }
+  .auth.is-registro .auth-panel {
+    transform: none;
+  }
+  .auth-panel-texto {
+    padding: 24px 20px 64px;
+    gap: 8px;
+  }
+  .auth-panel-titulo {
+    font-size: 1.375rem;
+  }
+  .auth-ciudad {
+    height: 34%;
+  }
+  .auth-form,
+  .auth-entrar,
+  .auth-registro {
+    grid-row: 2;
+    grid-column: 1;
+    justify-content: flex-start;
+    padding: 24px 16px 16px;
   }
 }
