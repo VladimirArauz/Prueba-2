@@ -1905,6 +1905,12 @@ textarea {
   padding-bottom: 8px;
 }
 
+.cart-privacidad {
+  margin: 8px 0 0;
+  color: var(--texto-2);
+  font-size: 0.875rem;
+}
+
 .cart-layout > * {
   min-width: 0;
 }
@@ -2881,5 +2887,418 @@ a.card-img-wrap {
     grid-column: 1;
     justify-content: flex-start;
     padding: 24px 16px 16px;
+  }
+}
+
+/* ================= NECUTOOLS: DASHBOARD (plan 2026-10-20-dashboard-necutools) ================= */
+/* Menú de secciones a la izquierda y paneles a la derecha. Mismos tokens, botones y tarjetas del sitio. */
+.dash {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.dash-nav {
+  position: sticky;
+  top: 24px;
+  padding: 12px;
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-panel);
+}
+
+.dash-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+}
+
+.dash-link {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.dash-link span:not(.cart-pill) {
+  flex: 1;
+}
+
+.dash-link .cart-pill {
+  position: static;
+}
+
+.dash-main {
+  min-width: 0;
+}
+
+.dash-head {
+  align-items: flex-end;
+}
+
+.dash-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.dash-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dash-filtros .form-group {
+  min-width: 170px;
+}
+
+/* Indicadores */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+}
+
+.kpi-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--texto-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.kpi-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-btn);
+  background: var(--gis);
+  color: var(--tinta);
+}
+
+.kpi-valor {
+  font-size: 1.625rem;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 112;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--tinta);
+}
+
+.kpi-sin-dato {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.kpi-cambio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.kpi-cambio.is-sube .icon {
+  color: var(--tinta);
+}
+
+.kpi-cambio.is-baja .icon,
+.kpi-cambio.is-baja strong {
+  color: var(--aviso);
+}
+
+.kpi-cambio strong {
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rejillas de tarjetas del resumen */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.dash-grid > .admin-card + .admin-card {
+  margin-top: 0;
+}
+
+.dash-grid .admin-card {
+  padding: 22px;
+}
+
+.dash-ancha {
+  grid-column: span 2;
+}
+
+.dash-grid-mitad {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+/* Gráficas */
+.grafica {
+  margin-top: 16px;
+}
+
+.grafica-lienzo {
+  position: relative;
+  height: 260px;
+}
+
+.grafica-dona .grafica-lienzo {
+  height: 190px;
+}
+
+.dash-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.leyenda-linea {
+  display: inline-block;
+  width: 22px;
+  border-top: 2px solid var(--tinta);
+  margin-right: -6px;
+}
+
+.leyenda-linea.is-punteada {
+  border-top: 2px dashed var(--tinta-2);
+}
+
+.dash-leyenda-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.dash-leyenda-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-leyenda-lista strong {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.punto {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tinta);
+  flex-shrink: 0;
+}
+
+.punto.is-pendiente { background: var(--senal); }
+.punto.is-vendido { background: var(--tinta); }
+.punto.is-cancelado { background: var(--linea); }
+
+/* Listas del resumen */
+.dash-lista,
+.dash-tareas {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  list-style: none;
+}
+
+.dash-lista li,
+.dash-tareas li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.dash-lista li:last-child,
+.dash-tareas li:last-child {
+  border-bottom: 0;
+}
+
+.dash-lista-num {
+  font-weight: 700;
+  color: var(--texto-2);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5em;
+}
+
+.dash-lista-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dash-lista-dato {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: var(--texto-2);
+}
+
+.dash-lista-dato strong {
+  display: block;
+  color: var(--tinta);
+  font-size: 1rem;
+}
+
+.dash-tareas .btn {
+  width: 100%;
+  justify-content: space-between;
+  white-space: normal;
+  text-align: left;
+}
+
+.dash-tareas li {
+  padding: 6px 0;
+  border-bottom: 0;
+}
+
+.dash-tarea-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.dash-vacio {
+  padding: 20px 0 4px;
+  color: var(--texto-2);
+}
+
+/* Pedidos */
+.dash-estados {
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+
+.status-badge.is-pendiente {
+  background: var(--senal);
+  border-color: var(--tinta);
+}
+
+.status-badge.is-cancelado {
+  color: var(--texto-2);
+  background: var(--hoja);
+}
+
+.pedido-items {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.875rem;
+}
+
+.pedido-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 200px;
+  white-space: normal;
+}
+
+.admin-table .pedido-acciones .btn + .btn {
+  margin-left: 0;
+}
+
+.pedido-nota {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.dash-paginas {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  color: var(--texto-2);
+}
+
+@media (max-width: 1200px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .dash {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  /* El menú pasa a una fila con scroll horizontal arriba de los paneles */
+  .dash-nav {
+    position: static;
+    padding: 8px;
+    overflow-x: auto;
+  }
+  .dash-nav-list {
+    flex-direction: row;
+  }
+  .dash-link {
+    width: auto;
+    white-space: nowrap;
+  }
+  .dash-grid,
+  .dash-grid-mitad {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash-ancha {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid,
+  .dash-grid,
+  .dash-grid-mitad {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash-tools,
+  .dash-filtros,
+  .dash-filtros .form-group {
+    width: 100%;
+  }
+  .dash-filtros .form-group {
+    min-width: 0;
+  }
+  .grafica-lienzo {
+    height: 220px;
   }
 }

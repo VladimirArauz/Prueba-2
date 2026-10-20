@@ -13,10 +13,20 @@ const NOMBRES_ICONOS = {
 };
 const NOMBRE_TIPO_OFERTA = { porcentaje: "Descuento", precio_especial: "Precio especial", dos_por_uno: "2x1" };
 const NOMBRE_CLASE_OFERTA = { semanal: "Semanal", temporada: "De temporada", remate: "Remate" };
+const NOMBRE_ESTADO = { pendiente: "Pendiente", vendido: "Vendido", cancelado: "Cancelado" };
+const TITULOS_PANEL = {
+  resumen: "Resumen", pedidos: "Pedidos", tiendas: "Tiendas", productos: "Productos y servicios",
+  ofertas: "Ofertas de la tienda", resenas: "Opiniones", promociones: "Promociones generales",
+  usuarios: "Usuarios", cuenta: "Mi cuenta"
+};
 
 const st = {
   sesion: null,
-  panel: "tiendas",
+  panel: "resumen",
+  resumen: null,
+  pedidos: { pedidos: [], pagina: 1, paginas: 1, total: 0, pendientes: 0 },
+  pedidosEstado: "",
+  pedidosPagina: 1,
   iconos: [],
   tiendas: [],
   productos: [],
@@ -116,7 +126,8 @@ function renderAcceso() {
   $("admin-workspace").hidden = !dentro;
   if (!dentro) return;
   const rol = esDueno() ? "Dueño" : "Encargado";
-  $("admin-user").innerHTML = `${icon("users")}<span>${escapeHTML(st.sesion.usuario)} · ${rol}</span>`;
+  const tiendas = !esDueno() && st.tiendas.length ? ` · ${st.tiendas.map(t => t.nombre).join(", ")}` : "";
+  $("admin-user").innerHTML = `${icon("user")}<span>Hola, ${escapeHTML(st.sesion.usuario)} · ${rol}${escapeHTML(tiendas)}</span>`;
   document.querySelectorAll("[data-solo-dueno]").forEach(el => { el.hidden = !esDueno(); });
   $("tienda-card").hidden = !esDueno() && !st.editando.tienda;
   $("tiendas-intro").textContent = esDueno()
@@ -152,9 +163,15 @@ function mostrarPanel(panel) {
   document.querySelectorAll(".admin-panel").forEach(sec => { sec.hidden = sec.id !== `panel-${panel}`; });
   document.querySelectorAll('#admin-tabs [data-action="panel"]').forEach(btn => {
     const activo = btn.dataset.panel === panel;
-    btn.classList.toggle("secondary", !activo);
+    btn.classList.toggle("ghost", !activo);
     btn.setAttribute("aria-pressed", String(activo));
+    // En celular el menú es una fila con scroll: la sección elegida queda a la vista
+    if (activo) btn.scrollIntoView({ block: "nearest", inline: "nearest" });
   });
+  $("dash-titulo").textContent = TITULOS_PANEL[panel];
+  $("dash-filtros").hidden = panel !== "resumen" && panel !== "pedidos";
+  // Las gráficas se dibujan con el panel visible para que tomen su tamaño real
+  if (panel === "resumen" && st.resumen) renderGraficas();
 }
 
 // ================= Carga de datos =================
@@ -171,10 +188,11 @@ async function cargarTodo() {
   }
   renderAcceso();
   try {
-    const [iconos, tiendas, productos, ofertas, resenas] = await Promise.all([
-      api("/admin/iconos"), api("/admin/tiendas"), api("/admin/productos"), api("/admin/ofertas"), api("/admin/resenas")
+    const [iconos, tiendas, productos, ofertas, resenas, resumen, pedidos] = await Promise.all([
+      api("/admin/iconos"), api("/admin/tiendas"), api("/admin/productos"), api("/admin/ofertas"), api("/admin/resenas"),
+      api(rutaResumen()), api(rutaPedidos())
     ]);
-    Object.assign(st, { iconos, tiendas, productos, ofertas, resenas });
+    Object.assign(st, { iconos, tiendas, productos, ofertas, resenas, resumen, pedidos });
     if (esDueno()) {
       [st.promos, st.usuarios] = await Promise.all([api("/admin/promociones"), api("/admin/usuarios")]);
     }
@@ -185,16 +203,22 @@ async function cargarTodo() {
   renderTodo();
 }
 
+// El resumen se recarga siempre: sus pendientes dependen de productos, ofertas y opiniones
 async function recargar(...que) {
   const rutas = { tiendas: "/admin/tiendas", productos: "/admin/productos", ofertas: "/admin/ofertas", resenas: "/admin/resenas",
-    promos: "/admin/promociones", usuarios: "/admin/usuarios" };
+    promos: "/admin/promociones", usuarios: "/admin/usuarios", resumen: rutaResumen(), pedidos: rutaPedidos() };
+  if (!que.includes("resumen")) que.push("resumen");
   const datos = await Promise.all(que.map(clave => api(rutas[clave])));
   que.forEach((clave, i) => { st[clave] = datos[i]; });
   renderTodo();
 }
 
-function renderTodo() {
+function renderTodo({ animar = false } = {}) {
   renderAcceso();
+  renderFiltrosDash();
+  renderResumen({ animar });
+  renderPedidos();
+  renderContadores();
   renderTiendas();
   renderSubcategorias();
   renderProductos();
@@ -204,6 +228,233 @@ function renderTodo() {
     renderPromos();
     renderUsuarios();
   }
+}
+
+// ================= Resumen (dashboard) =================
+function rutaResumen() {
+  const tienda = $("dash-tienda").value || "todas";
+  return `/admin/resumen?dias=${encodeURIComponent($("dash-periodo").value)}&tienda=${encodeURIComponent(tienda)}`;
+}
+
+function rutaPedidos() {
+  const params = new URLSearchParams({ pagina: st.pedidosPagina });
+  if ($("dash-tienda").value) params.set("tienda", $("dash-tienda").value);
+  if (st.pedidosEstado) params.set("estado", st.pedidosEstado);
+  return `/admin/pedidos?${params}`;
+}
+
+function renderFiltrosDash() {
+  const select = $("dash-tienda");
+  const actual = select.value;
+  select.innerHTML = `<option value="">${esDueno() ? "Todas las tiendas" : "Todas mis tiendas"}</option>`
+    + st.tiendas.map(t => `<option value="${t.id}">${escapeHTML(t.nombre)}</option>`).join("");
+  select.value = st.tiendas.some(t => String(t.id) === actual) ? actual : "";
+}
+
+// Pedidos pendientes y opiniones sin responder en el menú
+function renderContadores() {
+  const pendientes = st.pedidos.pendientes;
+  const sinResponder = st.resenas.filter(r => r.visible && !r.respuesta).length;
+  [["nav-pedidos", pendientes], ["nav-resenas", sinResponder]].forEach(([id, n]) => {
+    $(id).textContent = n > 99 ? "99+" : String(n);
+    $(id).classList.toggle("is-cero", !n);
+  });
+}
+
+function fechaCorta(iso) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+}
+
+function fechaPedido(iso) {
+  return new Date(iso).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+}
+
+function estadoPedido(estado) {
+  return `<span class="status-badge is-${estado}">${NOMBRE_ESTADO[estado]}</span>`;
+}
+
+function tiendaPedido(p) {
+  return p.stand_id ? (p.tienda || "Tienda borrada") : `Paquete: ${p.paquete || "promoción borrada"}`;
+}
+
+// "12% más que los 30 días anteriores"
+function textoCambio(indicador, dias) {
+  const periodo = `los ${dias} días anteriores`;
+  if (indicador.cambio === null) return `<div class="kpi-cambio"><span>Sin datos de ${periodo}</span></div>`;
+  if (indicador.cambio === 0) return `<div class="kpi-cambio"><span>Igual que ${periodo}</span></div>`;
+  const sube = indicador.cambio > 0;
+  return `<div class="kpi-cambio ${sube ? "is-sube" : "is-baja"}">${icon(sube ? "trending-up" : "trending-down")}
+    <span><strong>${Math.abs(indicador.cambio)}%</strong> ${sube ? "más" : "menos"} que ${periodo}</span></div>`;
+}
+
+function kpi(titulo, icono, valor, pie) {
+  return `
+    <div class="kpi">
+      <div class="kpi-head"><span>${titulo}</span><span class="kpi-ico">${icon(icono)}</span></div>
+      <div class="kpi-valor">${valor}</div>
+      ${pie}
+    </div>`;
+}
+
+function renderResumen({ animar = false } = {}) {
+  const r = st.resumen;
+  if (!r) return;
+  const i = r.indicadores;
+  const cal = i.calificacion;
+  $("resumen-kpis").innerHTML = [
+    kpi("Pedidos", "receipt", i.pedidos.valor, textoCambio(i.pedidos, r.dias)),
+    kpi("Ventas confirmadas", "chart-column", pesos(i.ventas.valor), textoCambio(i.ventas, r.dias)),
+    kpi("Ticket promedio", "shopping-cart", pesos(i.ticket.valor), textoCambio(i.ticket, r.dias)),
+    kpi("Calificación promedio", "star", cal.valor ? `${cal.valor} de 5` : `<span class="kpi-sin-dato">Sin opiniones</span>`,
+      `<div class="kpi-cambio"><span>${cal.nuevas === 1 ? "1 opinión nueva" : `${cal.nuevas} opiniones nuevas`} en el periodo</span></div>`)
+  ].join("");
+
+  const totalEstados = r.por_estado.reduce((suma, e) => suma + e.pedidos, 0);
+  $("leyenda-estados").innerHTML = totalEstados ? r.por_estado.map(e => `
+    <li><span class="punto is-${e.estado}" aria-hidden="true"></span>${NOMBRE_ESTADO[e.estado]}<strong>${e.pedidos}</strong></li>`).join("") : "";
+
+  $("resumen-productos").innerHTML = r.productos.length ? r.productos.map((p, n) => `
+    <li>
+      <span class="dash-lista-num">${n + 1}</span>
+      <span class="dash-lista-nombre">${escapeHTML(p.nombre)}</span>
+      <span class="dash-lista-dato"><strong>${p.piezas} ${p.piezas === 1 ? "pieza" : "piezas"}</strong>${money(p.total)}</span>
+    </li>`).join("") : `<li class="dash-vacio">Cuando lleguen pedidos, aquí verás lo que más se pide.</li>`;
+
+  $("resumen-recientes").innerHTML = r.recientes.length ? r.recientes.map(p => `
+    <tr>
+      <td><div class="cell-title">Pedido ${p.id}</div><div class="cell-sub">${escapeHTML(fechaPedido(p.creado_en))}</div></td>
+      <td>${escapeHTML(tiendaPedido(p))}</td>
+      <td class="cell-price">${money(p.total)}</td>
+      <td>${estadoPedido(p.estado)}</td>
+    </tr>`).join("") : filaVacia(4, "Aún no hay pedidos. Comparte el enlace de tu tienda para recibir los primeros.");
+
+  const t = r.por_hacer;
+  const tareas = [
+    [t.pedidos_pendientes, "pedidos", "pedido pendiente de confirmar", "pedidos pendientes de confirmar"],
+    [t.opiniones_sin_responder, "resenas", "opinión sin responder", "opiniones sin responder"],
+    [t.sin_foto, "productos", "producto con imagen de ejemplo", "productos con imagen de ejemplo"],
+    [t.texto_ejemplo, "productos", "producto con texto de ejemplo", "productos con texto de ejemplo"],
+    [t.ofertas_por_vencer, "ofertas", "oferta que vence esta semana", "ofertas que vencen esta semana"]
+  ].filter(([n]) => n > 0);
+  $("resumen-tareas").innerHTML = tareas.length ? tareas.map(([n, panel, uno, varios]) => `
+    <li><button type="button" class="btn secondary" data-action="panel" data-panel="${panel}">
+      <span><span class="dash-tarea-num">${n}</span> ${n === 1 ? uno : varios}</span>${icon("chevron-right")}
+    </button></li>`).join("") : `<li class="dash-vacio">${icon("circle-check")} Todo al día en tus tiendas.</li>`;
+
+  if (st.panel === "resumen") renderGraficas({ animar });
+}
+
+// Solo se animan cuando el usuario cambia de tienda o de periodo (plans/CLAUDE.md: movimiento como respuesta)
+function renderGraficas({ animar = false } = {}) {
+  const r = st.resumen;
+  const vacio = mensaje => `<p class="dash-vacio">${mensaje}</p>`;
+  const totalPedidos = r.serie.reduce((suma, d) => suma + d.pedidos, 0);
+
+  if (totalPedidos) {
+    graficaLinea($("grafica-dias"), {
+      titulo: `Pedidos y ventas confirmadas por día, del ${fechaCorta(r.desde)} al ${fechaCorta(r.hasta)}`,
+      etiquetas: r.serie.map(d => fechaCorta(d.fecha)),
+      pedidos: r.serie.map(d => d.pedidos),
+      ventas: r.serie.map(d => d.ventas)
+    }, { animar });
+  } else {
+    $("grafica-dias").innerHTML = vacio("Aún no hay pedidos en este periodo. Comparte el enlace de tu tienda para recibir los primeros.");
+  }
+
+  if (r.por_estado.some(e => e.pedidos)) {
+    graficaDona($("grafica-estados"), {
+      titulo: "Pedidos del periodo por estado",
+      etiquetas: r.por_estado.map(e => NOMBRE_ESTADO[e.estado]),
+      valores: r.por_estado.map(e => e.pedidos),
+      colores: ["senal", "tinta", "linea"]
+    }, { animar });
+  } else {
+    $("grafica-estados").innerHTML = vacio("Sin pedidos en el periodo.");
+  }
+
+  if (r.por_tienda.length) {
+    graficaBarras($("grafica-tiendas"), {
+      titulo: "Pedidos del periodo por tienda",
+      etiquetas: r.por_tienda.map(t => t.nombre),
+      valores: r.por_tienda.map(t => t.pedidos),
+      nombre: "Pedidos"
+    }, { animar });
+  } else {
+    $("grafica-tiendas").innerHTML = vacio("Cuando lleguen pedidos, aquí verás qué tienda vende más.");
+  }
+}
+
+async function cambiarFiltrosDash() {
+  st.pedidosPagina = 1;
+  try {
+    [st.resumen, st.pedidos] = await Promise.all([api(rutaResumen()), api(rutaPedidos())]);
+  } catch (error) {
+    return manejarError(error);
+  }
+  renderResumen({ animar: true });
+  renderPedidos();
+  renderContadores();
+}
+
+// ================= Pedidos =================
+function renderPedidos() {
+  document.querySelectorAll('#pedidos-estados [data-action="pedidos-estado"]').forEach(btn => {
+    const activo = btn.dataset.estado === st.pedidosEstado;
+    btn.classList.toggle("secondary", !activo);
+    btn.setAttribute("aria-pressed", String(activo));
+  });
+  const { pedidos, pagina, paginas, total } = st.pedidos;
+  $("pedidos-tbody").innerHTML = pedidos.length ? pedidos.map(p => `
+    <tr>
+      <td>
+        <div class="cell-title">Pedido ${p.id}</div>
+        <div class="cell-sub">${escapeHTML(fechaPedido(p.creado_en))}</div>
+        <div class="cell-sub">${escapeHTML(tiendaPedido(p))}</div>
+      </td>
+      <td><ul class="pedido-items">${p.items.map(i => `<li>${i.cantidad} × ${escapeHTML(i.nombre)}</li>`).join("")}</ul></td>
+      <td class="cell-price">${money(p.total)}<div class="cell-sub">${p.piezas} ${p.piezas === 1 ? "pieza" : "piezas"}</div></td>
+      <td>${estadoPedido(p.estado)}${p.nota ? `<div class="pedido-nota">${escapeHTML(p.nota)}</div>` : ""}</td>
+      <td class="col-actions"><div class="pedido-acciones">
+        ${p.estado !== "vendido" ? `<button type="button" class="btn btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="vendido">${icon("check")}Marcar como vendido</button>` : ""}
+        ${p.estado === "pendiente" ? `<button type="button" class="btn danger btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="cancelado">Cancelar pedido</button>` : ""}
+        ${p.estado !== "pendiente" ? `<button type="button" class="btn secondary btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="pendiente">Volver a pendiente</button>` : ""}
+        <button type="button" class="btn secondary btn-sm btn-icon" data-action="pedido-nota" data-id="${p.id}" aria-label="Agregar nota al pedido ${p.id}" title="Agregar nota">${icon("pencil")}</button>
+      </div></td>
+    </tr>`).join("") : filaVacia(5, st.pedidosEstado
+      ? "No hay pedidos con este estado."
+      : "Aún no hay pedidos. Cuando un cliente envíe su carrito por WhatsApp, aparecerá aquí.");
+  $("pedidos-paginas").innerHTML = paginas > 1 ? `
+    <button type="button" class="btn secondary btn-sm" data-action="pedidos-pagina" data-pagina="${pagina - 1}" ${pagina <= 1 ? "disabled" : ""}>${icon("arrow-left")}Anteriores</button>
+    <span>Página ${pagina} de ${paginas} · ${total} pedidos</span>
+    <button type="button" class="btn secondary btn-sm" data-action="pedidos-pagina" data-pagina="${pagina + 1}" ${pagina >= paginas ? "disabled" : ""}>Siguientes${icon("chevron-right")}</button>` : "";
+}
+
+async function cargarPedidos() {
+  try {
+    st.pedidos = await api(rutaPedidos());
+  } catch (error) {
+    return manejarError(error);
+  }
+  renderPedidos();
+  renderContadores();
+}
+
+async function guardarPedido(id, cambios, aviso) {
+  try {
+    await api(`/admin/pedidos/${id}`, { method: "PUT", body: cambios });
+    await recargar("pedidos");
+    showToast(aviso);
+  } catch (error) {
+    manejarError(error);
+  }
+}
+
+function notaPedido(id) {
+  const pedido = st.pedidos.pedidos.find(p => p.id === id);
+  if (!pedido) return;
+  const nota = prompt(`Nota del pedido ${id} (hasta 200 caracteres). Déjala vacía para quitarla.`, pedido.nota || "");
+  if (nota === null) return;
+  guardarPedido(id, { nota: nota.slice(0, 200) }, nota.trim() ? `Nota guardada en el pedido ${id}` : `Nota quitada del pedido ${id}`);
 }
 
 // ================= Tiendas =================
@@ -899,6 +1150,23 @@ const CANCELAR = { tienda: cancelarTienda, producto: cancelarProducto, oferta: c
 Object.assign(ACCIONES, {
   logout: () => cerrarSesion(),
   panel: el => mostrarPanel(el.dataset.panel),
+  "pedidos-estado": el => {
+    st.pedidosEstado = el.dataset.estado;
+    st.pedidosPagina = 1;
+    cargarPedidos();
+  },
+  "pedidos-pagina": el => {
+    st.pedidosPagina = Number(el.dataset.pagina);
+    cargarPedidos();
+  },
+  "pedido-estado": el => {
+    const id = Number(el.dataset.id);
+    const estado = el.dataset.estado;
+    if (estado === "cancelado" && !confirm(`¿Cancelar el pedido ${id}? Puedes volver a ponerlo como pendiente después.`)) return;
+    const avisos = { vendido: "Pedido marcado como vendido", cancelado: "Pedido cancelado", pendiente: "Pedido marcado como pendiente" };
+    guardarPedido(id, { estado }, `${avisos[estado]}: ${id}`);
+  },
+  "pedido-nota": el => notaPedido(Number(el.dataset.id)),
   editar: el => EDITAR[el.dataset.tipo](Number(el.dataset.id)),
   borrar: el => BORRAR[el.dataset.tipo](Number(el.dataset.id)),
   cancelar: el => CANCELAR[el.dataset.form](),
@@ -926,6 +1194,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("oferta-filtro").addEventListener("change", renderOfertas);
   $("oferta-clase-filtro").addEventListener("change", renderOfertas);
   $("resena-filtro").addEventListener("change", renderResenas);
+  $("dash-tienda").addEventListener("change", cambiarFiltrosDash);
+  $("dash-periodo").addEventListener("change", cambiarFiltrosDash);
   $("oferta-temporada").addEventListener("change", actualizarFormOferta);
   $("oferta-clase").addEventListener("change", () => {
     const form = $("form-oferta");
@@ -951,6 +1221,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   campo($("form-promo"), "inicio").value = hoyISO();
-  mostrarPanel("tiendas");
+  mostrarPanel("resumen");
   cargarTodo();
 });

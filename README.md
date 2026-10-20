@@ -16,12 +16,13 @@ public/                Sitio (lo único que ve el navegador)
   carrito.html         Carrito agrupado por tienda
   promociones.html     Promociones de temporada
   necutools.html       Panel de administración
-  js/                  comun.js (API, carrito, WhatsApp) + un archivo por página
+  js/                  comun.js (API, carrito, WhatsApp) + un archivo por página; graficas.js (Chart.js)
   style.css, iconos.js Sistema de diseño e iconos (Lucide)
 server/
   index.js             Seguridad, páginas, redirecciones de direcciones viejas y arranque
   api.js               API pública (tiendas, ofertas, promociones, búsqueda, precios del carrito)
   admin.js             API de Necutools (/api/admin), con permisos por rol
+  pedidos.js           Pedidos enviados por WhatsApp y resumen del dashboard de Necutools
   auth.js              Login, sesiones, dueños y encargados
   ofertas.js           Cálculo de las ofertas del día (único lugar que pone precios con descuento)
   validar.js           Validación compartida
@@ -70,9 +71,20 @@ Para volver a cargar los productos de ejemplo que hayas borrado: `npm run import
   a los vendedores de todas las tiendas incluidas.
 - **Carrito**: guarda solo `{tipo, id, cantidad}` en el navegador. Nombres, precios y descuentos los
   calcula siempre el servidor (`POST /api/carrito/precios`).
+- **Pedidos**: al tocar "Enviar pedido por WhatsApp", el carrito guarda ese pedido en la tabla `pedidos`
+  (`POST /api/pedidos`) con los precios que calcula el servidor. **No se guarda ningún dato del cliente**
+  (ni nombre ni indicaciones): solo tienda, productos, piezas, total y fecha. Si guardarlo falla, WhatsApp
+  se abre igual. Límite de 40 pedidos por hora por IP.
 - **Necutools**: los **dueños** crean tiendas, usuarios y promociones y editan todo; los **encargados**
   solo editan las tiendas que tienen asignadas (productos, servicios, subcategorías y ofertas).
   Cada quien puede cambiar su contraseña en "Mi cuenta".
+- **Dashboard de Necutools**: abre en "Resumen" con pedidos, ventas confirmadas, ticket promedio y
+  calificación del periodo (7, 30 o 90 días, por tienda), comparados con el periodo anterior; gráficas
+  de pedidos y ventas por día, estado de los pedidos y pedidos por tienda; productos más pedidos,
+  pedidos recientes y una lista de pendientes. En "Pedidos" el vendedor marca cada pedido como
+  vendido o cancelado y le agrega notas. "Ventas" cuenta solo los pedidos marcados como vendidos.
+  Las gráficas usan **Chart.js** (dependencia `chart.js`), que el servidor publica en
+  `/vendor/chart.umd.js` desde `node_modules` (sin CDN, la CSP no cambia).
 
 ## Variables de entorno
 

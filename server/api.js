@@ -293,8 +293,8 @@ function leerCarrito(body) {
   return [...porClave.values()];
 }
 
-router.post("/carrito/precios", handle(async (req, res) => {
-  const items = leerCarrito(req.body);
+// Precios y grupos del carrito (una tienda o un paquete por grupo). También lo usa server/pedidos.js.
+async function calcularCarrito(items) {
   const idsProductos = items.filter(i => i.tipo === "producto").map(i => i.id);
   const idsPaquetes = items.filter(i => i.tipo === "paquete").map(i => i.id);
 
@@ -344,7 +344,11 @@ router.post("/carrito/precios", handle(async (req, res) => {
       return { ...grupo, subtotal_base: base, descuento: redondear(base - total), total };
     });
 
-  res.json({ grupos: salida, faltantes });
+  return { grupos: salida, faltantes };
+}
+
+router.post("/carrito/precios", handle(async (req, res) => {
+  res.json(await calcularCarrito(leerCarrito(req.body)));
 }));
 
-module.exports = { router };
+module.exports = { router, calcularCarrito, leerCarrito };

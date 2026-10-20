@@ -265,3 +265,21 @@ CREATE TABLE IF NOT EXISTS resenas (
   UNIQUE (producto_id, cliente_id)
 );
 CREATE INDEX IF NOT EXISTS resenas_producto_idx ON resenas (producto_id) WHERE visible;
+
+-- ---------- Pedidos enviados por WhatsApp (para el resumen de Necutools) ----------
+-- Se guardan al tocar "Enviar pedido por WhatsApp", con precios del servidor y sin datos del cliente.
+CREATE TABLE IF NOT EXISTS pedidos (
+  id              SERIAL PRIMARY KEY,
+  stand_id        INTEGER REFERENCES stands(id) ON DELETE SET NULL,
+  promocion_id    INTEGER REFERENCES promociones(id) ON DELETE SET NULL,
+  items           JSONB NOT NULL,
+  total           NUMERIC(10,2) NOT NULL CHECK (total >= 0),
+  piezas          SMALLINT NOT NULL CHECK (piezas > 0),
+  estado          VARCHAR(12) NOT NULL DEFAULT 'pendiente'
+                  CHECK (estado IN ('pendiente', 'vendido', 'cancelado')),
+  nota            VARCHAR(200),
+  creado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS pedidos_stand_fecha_idx ON pedidos (stand_id, creado_en DESC);
+CREATE INDEX IF NOT EXISTS pedidos_fecha_idx ON pedidos (creado_en DESC);

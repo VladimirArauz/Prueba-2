@@ -12,6 +12,7 @@ const api = require("./api");
 const admin = require("./admin");
 const clientes = require("./clientes");
 const resenas = require("./resenas");
+const pedidos = require("./pedidos");
 const { importarEjemplos } = require("./ejemplos");
 
 const app = express();
@@ -76,9 +77,11 @@ function sameOrigin(req, res, next) {
 
 app.use("/api", apiLimiter, express.json({ limit: "2mb" }), sameOrigin, auth.sessionMiddleware());
 app.use("/api/auth", auth.router);
+app.use("/api/admin", pedidos.adminRouter);
 app.use("/api/admin", admin.router);
 app.use("/api/clientes", clientes.router);
 app.use("/api", resenas.router);
+app.use("/api", pedidos.router);
 app.use("/api", api.router);
 app.use("/api", (req, res) => res.status(404).json({ error: "Ruta no encontrada." }));
 
@@ -101,6 +104,14 @@ app.get(new RegExp(`^/${TIENDAS_VIEJAS}/carrito\\.html$`), (req, res) => res.red
 app.get(new RegExp(`^/${TIENDAS_VIEJAS}(?:/(?:index\\.html)?)?$`), (req, res) => res.redirect(301, `/t/${req.params[0]}`));
 app.get(new RegExp(`^/${TIENDAS_VIEJAS}/([a-z0-9-]+)(?:/(?:index\\.html)?)?$`), (req, res) =>
   res.redirect(301, `/t/${req.params[0]}?sub=${req.params[1]}`));
+
+// Chart.js (gráficas de Necutools) se sirve desde node_modules: la CSP solo permite scripts propios
+// (el paquete no exporta dist/chart.umd.js: se arma la ruta desde su archivo principal, también en dist/)
+const CHART_JS = path.join(path.dirname(require.resolve("chart.js")), "chart.umd.js");
+app.get("/vendor/chart.umd.js", (req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(CHART_JS);
+});
 
 // ================= Sitio estático (solo la carpeta public/) =================
 // HTML, CSS y JS se revalidan siempre (304 si no cambiaron): si no, tras un despliegue el

@@ -19,6 +19,7 @@ Cómo se usa:
 | `2026-10-17-catalogo-multitienda.md` | Aplicado y subido (fases 1 a 7). Faltan revisar las 2 decisiones de diseño pendientes | 2026-10-17 |
 | `2026-10-19-ofertas-temporada-y-resenas.md` | Aplicado y subido (commit + push del 2026-10-19) | 2026-10-19 |
 | `2026-10-20-barra-lateral-login-animaciones.md` | Aplicado, probado con el servidor real y subido (commit + push del 2026-10-20) | 2026-10-20 |
+| `2026-10-20-dashboard-necutools.md` | Aplicado y probado en local (prompts 1 a 6). Falta commit + push | 2026-10-20 |
 
 ---
 
@@ -46,6 +47,10 @@ Cómo se usa:
 15. **Las piezas del remate no bajan solas:** el vendedor actualiza el número en Necutools cuando vende.
 16. **Excepciones de diseño del plan `2026-10-20-barra-lateral-login-animaciones.md`:** el usuario autorizó la barra lateral, el hover que levanta con sombra suave, el zoom leve de imagen, las secciones que aparecen al bajar y las tarjetas escalonadas. Siguen prohibidos los colores nuevos, los degradados y `backdrop-filter`. Si el usuario quiere que esas excepciones sean regla permanente, tiene que pedir que se actualice `plans/CLAUDE.md`.
 17. **En esta máquina no hay Node ni servidor de PostgreSQL instalados** (solo el cliente `psql`). Para probar el 2026-10-20 se bajaron Node 22.23.3 (nodejs.org, con su checksum) y PostgreSQL 18.4 (paquete npm `embedded-postgres`) a la carpeta temporal de la sesión. Para correr `npm run dev` aquí hay que instalar Node 22 y PostgreSQL.
+
+18. **Dashboard de Necutools, decisiones por confirmar (plan `2026-10-20-dashboard-necutools.md`):** el usuario pidió correr todo sin detenerse, así que en el prompt 4 no se le preguntó por las excepciones. Se aplicó lo que cumple `plans/CLAUDE.md`: las gráficas **no** se animan al cargar, solo al cambiar tienda o periodo (y nunca con movimiento reducido); los indicadores no cuentan hacia arriba. El menú propio de Necutools sí se hizo (lo implica "rediseñar todo Necutools"). Si quiere la animación al cargar, se cambia `animar` en `renderResumen` (`public/js/necutools.js`).
+19. **Subir el dashboard:** hacer commit + push. En Render, `npm install` instala `chart.js` solo; la tabla `pedidos` se crea sola al arrancar. Después de desplegar, revisar `/vendor/chart.umd.js` y Necutools → Resumen.
+20. **Pedidos que no se cierran:** el pedido se guarda al tocar "Enviar pedido por WhatsApp", aunque el cliente no lo mande en WhatsApp. Por eso "Ventas" solo cuenta los que el vendedor marca como vendidos; los demás se quedan pendientes hasta que alguien los cancele.
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -92,6 +97,41 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-20: dashboard de Necutools con pedidos y gráficas (plan `2026-10-20-dashboard-necutools.md`, prompts 1 a 6)
+
+**Base y servidor**
+- `db/schema.sql`: tabla `pedidos` (tienda o paquete, `items` JSONB con precios del servidor, total, piezas, estado pendiente/vendido/cancelado, nota) con 2 índices. Sin datos del cliente.
+- `server/api.js`: el cuerpo de `POST /carrito/precios` pasó a `calcularCarrito(items)` (misma respuesta; se exporta con `leerCarrito`).
+- `server/pedidos.js` (nuevo): `POST /api/pedidos` (recalcula el grupo con `calcularCarrito`, 40 por hora por IP); `GET /api/admin/pedidos` (estado, tienda, 20 por página, contador de pendientes), `PUT /api/admin/pedidos/:id` (estado y nota) y `GET /api/admin/resumen?dias=7|30|90&tienda=` (indicadores contra el periodo anterior, serie diaria en hora de CDMX, por tienda, por estado, 5 productos más pedidos, 5 recientes y "Por hacer"). Encargados: solo sus tiendas; paquetes: solo dueños. `requireAdmin` por ruta para no cargar la sesión dos veces.
+- `server/index.js`: monta los routers y sirve `/vendor/chart.umd.js` desde `node_modules/chart.js/dist` (el paquete no exporta ese archivo: la ruta se arma desde su `main`).
+- `package.json` / `package-lock.json`: `chart.js` 4.4.7 exacto (trae `@kurkle/color`).
+
+**Frontend**
+- `public/js/carrito.js`: registra el pedido al abrir WhatsApp, sin bloquear y una sola vez por grupo; línea "Guardamos el pedido sin tus datos…" (`.cart-privacidad`).
+- `public/necutools.html`: las pestañas pasaron a un menú vertical `.dash-nav` (mismo `#admin-tabs`, `data-action="panel"`, `data-panel`, `data-solo-dueno`) con iconos y contadores (pedidos pendientes, opiniones sin responder); encabezado con el título de la sección, saludo, selectores de tienda y periodo (solo en Resumen y Pedidos), "Ver el sitio" y "Cerrar sesión"; paneles nuevos **Resumen** (abre primero) y **Pedidos**. Las 7 pestañas de antes no cambiaron por dentro.
+- `public/js/necutools.js`: `renderResumen`, `renderGraficas`, `renderPedidos`, `renderContadores`, filtros y acciones de pedidos (vendido, cancelar con confirmación, volver a pendiente, nota). `recargar` siempre refresca el resumen. `mostrarPanel` alterna `.ghost` en lugar de `.secondary`.
+- `public/js/graficas.js` (nuevo): `graficaLinea`, `graficaDona`, `graficaBarras` con colores de los tokens, tooltips en `--tinta`, línea monótona sin relleno, tabla oculta con los datos y sin animación con movimiento reducido.
+- `public/iconos.js`: `layout-dashboard`, `receipt`, `trending-up`, `trending-down`, `chart-column`, `circle-check`, `clipboard-list`.
+- `public/style.css`: sección "NECUTOOLS: DASHBOARD" (`.dash`, `.kpi`, `.dash-grid`, `.grafica`, estados de pedido). Solo tokens existentes.
+- `README.md`: pedidos, privacidad y Chart.js.
+
+**Desviaciones del plan**
+- El menú pasa a fila horizontal a ≤ 992px (no a 860px): entre 860 y 992 no cabía con los formularios de 2 columnas.
+- No se hizo una página de prueba aparte para Chart.js: se probó directo en Necutools.
+- No se preguntó por la animación al cargar (ver pendiente 18).
+
+**Verificación** (servidor real con Node 22.23.3 + PostgreSQL 18.4 de `embedded-postgres` en el puerto 54329, nunca Render; Chrome sin ventana con `puppeteer-core`)
+- Schema aplicado 3 veces seguidas sin error.
+- 10 pruebas de `POST /api/pedidos`: precio del navegador ignorado, 400 con clave inválida o ajena, 403 sin Origin, 429 al pasar 40 por hora y `/carrito/precios` igual que antes.
+- 34 pruebas de la API de administración: 401 sin sesión, estados y notas inválidos, 404, números del resumen que cuadran con pedidos en 4 días distintos, filtros, encargado sin tiendas ajenas ni paquetes.
+- 95 pruebas en navegador: carrito → WhatsApp → pedido guardado (sin duplicar); las 9 pestañas a 1280 y 360px sin scroll horizontal; marcar vendido, nota, filtros y "Ventas" que cambia; crear y borrar un producto; animación solo al cambiar el periodo; movimiento reducido sin animación; portada, carrito, promociones, cuenta, producto y tienda sin scroll horizontal; **cero errores de consola o de CSP**.
+- Sin hex sueltos, degradados, `backdrop-filter`, `style="`, `onclick`, `uppercase` ni emojis en lo nuevo.
+- Se volvió a topar el límite de 300 peticiones cada 15 min por IP (pendiente 12) al correr las pruebas seguidas.
+
+### 2026-10-20: plan del dashboard de Necutools
+- Nuevo plan `plans/planes/2026-10-20-dashboard-necutools.md` y sus 6 prompts en `plans/prompts/` (mismo nombre). Se basa en el reel de Instagram de code.xr "Dashboard V14 — Modern & Minimal UI" (DeoxA_vzRbo); solo se pudo leer el texto del post, no los cuadros del video.
+- Decisiones del usuario: rediseñar todo Necutools sin quitar nada (menú vertical, encabezado, paneles nuevos Resumen y Pedidos); **registrar pedidos** al tocar "Enviar pedido por WhatsApp" (tabla `pedidos`, sin datos personales, estados pendiente/vendido/cancelado); gráficas con **Chart.js** servido desde el propio servidor. No se cambió código.
 
 ### 2026-10-20: caché de CSS y JS después de desplegar (`server/index.js`)
 - Problema que vio el usuario en producción justo después del push del plan de la barra lateral: la barra salió sin estilos, con el HTML nuevo pero el `style.css` y el `comun.js` viejos de la caché del navegador.

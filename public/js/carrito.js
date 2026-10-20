@@ -5,6 +5,8 @@
  */
 
 let grupos = [];
+// Pedidos ya registrados en esta visita: no se duplican si se vuelve a tocar el botón
+const registrados = new Set();
 
 function filaItem(item) {
   const clave = `${item.tipo}-${item.id}`;
@@ -64,6 +66,7 @@ function grupoHTML(grupo) {
           ${icon("message-circle")}Enviar pedido a ${escapeHTML(grupo.nombre)} por WhatsApp
         </button>
       </div>
+      <p class="cart-privacidad">Guardamos el pedido sin tus datos para que la tienda le dé seguimiento.</p>
       <div data-enviado="${escapeHTML(grupo.clave)}"></div>
     </section>`;
 }
@@ -134,11 +137,21 @@ function mensajeDe(grupo) {
   return mensaje;
 }
 
+// Guarda el pedido para el resumen de Necutools. No bloquea ni avisa si falla: WhatsApp ya se abrió.
+function registrarPedido(grupo) {
+  const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, cantidad: i.cantidad }));
+  const firma = `${grupo.clave}|${items.map(i => `${i.tipo}-${i.id}x${i.cantidad}`).join(",")}`;
+  if (registrados.has(firma)) return;
+  registrados.add(firma);
+  api("/pedidos", { method: "POST", body: { clave: grupo.clave, items } }).catch(() => registrados.delete(firma));
+}
+
 function enviar(clave) {
   const grupo = grupos.find(g => g.clave === clave);
   if (!grupo) return;
   const contenedor = document.querySelector(`[data-enviado="${CSS.escape(clave)}"]`);
   if (!abrirWhatsApp(grupo.whatsapp, mensajeDe(grupo), contenedor)) return;
+  registrarPedido(grupo);
   const claves = grupo.items.map(i => `${i.tipo}-${i.id}`).join(",");
   contenedor.insertAdjacentHTML("beforeend", `
     <div class="form-actions">
