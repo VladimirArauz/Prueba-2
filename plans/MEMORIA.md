@@ -21,7 +21,7 @@ Cómo se usa:
 | `2026-10-20-barra-lateral-login-animaciones.md` | Aplicado, probado con el servidor real y subido (commit + push del 2026-10-20) | 2026-10-20 |
 | `2026-10-20-dashboard-necutools.md` | Aplicado, probado en local y con commit `c2830ab`. Falta el push (token de `gh` vencido) | 2026-10-20 |
 | `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado y unido a `main` (commit `8d2e868`, la rama `seguridad` se borró en local). Falta el push de `main` y los pasos de Render | 2026-10-20 |
-| `2026-10-20-registro-validacion-y-login.md` | Aplicado y probado en local, en `main` sin commit. Falta commit + push | 2026-10-20 |
+| `2026-10-20-registro-validacion-y-login.md` | Aplicado, commit `97fd422` en `main` y subido (ya se ve en Render) | 2026-10-20 |
 
 ---
 
@@ -101,6 +101,11 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-20: barra lateral pegada al borde y login alineado arriba (`public/style.css`)
+- La barra lateral (escritorio) ya no flota: `top`, `bottom` y `left` en 0, sin radio y solo con borde derecho `--linea`. El contenido conserva su separación de 16px (`--side-margen` ahora solo se usa en el `padding-left` del `body`). En celular no cambió (cajón).
+- `.auth-entrar` con `justify-content: flex-start`: al crecer el registro, "Iniciar sesión" quedaba centrado con un hueco grande encima (lo mostró la captura del usuario en producción).
+- Verificado en local a 1366 y 360px (portada, cuenta, Necutools): barra en 0,0 de alto completo, sin scroll horizontal, sin errores.
 
 ### 2026-10-20: registro con usuario y teléfono, validación en vivo y login con usuario o correo (plan `2026-10-20-registro-validacion-y-login.md`, prompts 1 a 5, en `main`)
 - **Base** (`db/schema.sql`): `clientes.usuario` (índice único en `lower`), `clientes.pais`, `clientes.telefono` (E.164); `admins.correo` (índice único en `lower`); índice único de `lower(admins.usuario)` solo si no hay choques (pendiente 22). Nulos para las cuentas viejas; no se borró nada.

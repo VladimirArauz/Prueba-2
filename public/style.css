@@ -277,17 +277,17 @@ body {
 .sidebar {
   position: fixed;
   z-index: 1000;
-  top: var(--side-margen);
-  bottom: var(--side-margen);
-  left: var(--side-margen);
+  top: 0;
+  bottom: 0;
+  left: 0;
   width: var(--side-w);
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px 0;
   background: var(--hoja);
-  border: 1px solid var(--linea);
-  border-radius: var(--r-card);
+  border-right: 1px solid var(--linea);
+  border-radius: 0;
   transition: width var(--t-lenta), box-shadow var(--t-lenta);
 }
 
@@ -2688,6 +2688,8 @@ a.card-img-wrap {
 
 .auth-entrar {
   grid-column: 1;
+  /* El registro es más largo: "Iniciar sesión" va arriba en vez de quedar centrado con un hueco encima */
+  justify-content: flex-start;
 }
 
 .auth-registro {
