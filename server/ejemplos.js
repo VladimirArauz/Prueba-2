@@ -52,4 +52,48 @@ async function importarEjemplos({ forzar = false } = {}) {
   console.log(`Productos de ejemplo importados: ${nuevos}`);
 }
 
-module.exports = { importarEjemplos };
+/**
+ * Servicios de ejemplo de db/servicios-ejemplo.json (dulceros, estampado, reparaciones…).
+ * Corre una sola vez, así un servicio que el vendedor borre no regresa al reiniciar.
+ */
+const MIGRACION_SERVICIOS = "servicios-ejemplo-2026-10-20";
+const MODOS_SERVICIO = ["desde", "cotizar"];
+
+async function importarServicios({ forzar = false } = {}) {
+  if (!forzar) {
+    const { rows } = await pool.query("SELECT 1 FROM migraciones WHERE nombre = $1", [MIGRACION_SERVICIOS]);
+    if (rows[0]) return;
+  }
+  const tiendas = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "db", "servicios-ejemplo.json"), "utf8"));
+  const cliente = await pool.connect();
+  let nuevos = 0;
+  try {
+    await cliente.query("BEGIN");
+    for (const tienda of tiendas) {
+      const { rows } = await cliente.query("SELECT id FROM stands WHERE slug = $1", [tienda.tienda]);
+      if (!rows[0]) continue; // la tienda se borró o cambió de dirección
+      const standId = rows[0].id;
+
+      for (const s of tienda.servicios) {
+        if (!MODOS_SERVICIO.includes(s.precio_modo)) continue;
+        const precio = s.precio_modo === "cotizar" ? null : s.precio;
+        const { rowCount } = await cliente.query(
+          `INSERT INTO productos (stand_id, tipo, nombre, categoria, precio_modo, precio, descripcion, orden)
+           SELECT $1::int, 'servicio', $2::text, 'General', $3::text, $4::numeric, $5::text, $6::int
+           WHERE NOT EXISTS (SELECT 1 FROM productos WHERE stand_id = $1::int AND nombre = $2::text)`,
+          [standId, s.nombre, s.precio_modo, precio, s.descripcion, s.orden]);
+        nuevos += rowCount;
+      }
+    }
+    await cliente.query("INSERT INTO migraciones (nombre) VALUES ($1) ON CONFLICT DO NOTHING", [MIGRACION_SERVICIOS]);
+    await cliente.query("COMMIT");
+  } catch (err) {
+    await cliente.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    cliente.release();
+  }
+  console.log(`Servicios de ejemplo importados: ${nuevos}`);
+}
+
+module.exports = { importarEjemplos, importarServicios };

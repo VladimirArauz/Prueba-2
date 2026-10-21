@@ -22,6 +22,7 @@ Cómo se usa:
 | `2026-10-20-dashboard-necutools.md` | Aplicado, probado en local y con commit `c2830ab`. Falta el push (token de `gh` vencido) | 2026-10-20 |
 | `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado y unido a `main` (commit `8d2e868`, la rama `seguridad` se borró en local). Falta el push de `main` y los pasos de Render | 2026-10-20 |
 | `2026-10-20-registro-validacion-y-login.md` | Aplicado, commit `97fd422` en `main` y subido (ya se ve en Render) | 2026-10-20 |
+| `2026-10-20-servicios-por-tienda.md` | Aplicado y con commit en `main`. Falta el push | 2026-10-20 |
 
 ---
 
@@ -44,11 +45,11 @@ Cómo se usa:
 10. **Diseño por confirmar (plan 2026-10-17):** (a) el letrero azul de "Promociones de temporada" debajo del hero, que compite un poco con el tablero (choque con `plans/CLAUDE.md`, "la única pieza llamativa es el tablero"); (b) la etiqueta de oferta `.tag-oferta` (relleno `--senal`, borde `--tinta`). Se hicieron dentro de las reglas, pero el usuario no las ha visto.
 11. **`plans/CLAUDE.md` desactualizado:** la sección 1 todavía dice que son 7 tiendas fijas con carpetas propias y que Necutools es una sección de `index.html`. Solo se puede corregir si el usuario lo pide.
 12. **Límite de peticiones a la API:** 300 cada 15 minutos por IP. Si muchos estudiantes entran desde la misma red de la escuela (misma IP), podrían toparse con el límite. Vigilar y subirlo en `server/index.js` si pasa.
-13. **Ofertas de ejemplo de temporada:** no se agregaron a la base de Render (serían datos falsos). Para verlas, crear en Necutools una oferta "De temporada" (ej. Navidad, del 1 al 25 de diciembre) y un "Remate".
+13. **Ofertas de ejemplo de temporada:** no se agregaron a la base de Render (serían datos falsos). (Excepción del 2026-10-20: el usuario pidió **servicios** de ejemplo en todas las tiendas y esos sí se cargan solos en Render; cada vendedor los edita o borra en Necutools.) Para verlas, crear en Necutools una oferta "De temporada" (ej. Navidad, del 1 al 25 de diciembre) y un "Remate".
 14. **Moderación de opiniones:** el vendedor solo puede responder u ocultar (no borrar). No hay "compra verificada" porque los pedidos se cierran por WhatsApp y no quedan registrados. Tampoco hay todavía "olvidé mi contraseña" para clientes (no hay servicio de correo); si un cliente la olvida, puede crear otra cuenta.
 15. **Las piezas del remate no bajan solas:** el vendedor actualiza el número en Necutools cuando vende.
 16. **Excepciones de diseño del plan `2026-10-20-barra-lateral-login-animaciones.md`:** el usuario autorizó la barra lateral, el hover que levanta con sombra suave, el zoom leve de imagen, las secciones que aparecen al bajar y las tarjetas escalonadas. Siguen prohibidos los colores nuevos, los degradados y `backdrop-filter`. Si el usuario quiere que esas excepciones sean regla permanente, tiene que pedir que se actualice `plans/CLAUDE.md`.
-17. **En esta máquina no hay Node ni servidor de PostgreSQL instalados** (solo el cliente `psql`). Para probar el 2026-10-20 se bajaron Node 22.23.3 (nodejs.org, con su checksum) y PostgreSQL 18.4 (paquete npm `embedded-postgres`) a la carpeta temporal de la sesión. Para correr `npm run dev` aquí hay que instalar Node 22 y PostgreSQL.
+17. **(Actualizado 2026-10-20: ya hay Node 22.20 y PostgreSQL 17 en `C:\Program Files\PostgreSQL\17`; con ellos se probó el plan de servicios.)** **En esta máquina no había Node ni servidor de PostgreSQL instalados** (solo el cliente `psql`). Para probar el 2026-10-20 se bajaron Node 22.23.3 (nodejs.org, con su checksum) y PostgreSQL 18.4 (paquete npm `embedded-postgres`) a la carpeta temporal de la sesión. Para correr `npm run dev` aquí hay que instalar Node 22 y PostgreSQL.
 
 18. **Dashboard de Necutools, decisiones por confirmar (plan `2026-10-20-dashboard-necutools.md`):** el usuario pidió correr todo sin detenerse, así que en el prompt 4 no se le preguntó por las excepciones. Se aplicó lo que cumple `plans/CLAUDE.md`: las gráficas **no** se animan al cargar, solo al cambiar tienda o periodo (y nunca con movimiento reducido); los indicadores no cuentan hacia arriba. El menú propio de Necutools sí se hizo (lo implica "rediseñar todo Necutools"). Si quiere la animación al cargar, se cambia `animar` en `renderResumen` (`public/js/necutools.js`).
 19. **Subir el dashboard:** commit `c2830ab` hecho; falta el push (el token de `gh` de la cuenta Mor4l3sAx3l04 está vencido: `gh auth login -h github.com` y `git push origin main`). En Render, `npm install` instala `chart.js` solo; la tabla `pedidos` se crea sola al arrancar. Después de desplegar, revisar `/vendor/chart.umd.js` y Necutools → Resumen.
@@ -101,6 +102,16 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-20: apartado de Servicios en cada tienda (plan `2026-10-20-servicios-por-tienda.md`, prompts 1 a 3)
+- Pedido del usuario: que cada tienda tenga, aparte de los productos, un apartado de servicios (dulceros en Dulces, estampado de logos en Ropa, reparaciones en Tecnología). Los servicios ya existían en la base y en Necutools, pero la pestaña se escondía si la tienda no tenía ninguno y no había ninguno cargado.
+- Decisiones del usuario: sección propia siempre visible (la pestaña se queda y baja a ella) y servicios de ejemplo en todas las tiendas, también en Render (ver pendiente 13).
+- **Ejemplos**: `db/servicios-ejemplo.json` (10 servicios en las 7 tiendas, "desde" o "a cotizar") y `importarServicios()` en `server/ejemplos.js` con la migración `servicios-ejemplo-2026-10-20` (una sola vez: si el vendedor borra uno, no regresa). Se llama en `server/index.js` y `scripts/importar-ejemplos.js`.
+- **Tienda**: `public/tienda.html` con la sección `#servicios` (h2, descripción, grid, aviso de vacío con icono `wrench`, "Mostrar más servicios"). `public/js/tienda.js`: `renderServicios()`, `irAServicios()` (scroll suave o directo con movimiento reducido, foco en el título); la pestaña "Servicios (n)" siempre aparece y baja a la sección; la lista principal solo muestra productos u ofertas; `?tab=servicios` y `#servicios` bajan a la sección.
+- Enlaces a `/t/<slug>#servicios` en `public/js/comun.js` (búsqueda y vitrina) y `public/js/producto.js` (Volver). Imagen por defecto `public/imagenes/servicio.svg` para servicios sin foto (`imagenDe`).
+- `public/style.css`: `.servicios-tienda` (margen 56px, `scroll-margin-top` 24px y 88px en celular por la barra superior). Solo tokens existentes.
+- Texto de ayuda de Necutools y `README.md`.
+- **Verificación** (servidor local + PostgreSQL 17 instalado en la máquina, base temporal en el puerto 54329, nunca Render; Edge sin ventana con `puppeteer-core`): 3 arranques sin duplicar (10 servicios); un servicio borrado no regresa; 24 pruebas en navegador a 1280 y 360px (sección, pestaña que baja y enfoca, WhatsApp con el servicio, aviso de tienda sin servicios, `?tab=servicios`, `#servicios`, buscador → "Ver en Ropa", Volver desde el servicio, sin scroll horizontal, cero errores de consola o CSP); ataques 225 de 225.
 
 ### 2026-10-20: barra lateral pegada al borde y login alineado arriba (`public/style.css`)
 - La barra lateral (escritorio) ya no flota: `top`, `bottom` y `left` en 0, sin radio y solo con borde derecho `--linea`. El contenido conserva su separación de 16px (`--side-margen` ahora solo se usa en el `padding-left` del `body`). En celular no cambió (cajón).

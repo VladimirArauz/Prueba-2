@@ -33,9 +33,11 @@ server/
   totp.js              Verificación en dos pasos (códigos de Google Authenticator y similares)
   imagenes.js          Quita los metadatos (GPS, modelo del celular) de las imágenes subidas
   bitacora.js          Registro de lo que se hace en Necutools
-  ejemplos.js          Carga los productos de ejemplo de db/ejemplos.json (una sola vez)
+  ejemplos.js          Carga los productos de ejemplo de db/ejemplos.json y los servicios de
+                       db/servicios-ejemplo.json (cada uno una sola vez)
 db/schema.sql          Tablas de la base de datos (se aplican solas al arrancar)
 db/ejemplos.json       Productos de ejemplo que antes eran páginas fijas
+db/servicios-ejemplo.json  Servicios de ejemplo por tienda (dulceros, estampado de logos, reparaciones…)
 scripts/               importar-ejemplos.js (npm run importar) y seguridad/ataques.js (pruebas de ataque en local)
 recursos/              Fotos reales sin usar todavía (no se publican)
 plans/                 Reglas del proyecto, planes y prompts (no se publica)
@@ -60,10 +62,13 @@ npm install
 npm run dev               # http://localhost:3000
 ```
 
-Al arrancar, el servidor crea o actualiza las tablas, carga una sola vez los productos de ejemplo
+Al arrancar, el servidor crea o actualiza las tablas, carga una sola vez los productos y servicios de ejemplo
 y, si no existe ningún administrador, crea uno (como **dueño**) con `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
 
-Para volver a cargar los productos de ejemplo que hayas borrado: `npm run importar` (no duplica los que existen).
+Para volver a cargar los productos y servicios de ejemplo que hayas borrado: `npm run importar` (no duplica los que existen).
+
+Cada tienda muestra sus servicios en una sección propia debajo de los productos (`/t/<tienda>#servicios`).
+Se crean en Necutools → Productos y servicios con el tipo "Servicio" y se piden por WhatsApp.
 
 ## Cómo funciona
 

@@ -1,0 +1,47 @@
+[
+  {
+    "tienda": "dulces",
+    "servicios": [
+      { "nombre": "Armado de dulceros para fiestas infantiles", "descripcion": "Armamos los dulceros de tu fiesta con la temática y los dulces que elijas. Precio por dulcero; pide con al menos 3 días de anticipación.", "precio_modo": "desde", "precio": 25, "orden": 1 },
+      { "nombre": "Mesa de dulces para eventos", "descripcion": "Montamos la mesa de dulces para cumpleaños, graduaciones o eventos de la escuela. Dinos cuántos invitados son y te mandamos el precio.", "precio_modo": "cotizar", "precio": null, "orden": 2 }
+    ]
+  },
+  {
+    "tienda": "ropa",
+    "servicios": [
+      { "nombre": "Estampado de logos para equipos de futbol", "descripcion": "Estampamos el escudo, el número y el nombre de cada jugador. Precio por playera; descuento a partir de 10 piezas.", "precio_modo": "desde", "precio": 120, "orden": 1 },
+      { "nombre": "Bordado de logo para empresas", "descripcion": "Bordamos el logo de tu empresa o proyecto en playeras, polos o sudaderas. Mándanos el logo y la cantidad para cotizar.", "precio_modo": "cotizar", "precio": null, "orden": 2 }
+    ]
+  },
+  {
+    "tienda": "tecnologia",
+    "servicios": [
+      { "nombre": "Reparación de celulares y laptops", "descripcion": "Revisamos tu equipo y te decimos qué tiene y cuánto cuesta antes de repararlo: pantallas, centros de carga, teclados y software.", "precio_modo": "cotizar", "precio": null, "orden": 1 },
+      { "nombre": "Cambio de mica y pila", "descripcion": "Cambiamos la mica o la pila de tu celular en el momento. El precio depende del modelo.", "precio_modo": "desde", "precio": 80, "orden": 2 }
+    ]
+  },
+  {
+    "tienda": "propaganda",
+    "servicios": [
+      { "nombre": "Diseño de logo o volante", "descripcion": "Diseñamos el logo de tu proyecto o el volante de tu evento, con dos rondas de cambios. Te entregamos los archivos listos para imprimir.", "precio_modo": "desde", "precio": 150, "orden": 1 }
+    ]
+  },
+  {
+    "tienda": "papeleria",
+    "servicios": [
+      { "nombre": "Impresión y engargolado de trabajos", "descripcion": "Imprimimos y engargolamos tus trabajos y tesis. Mándanos el archivo por WhatsApp y pasa por él.", "precio_modo": "desde", "precio": 15, "orden": 1 }
+    ]
+  },
+  {
+    "tienda": "regalos",
+    "servicios": [
+      { "nombre": "Armado de arreglos y cajas de regalo", "descripcion": "Armamos cajas y arreglos con globos, dulces o peluches para cumpleaños, aniversarios y fechas especiales.", "precio_modo": "desde", "precio": 90, "orden": 1 }
+    ]
+  },
+  {
+    "tienda": "otra",
+    "servicios": [
+      { "nombre": "Encargos a la medida", "descripcion": "¿Buscas algo que no está en las tiendas? Cuéntanos qué necesitas y te decimos si lo podemos conseguir o hacer.", "precio_modo": "cotizar", "precio": null, "orden": 1 }
+    ]
+  }
+]

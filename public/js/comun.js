@@ -51,7 +51,7 @@ function textoPrecio(item) {
 }
 
 function imagenDe(item) {
-  return item.imagen_url || "/imagenes/producto.svg";
+  return item.imagen_url || (item.tipo === "servicio" ? "/imagenes/servicio.svg" : "/imagenes/producto.svg");
 }
 
 // ================= Aviso flotante (toast) =================
@@ -215,7 +215,7 @@ function precioProducto(p) {
 // opciones.conTienda: en búsqueda y vitrina los servicios llevan a su tienda
 function accionProducto(p, opciones = {}) {
   if (p.tipo === "servicio" && opciones.conTienda) {
-    return `<a class="btn secondary" href="/t/${escapeHTML(p.slug)}?tab=servicios">${icon("store")}Ver en ${escapeHTML(p.tienda)}</a>`;
+    return `<a class="btn secondary" href="/t/${escapeHTML(p.slug)}#servicios">${icon("store")}Ver en ${escapeHTML(p.tienda)}</a>`;
   }
   if (p.tipo === "servicio") {
     return `<button type="button" class="btn wa" data-action="pedir-servicio" data-id="${Number(p.id)}">${icon("message-circle")}Pedir información por WhatsApp</button>`;

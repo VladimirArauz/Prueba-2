@@ -26,7 +26,7 @@ function renderProducto() {
   const p = est.producto;
   document.title = `${p.nombre} | Necutla`;
   const volver = $("producto-volver");
-  volver.href = `/t/${encodeURIComponent(p.slug)}${p.tipo === "servicio" ? "?tab=servicios" : ""}`;
+  volver.href = `/t/${encodeURIComponent(p.slug)}${p.tipo === "servicio" ? "#servicios" : ""}`;
   volver.innerHTML = `${icon("arrow-left")}Volver a ${escapeHTML(p.tienda)}`;
   $("producto-img").src = imagenDe(p);
   $("producto-img").alt = p.nombre;

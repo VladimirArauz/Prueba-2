@@ -13,7 +13,7 @@ const admin = require("./admin");
 const clientes = require("./clientes");
 const resenas = require("./resenas");
 const pedidos = require("./pedidos");
-const { importarEjemplos } = require("./ejemplos");
+const { importarEjemplos, importarServicios } = require("./ejemplos");
 const { limpiarViejos } = require("./intentos");
 const { limpiarImagenesGuardadas } = require("./imagenes");
 
@@ -198,6 +198,7 @@ async function start() {
   await migrate();
   await auth.ensureInitialAdmin();
   await importarEjemplos();
+  await importarServicios();
   await limpiarImagenesGuardadas(pool);
   setInterval(() => limpiarViejos().catch(err => console.error(err)), 6 * 60 * 60 * 1000).unref();
   app.listen(PORT, () => console.log(`Necutla escuchando en el puerto ${PORT}`));
