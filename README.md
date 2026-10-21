@@ -16,7 +16,9 @@ public/                Sitio (lo único que ve el navegador)
   carrito.html         Carrito agrupado por tienda
   promociones.html     Promociones de temporada
   necutools.html       Panel de administración
-  js/                  comun.js (API, carrito, WhatsApp) + un archivo por página; graficas.js (Chart.js)
+  js/                  comun.js (API, carrito, WhatsApp) + un archivo por página; graficas.js (Chart.js);
+                       validacion.js (validación en vivo y medidor de contraseña)
+  datos/paises.json    Países con su lada y el largo de sus teléfonos (lo usa también el servidor)
   style.css, iconos.js Sistema de diseño e iconos (Lucide)
 server/
   index.js             Seguridad, páginas, redirecciones de direcciones viejas y arranque
@@ -25,8 +27,8 @@ server/
   pedidos.js           Pedidos enviados por WhatsApp y resumen del dashboard de Necutools
   auth.js              Login, sesiones, dueños y encargados
   ofertas.js           Cálculo de las ofertas del día (único lugar que pone precios con descuento)
-  validar.js           Validación compartida
-  contrasenas.js       Reglas de contraseñas nuevas (largo, comunes, sin usuario)
+  validar.js           Validación compartida (incluye correo con DNS MX, teléfono por país y usuario)
+  contrasenas.js       Reglas de contraseñas nuevas (largo, tipos de carácter, comunes, sin usuario, confirmación)
   intentos.js          Límite de intentos fallidos por cuenta
   totp.js              Verificación en dos pasos (códigos de Google Authenticator y similares)
   imagenes.js          Quita los metadatos (GPS, modelo del celular) de las imágenes subidas
@@ -82,7 +84,19 @@ Para volver a cargar los productos de ejemplo que hayas borrado: `npm run import
   se abre igual. Límite de 40 pedidos por hora por IP.
 - **Necutools**: los **dueños** crean tiendas, usuarios y promociones y editan todo; los **encargados**
   solo editan las tiendas que tienen asignadas (productos, servicios, subcategorías y ofertas).
-  Cada quien puede cambiar su contraseña en "Mi cuenta".
+  Cada quien puede cambiar su contraseña y poner un correo opcional en "Mi cuenta". Se entra con el
+  usuario o con el correo en el mismo campo.
+- **Cuentas de cliente** (`/cuenta.html`, solo para opinar): nombre visible, nombre de usuario único,
+  correo, teléfono con la lada de su país y contraseña escrita dos veces. Se entra con el usuario o el
+  correo. El correo debe tener un dominio que reciba correos (el servidor revisa su registro MX en DNS
+  y avisa de errores de dedo como `gmial.com`). El teléfono se valida con el largo de su país
+  (`public/datos/paises.json`, formato E.164: México 10 dígitos, España 9…) y se guarda como
+  `+525512345678`. **El teléfono es privado**: no sale en opiniones, tiendas ni pedidos. Las cuentas de
+  antes de este cambio siguen entrando y completan usuario y teléfono una vez.
+- **Contraseñas nuevas** (registro, cambio y reinicio): minúscula, mayúscula, número y carácter
+  especial obligatorios; 10 caracteres o más para clientes y 12 para Necutools; siempre se escriben dos
+  veces. Debajo del campo, un medidor dice si es débil, media, fuerte o súper segura, y cada campo
+  avisa en vivo qué le falta (`public/js/validacion.js`; el servidor vuelve a revisar todo).
 - **Dashboard de Necutools**: abre en "Resumen" con pedidos, ventas confirmadas, ticket promedio y
   calificación del periodo (7, 30 o 90 días, por tienda), comparados con el periodo anterior; gráficas
   de pedidos y ventas por día, estado de los pedidos y pedidos por tienda; productos más pedidos,
@@ -102,6 +116,7 @@ Para volver a cargar los productos de ejemplo que hayas borrado: `npm run import
 | `WHATSAPP_NUMBERS` | Números de respaldo para las tiendas sin números propios, separados por coma (`5255XXXXXXXX`) |
 | `NODE_ENV` | `production` en Render (activa cookies seguras) |
 | `HOY_PRUEBA` | Solo en tu computadora: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones. En producción se ignora |
+| `CORREO_DNS_PRUEBA` | Solo en tu computadora: con `1`, no consulta el DNS al revisar correos (todo dominio vale salvo `*.invalid` y `sin-correo.*`). En producción se ignora |
 
 El archivo `.env` **nunca** se sube a git (está en `.gitignore`).
 
@@ -143,7 +158,7 @@ Auditoría completa y su estado en `plans/auditorias/2026-10-20-seguridad.md`.
 | Cabeceras | CSP estricta (sin scripts ni estilos en línea, sin iframes ajenos), HSTS, `nosniff`, `Permissions-Policy` sin cámara, micrófono ni ubicación; Necutools y `/api` con `noindex`; respuestas privadas con `no-store` |
 | Peticiones | Solo las rutas de Necutools que suben imágenes aceptan 2 MB; el resto, 20 KB. Lo que modifica datos debe venir de este sitio (`Origin` y `Sec-Fetch-Site`) |
 | Sesión | En PostgreSQL; cookie `__Host-necutla.sid` (`httpOnly`, `secure`, `sameSite=strict`); id nuevo al entrar y al salir; 8 h sin uso o 24 h en total. En Render, el servidor no arranca sin `NODE_ENV=production` |
-| Cuentas | bcrypt; contraseñas nuevas de 12 (Necutools) o 10 (clientes) caracteres o más, hasta 72 bytes, sin las más comunes ni el usuario o correo. 10 fallos seguidos frenan la cuenta 15 minutos, venga de la IP que venga (también al adivinar la contraseña actual en "Mi cuenta"); además, 10 por IP |
+| Cuentas | bcrypt; contraseñas nuevas de 12 (Necutools) o 10 (clientes) caracteres o más, con minúscula, mayúscula, número y carácter especial, hasta 72 bytes, sin las más comunes ni el usuario o correo, confirmadas dos veces. El freno por cuenta cuenta igual si se intenta con el usuario o con el correo. 10 fallos seguidos frenan la cuenta 15 minutos, venga de la IP que venga (también al adivinar la contraseña actual en "Mi cuenta"); además, 10 por IP |
 | Dos pasos | Opcional en Necutools ("Mi cuenta"): código de la app de autenticación, cada código sirve una vez, 8 códigos de respaldo de un solo uso. Un dueño puede quitársela a quien perdió su celular |
 | Permisos | Revisados en el servidor en cada petición: un encargado no toca tiendas ajenas ni paquetes. Desactivar a alguien, cambiar su contraseña o activar dos pasos cierra sus otras sesiones |
 | Datos | Consultas con parámetros; validación de cada campo; los precios los pone el servidor; todo texto se escapa al mostrarlo |

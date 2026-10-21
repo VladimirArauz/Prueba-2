@@ -321,3 +321,26 @@ CREATE TABLE IF NOT EXISTS bitacora (
 );
 CREATE INDEX IF NOT EXISTS bitacora_fecha_idx ON bitacora (creado_en DESC);
 CREATE INDEX IF NOT EXISTS bitacora_admin_idx ON bitacora (admin_id, creado_en DESC);
+
+-- ---------- Registro con usuario y teléfono; login con usuario o correo (plan 2026-10-20-registro-validacion-y-login) ----------
+-- Nulos para las cuentas que ya existían: las completan la próxima vez que entran
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS usuario VARCHAR(30);
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS pais CHAR(2);
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono VARCHAR(16);
+CREATE UNIQUE INDEX IF NOT EXISTS clientes_usuario_idx ON clientes (lower(usuario)) WHERE usuario IS NOT NULL;
+
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS correo VARCHAR(120);
+CREATE UNIQUE INDEX IF NOT EXISTS admins_correo_idx ON admins (lower(correo)) WHERE correo IS NOT NULL;
+
+-- Usuario de admin sin importar mayúsculas: solo si no hay dos que choquen (ej. "Axel" y "axel"),
+-- para que el arranque nunca falle. Mientras choquen, el login busca primero el usuario exacto.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'admins_usuario_lower_idx')
+     AND NOT EXISTS (SELECT lower(usuario) FROM admins GROUP BY lower(usuario) HAVING count(*) > 1) THEN
+    CREATE UNIQUE INDEX admins_usuario_lower_idx ON admins (lower(usuario));
+  END IF;
+END $$;
+
+-- Al cambiar la contraseña de un cliente sube la versión: las sesiones con la versión anterior dejan de valer
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS sesion_version INTEGER NOT NULL DEFAULT 0;

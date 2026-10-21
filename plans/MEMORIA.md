@@ -20,7 +20,8 @@ Cómo se usa:
 | `2026-10-19-ofertas-temporada-y-resenas.md` | Aplicado y subido (commit + push del 2026-10-19) | 2026-10-19 |
 | `2026-10-20-barra-lateral-login-animaciones.md` | Aplicado, probado con el servidor real y subido (commit + push del 2026-10-20) | 2026-10-20 |
 | `2026-10-20-dashboard-necutools.md` | Aplicado, probado en local y con commit `c2830ab`. Falta el push (token de `gh` vencido) | 2026-10-20 |
-| `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado, probado en local y con commit en la rama `seguridad`. Falta el push (token de `gh` vencido), el merge a `main` y los pasos de Render | 2026-10-20 |
+| `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado y unido a `main` (commit `8d2e868`, la rama `seguridad` se borró en local). Falta el push de `main` y los pasos de Render | 2026-10-20 |
+| `2026-10-20-registro-validacion-y-login.md` | Aplicado y probado en local, en `main` sin commit. Falta commit + push | 2026-10-20 |
 
 ---
 
@@ -32,7 +33,7 @@ Cómo se usa:
 - Pedir el visto bueno de los pendientes 10 y 11.
 
 1. **Terminar el despliegue en Render: ver la checklist "Pasos pendientes en Render" justo abajo.** Pasos 1, 2 y 4 hechos (2026-10-17); faltan el paso 3 (comprobar la página) y el 5 (seguridad). Si el usuario pregunta "¿qué pasos eran para Render?", responder con esa checklist completa.
-2. **Contraseña del admin en Render.** Después del primer despliegue (cuando ya existe el admin), se puede borrar `ADMIN_PASSWORD` de las variables de Render; ya no se usa. Ya hay pantallas para cambiar contraseña ("Mi cuenta") y crear usuarios (pestaña "Usuarios" de Necutools).
+2. **(Resuelto 2026-10-20: el usuario borró `ADMIN_PASSWORD`.) Contraseña del admin en Render.** Después del primer despliegue (cuando ya existe el admin), se puede borrar `ADMIN_PASSWORD` de las variables de Render; ya no se usa. Ya hay pantallas para cambiar contraseña ("Mi cuenta") y crear usuarios (pestaña "Usuarios" de Necutools).
 3. **Base de datos gratis de Render caduca** a los 30 días de creada (luego hay un periodo corto para pasar a plan de pago) y no tiene respaldos. Antes de que caduque: pasar a plan pagado o exportar con `pg_dump`/pgAdmin y crear otra.
 4. **Restringir el acceso externo a la base** en `render.yaml` (`ipAllowList`): hoy está abierto a `0.0.0.0/0` para que pgAdmin funcione desde cualquier red. Cambiar por la IP del usuario.
 5. **Números reales de WhatsApp.** Cada tienda pone los de sus vendedores en Necutools (Tiendas → Editar). `WHATSAPP_NUMBERS` queda solo de respaldo para tiendas sin números. Faltan los números reales.
@@ -52,7 +53,8 @@ Cómo se usa:
 18. **Dashboard de Necutools, decisiones por confirmar (plan `2026-10-20-dashboard-necutools.md`):** el usuario pidió correr todo sin detenerse, así que en el prompt 4 no se le preguntó por las excepciones. Se aplicó lo que cumple `plans/CLAUDE.md`: las gráficas **no** se animan al cargar, solo al cambiar tienda o periodo (y nunca con movimiento reducido); los indicadores no cuentan hacia arriba. El menú propio de Necutools sí se hizo (lo implica "rediseñar todo Necutools"). Si quiere la animación al cargar, se cambia `animar` en `renderResumen` (`public/js/necutools.js`).
 19. **Subir el dashboard:** commit `c2830ab` hecho; falta el push (el token de `gh` de la cuenta Mor4l3sAx3l04 está vencido: `gh auth login -h github.com` y `git push origin main`). En Render, `npm install` instala `chart.js` solo; la tabla `pedidos` se crea sola al arrancar. Después de desplegar, revisar `/vendor/chart.umd.js` y Necutools → Resumen.
 20. **Pedidos que no se cierran:** el pedido se guarda al tocar "Enviar pedido por WhatsApp", aunque el cliente no lo mande en WhatsApp. Por eso "Ventas" solo cuenta los que el vendedor marca como vendidos; los demás se quedan pendientes hasta que alguien los cancele.
-21. **Seguridad (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`):** commit hecho en la rama `seguridad` (encima del commit del dashboard `c2830ab`). El push falló porque el token de `gh` sigue vencido: `gh auth login -h github.com` y luego `git push -u origin seguridad`. Render despliega `main`: para publicarlo hay que hacer merge de `seguridad` a `main` y push de `main` (eso también sube el dashboard, pendiente 19). Después, en Render: borrar `ADMIN_PASSWORD` (pendiente 2), restringir la IP de la base (pendiente 4), activar los 2 pasos en los dueños y leer en Logs las líneas "Revisión de proxy" (deben decir 1 dirección). Al desplegar, todos tendrán que volver a iniciar sesión una vez (la cookie cambia a `__Host-necutla.sid`). Informe: `plans/auditorias/2026-10-20-seguridad.md`.
+21. **Seguridad (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`):** unido a `main` el 2026-10-20 (fast-forward a `8d2e868`; la rama local `seguridad` se borró, en GitHub sigue `origin/seguridad`). **Regla del usuario: no crear ramas, trabajar siempre en `main`.** Para publicar: `git push origin main` (también sube el dashboard, pendiente 19). Después, en Render: restringir la IP de la base (pendiente 4), activar los 2 pasos en los dueños y leer en Logs las líneas "Revisión de proxy" (deben decir 1 dirección). Al desplegar, todos tendrán que volver a iniciar sesión una vez (la cookie cambia a `__Host-necutla.sid`). Informe: `plans/auditorias/2026-10-20-seguridad.md`.
+22. **Registro y login (plan `2026-10-20-registro-validacion-y-login.md`):** (a) el usuario autorizó usar el verde `--wa` solo para el estado "campo válido" (y para el nivel "súper segura" del medidor y las reglas cumplidas), como excepción a `plans/CLAUDE.md`; si quiere que sea regla permanente, tiene que pedir que se actualice. (b) En producción existen los admins `Axel` (id 1) y `axel` (id 3): mientras existan los dos, el login busca el usuario exacto primero y no se crea el índice único de `lower(usuario)` (el `DO $$` de `db/schema.sql` lo salta). Hay que preguntarle al usuario cuál renombrar o desactivar; al quitar el choque, el índice se crea solo en el siguiente arranque. (c) Falta commit y push.
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -92,13 +94,59 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 - [x] Ver las tablas en *Databases → necutla → Schemas → public → Tables* (`stands`, `productos`, `admins`, `session`).
 
 **Paso 5: después del primer despliegue (seguridad)**
-- [ ] Render → `necutla` → **Environment** → borrar `ADMIN_PASSWORD` (el admin ya quedó creado en la base) → *Save changes*.
+- [x] (hecho, avisado por el usuario el 2026-10-20) Render → `necutla` → **Environment** → borrar `ADMIN_PASSWORD` (el admin ya quedó creado en la base) → *Save changes*.
 - [ ] Restringir el acceso a la base: `necutla-db` → **Networking / Access Control** → cambiar `0.0.0.0/0` por tu IP (búscala en https://ifconfig.me) con `/32` al final.
 - [ ] Anotar la **fecha de creación de la base**: el plan gratis caduca a los 30 días. Poner recordatorio para respaldarla (pgAdmin → clic derecho en `necutla` → *Backup…*) o pasarla a plan de pago antes.
 
 ---
 
 ## Cambios hechos
+
+### 2026-10-20: registro con usuario y teléfono, validación en vivo y login con usuario o correo (plan `2026-10-20-registro-validacion-y-login.md`, prompts 1 a 5, en `main`)
+- **Base** (`db/schema.sql`): `clientes.usuario` (índice único en `lower`), `clientes.pais`, `clientes.telefono` (E.164); `admins.correo` (índice único en `lower`); índice único de `lower(admins.usuario)` solo si no hay choques (pendiente 22). Nulos para las cuentas viejas; no se borró nada.
+- **Servidor**:
+  - `server/validar.js`: `usuarioValido`, `correoReal` (formato + DNS MX con caché de 1 h; sugerencia de errores de dedo como `gmial.com`; si el DNS no responde, se acepta) y `telefono` (largo por país, devuelve E.164).
+  - `public/datos/paises.json`: 32 países con lada y largos válidos; México primero.
+  - `server/contrasenas.js`: minúscula, mayúscula, número y carácter especial obligatorios, y `confirmar`.
+  - `server/clientes.js`: registro con usuario, país, teléfono y confirmación (409 sin decir si chocó el usuario o el correo); `POST /revisar-correo` (60 por 15 min, no revela si el correo existe); login con `identificador` (usuario o correo); `PUT /password` (cierra la sesión de cliente en otros navegadores); `PUT /completar`; `/sesion` con `usuario` e `incompleta`. El teléfono no sale en ninguna respuesta.
+  - `server/auth.js`: login de Necutools con usuario o correo (`buscarAdmin`). Freno por id de cuenta en los dos logins, así cuenta igual con el usuario que con el correo.
+  - `server/admin.js`: correo opcional en Usuarios, `PUT /mi-correo` con la contraseña actual, confirmación obligatoria en toda contraseña nueva; usuario repetido sin importar mayúsculas → 409.
+- **Frontend**:
+  - `public/js/validacion.js` (nuevo): mensajes bajo cada campo, verde al estar bien, medidor débil/media/fuerte/súper segura con la lista de reglas, teléfono con selector de país, sugerencia "Usar …@gmail.com".
+  - `public/cuenta.html` y `public/js/cuenta.js`: "Usuario o correo", registro completo, "Completa tu cuenta" para cuentas viejas y "Cambiar contraseña".
+  - `public/necutools.html` y `public/js/necutools.js`: "Usuario o correo", correo en Usuarios (y en la tabla), "Repite la contraseña" y medidor en Usuarios y Mi cuenta, tarjeta "Mi correo".
+  - `public/style.css` (sección "VALIDACIÓN EN VIVO", solo tokens), `public/iconos.js` (`circle-alert`, `phone`, `at-sign`), `public/js/comun.js` (`api` deja el cuerpo del error en `error.datos`).
+- **Docs y pruebas**: `README.md` y `.env.example` (`CORREO_DNS_PRUEBA`, solo desarrollo); `scripts/seguridad/ataques.js` con 41 pruebas nuevas y las contraseñas de prueba con las reglas nuevas.
+- **Revisión de código** (`/code-review medium`, 10 puntos, todos corregidos):
+  - Los errores de dedo ya no bloquean: si el dominio recibe correos (ymail.com, email.com, hotmail.fr) solo se sugiere el otro. Sin MX se acepta si el dominio tiene A/AAAA (RFC 5321).
+  - El correo se revisa en el servidor solo al salir del campo, no en cada tecla, por la IP compartida de la escuela.
+  - Si la lista de países no carga, queda México.
+  - Un admin cuyo usuario lleva `@` sigue entrando.
+  - Al editar un usuario, su correo solo se manda si cambió.
+  - La contraseña de admin tampoco puede llevar la parte del correo antes de la @.
+  - Columna `clientes.sesion_version`: al cambiar la contraseña, una sesión vieja que se vuelva a guardar ya no vale.
+  - Letras de cualquier idioma (ç, ß) cuentan como letras.
+  - El login de clientes usa dos consultas fijas en vez de meter el nombre de la columna en el SQL.
+- **Verificación** (servidor real local + `embedded-postgres` en el puerto 54329, nunca Render):
+  - Ataques 225 de 225; XSS 44; UI de seguridad 36; Necutools 95; p1 9; p2 34.
+  - Nuevas en navegador: registro 41, Necutools 25 y cuenta vieja 8. La carrera de sesiones al cambiar la contraseña se probó volviendo a guardar la sesión vieja a mano: queda fuera.
+  - Schema aplicado 3 veces seguidas sin error. El caso `Caso`/`caso` se probó con el índice quitado: cada uno entra con su usuario exacto y en mayúsculas da 401.
+  - DNS real probado con gmail.com, unam.mx, dominios inventados y errores de dedo.
+  - Cero errores de consola o CSP, y a 360px sin scroll horizontal.
+  - Sin hex sueltos, degradados, `style="`, `onclick`, `uppercase` ni emojis. `npm audit` 0.
+- **Desviaciones**:
+  - El prompt 2 no se detuvo a preguntar por `Axel`/`axel` (el usuario pidió no parar). Se resolvió sin tocar producción: el índice solo se crea sin choques y el login busca el usuario exacto primero (pendiente 22).
+  - El botón de enviar no deshabilita nada. Si el foco va directo al botón, el campo no se repinta al salir, para que el mensaje no mueva el botón y no se pierda el clic.
+  - No hay "olvidé mi contraseña" (no hay servicio de correo; pendiente 14).
+
+### 2026-10-20: plan de registro, validación en vivo y login con usuario o correo
+- Nuevo plan `plans/planes/2026-10-20-registro-validacion-y-login.md` y sus 5 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Pedido del usuario: registro con usuario, teléfono con lada por país y correo; errores bajo cada campo y verde cuando es válido; medidor débil/media/fuerte/súper segura; mayúscula, minúscula, número y carácter especial obligatorios en toda contraseña nueva, con confirmación; login con usuario o correo en un solo campo (tienda y Necutools).
+- Decisiones del usuario: cualquier dominio de correo real (revisión DNS MX), verde `--wa` para lo válido (pendiente 22), usuario único además del nombre visible, teléfono obligatorio y privado.
+
+### 2026-10-20: usuarios de Necutools en producción y pgAdmin en el puerto 8080
+- A pedido del usuario se crearon en la base de Render los admins `vladi` (id 2) y `axel` (id 3), ambos dueños. Ya existía `Axel` (id 1, con mayúscula; el login distingue mayúsculas). Las contraseñas se dieron en el chat y cada uno debe cambiarla en Mi cuenta. No se guardaron en ningún archivo.
+- pgAdmin web no abría porque el Apache de XAMPP ocupa el puerto 80 y el `apache2` del sistema estaba apagado. Se cambió `/etc/apache2/ports.conf` a `Listen 8080` (copia en `ports.conf.antes-8080`) y se arrancó: ahora es http://localhost:8080/pgadmin4. `apache2` sigue sin arrancar solo al prender la máquina (`systemctl start apache2`).
 
 ### 2026-10-20: auditoría de seguridad y endurecimiento (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`, prompts 1 a 6, rama `seguridad`)
 

@@ -149,7 +149,7 @@ async function iniciarSesion(event) {
   await enviar(form, async () => {
     const r = await api("/auth/login", {
       method: "POST",
-      body: { usuario: $("admin-login-user").value, password: $("admin-login-password").value }
+      body: { identificador: $("admin-login-user").value, password: $("admin-login-password").value }
     });
     form.reset();
     if (r.segundoPaso) {
@@ -1113,7 +1113,7 @@ function renderUsuarios() {
 
   $("usuarios-tbody").innerHTML = st.usuarios.map(u => `
     <tr>
-      <td><div class="cell-title">${escapeHTML(u.usuario)}</div>${u.id === st.sesion.id ? `<div class="cell-sub">Tú</div>` : ""}</td>
+      <td><div class="cell-title">${escapeHTML(u.usuario)}</div>${u.correo ? `<div class="cell-sub">${escapeHTML(u.correo)}</div>` : ""}${u.id === st.sesion.id ? `<div class="cell-sub">Tú</div>` : ""}</td>
       <td>${u.rol === "dueno" ? "Dueño" : "Encargado"}</td>
       <td>${u.rol === "dueno" ? "Todas" : escapeHTML(u.tiendas.map(id => (tiendaPorId(id) || {}).nombre).filter(Boolean).join(", ") || "Ninguna")}</td>
       <td>${estadoBadge(u.activo, "Activa", "Desactivada")}${u.totp_activo ? `<div class="cell-sub">Con verificación en dos pasos</div>` : ""}</td>
@@ -1126,11 +1126,16 @@ function editarUsuario(id) {
   if (!u) return;
   const form = $("form-usuario");
   st.editando.usuario = u;
+  reiniciarCampos(form);
   campo(form, "usuario").value = u.usuario;
   campo(form, "usuario").disabled = true;
+  campo(form, "correo").value = u.correo || "";
   campo(form, "password").value = "";
+  campo(form, "confirmar").value = "";
+  campo(form, "password").dispatchEvent(new Event("input"));
   campo(form, "password").required = false;
   $("usuario-password-label").textContent = "Contraseña nueva (opcional)";
+  $("usuario-confirmar-label").textContent = "Repite la contraseña nueva";
   campo(form, "rol").value = u.rol;
   campo(form, "activo").checked = u.activo;
   campo(form, "quitar_2fa").checked = false;
@@ -1144,9 +1149,11 @@ function cancelarUsuario() {
   st.editando.usuario = null;
   const form = $("form-usuario");
   form.reset();
+  reiniciarCampos(form);
   campo(form, "usuario").disabled = false;
   campo(form, "password").required = true;
   $("usuario-password-label").textContent = "Contraseña";
+  $("usuario-confirmar-label").textContent = "Repite la contraseña";
   $("usuario-2fa-group").hidden = true;
   modoEdicion(form, "usuario", false, "Crear usuario", "");
   renderUsuarios();
@@ -1155,13 +1162,19 @@ function cancelarUsuario() {
 async function guardarUsuario(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  if (!(await validarFormulario(form))) return;
   await enviar(form, async () => {
     const editando = st.editando.usuario;
+    const password = campo(form, "password").value;
     const body = {
       rol: campo(form, "rol").value,
       tiendas: marcados(form, "tiendas").map(Number),
-      password: campo(form, "password").value || undefined
+      password: password || undefined,
+      confirmar: password ? campo(form, "confirmar").value : undefined
     };
+    // Al editar, el correo solo se manda si cambió (si no, el servidor no lo vuelve a revisar)
+    const correo = campo(form, "correo").value.trim();
+    if (!editando || correo !== (editando.correo || "")) body.correo = correo;
     const guardado = editando
       ? await api(`/admin/usuarios/${editando.id}`, {
         method: "PUT", body: { ...body, activo: campo(form, "activo").checked, quitar_2fa: campo(form, "quitar_2fa").checked }
@@ -1177,17 +1190,55 @@ async function guardarUsuario(event) {
 async function cambiarPassword(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  if (campo(form, "nueva").value !== campo(form, "confirmar").value) {
-    alert("Las dos contraseñas nuevas no coinciden. Escríbelas otra vez.");
-    return;
-  }
+  if (!(await validarFormulario(form))) return;
   await enviar(form, async () => {
     await api("/admin/mi-password", {
-      method: "PUT", body: { actual: campo(form, "actual").value, nueva: campo(form, "nueva").value }
+      method: "PUT",
+      body: { actual: campo(form, "actual").value, nueva: campo(form, "nueva").value, confirmar: campo(form, "confirmar").value }
     });
     form.reset();
+    reiniciarCampos(form);
     showToast("Contraseña cambiada.");
   });
+}
+
+async function guardarMiCorreo(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!(await validarFormulario(form))) return;
+  await enviar(form, async () => {
+    const { correo } = await api("/admin/mi-correo", {
+      method: "PUT", body: { correo: campo(form, "correo").value.trim(), password: campo(form, "password").value }
+    });
+    st.sesion.correo = correo;
+    campo(form, "password").value = "";
+    reiniciarCampos(form);
+    renderMiCorreo();
+    showToast(correo ? "Correo guardado." : "Correo quitado.");
+  });
+}
+
+// Validación en vivo de Usuarios y Mi cuenta (validacion.js). Contraseñas de admin: 12 caracteres o más.
+const MIN_PASSWORD_ADMIN = 12; // igual que server/admin.js
+const correoOpcional = valor => (valor.trim() ? revisarCorreo(valor) : { ok: true, mensaje: "" });
+const correoOpcionalEnVivo = valor => (valor.trim() ? revisarCorreoEnVivo(valor) : { ok: null, mensaje: "" });
+
+function prepararValidacion() {
+  const usuario = $("form-usuario");
+  prepararCampo(campo(usuario, "usuario"), valor => revisarUsuario(valor, 50));
+  // Al editar, el correo que ya tenía no se vuelve a revisar (si su dominio dejó de existir, igual se puede guardar)
+  const sinCambio = valor => st.editando.usuario && valor.trim().toLowerCase() === (st.editando.usuario.correo || "");
+  prepararCampo(campo(usuario, "correo"), valor => (sinCambio(valor) ? { ok: true, mensaje: "" } : correoOpcional(valor)),
+    { enVivo: valor => (sinCambio(valor) ? { ok: true, mensaje: "" } : correoOpcionalEnVivo(valor)) });
+  prepararPassword(campo(usuario, "password"), {
+    minimo: MIN_PASSWORD_ADMIN, confirmar: campo(usuario, "confirmar"), opcional: () => Boolean(st.editando.usuario)
+  });
+  const cuenta = $("form-cuenta");
+  prepararCampo(campo(cuenta, "actual"), valor => (valor ? { ok: true, mensaje: "" } : { ok: false, mensaje: "Escribe tu contraseña actual." }));
+  prepararPassword(campo(cuenta, "nueva"), { minimo: MIN_PASSWORD_ADMIN, confirmar: campo(cuenta, "confirmar") });
+  const correo = $("form-mi-correo");
+  prepararCampo(campo(correo, "correo"), correoOpcional, { enVivo: correoOpcionalEnVivo });
+  prepararCampo(campo(correo, "password"), valor => (valor ? { ok: true, mensaje: "" } : { ok: false, mensaje: "Escribe tu contraseña para confirmar el cambio." }));
 }
 
 // ================= Bitácora (solo dueños) =================
@@ -1232,7 +1283,16 @@ async function cancelarPedidosViejos() {
 }
 
 // ================= Verificación en dos pasos =================
+function renderMiCorreo() {
+  const correo = st.sesion && st.sesion.correo;
+  $("mi-correo").value = correo || "";
+  $("mi-correo-estado").textContent = correo
+    ? `Puedes iniciar sesión con tu usuario o con ${correo}. Para quitarlo, deja el campo vacío.`
+    : "Con tu correo también puedes iniciar sesión en Necutools. Es opcional.";
+}
+
 function render2fa() {
+  renderMiCorreo();
   const activa = Boolean(st.sesion && st.sesion.totp_activo);
   $("estado-2fa").textContent = activa
     ? "Está activa: al entrar, Necutools te pide el código de tu celular. Para quitarla escribe tu contraseña y un código."
@@ -1344,6 +1404,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("form-promo").addEventListener("submit", guardarPromo);
   $("form-usuario").addEventListener("submit", guardarUsuario);
   $("form-cuenta").addEventListener("submit", cambiarPassword);
+  $("form-mi-correo").addEventListener("submit", guardarMiCorreo);
+  prepararValidacion();
   $("admin-codigo-form").addEventListener("submit", enviarCodigo);
   $("form-2fa-iniciar").addEventListener("submit", iniciar2fa);
   $("form-2fa-activar").addEventListener("submit", activar2fa);

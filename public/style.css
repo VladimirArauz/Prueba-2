@@ -3340,3 +3340,152 @@ a.card-img-wrap {
   font-weight: 700;
   color: var(--tinta);
 }
+
+/* ================= VALIDACIÓN EN VIVO (plan 2026-10-20-registro-validacion-y-login) =================
+   Mensaje bajo cada campo: rojo si falta algo, verde --wa cuando ya está bien (excepción autorizada
+   por el usuario solo para este estado). Medidor de contraseña de 4 tramos. */
+.campo-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--texto-2);
+}
+
+.campo-estado:empty {
+  display: none;
+}
+
+.campo-estado .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.form-group.is-invalido input,
+.form-group.is-invalido select {
+  border-color: var(--aviso);
+}
+
+.form-group.is-invalido .campo-estado {
+  color: var(--aviso);
+}
+
+.form-group.is-valido input,
+.form-group.is-valido select {
+  border-color: var(--wa);
+}
+
+.form-group.is-valido .campo-estado,
+.form-group.is-valido .campo-icono > .icon {
+  color: var(--wa);
+}
+
+.campo-sugerencia {
+  margin-left: 2px;
+}
+
+/* Teléfono: país con lada + número */
+.campo-telefono {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.campo-telefono .campo-icono {
+  min-width: 0;
+}
+
+@media (max-width: 400px) {
+  .campo-telefono {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Medidor: data-nivel 1 débil, 2 media, 3 fuerte, 4 súper segura */
+.medidor-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.medidor {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.medidor span {
+  height: 6px;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  background: var(--gis);
+  transition: background-color var(--t-fast), border-color var(--t-fast);
+}
+
+.medidor[data-nivel="1"] span:nth-child(-n+1) {
+  border-color: var(--aviso);
+  background: var(--aviso);
+}
+
+.medidor[data-nivel="2"] span:nth-child(-n+2) {
+  border-color: var(--tinta);
+  background: var(--senal);
+}
+
+.medidor[data-nivel="3"] span:nth-child(-n+3) {
+  border-color: var(--tinta-2);
+  background: var(--tinta-2);
+}
+
+.medidor[data-nivel="4"] span {
+  border-color: var(--wa);
+  background: var(--wa);
+}
+
+.medidor-texto {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.medidor-texto:empty {
+  display: none;
+}
+
+.reglas-password {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 2px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.reglas-password li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reglas-password .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.reglas-password li.is-ok {
+  color: var(--wa);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .medidor span {
+    transition: none;
+  }
+}

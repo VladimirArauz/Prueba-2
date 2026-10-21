@@ -1,0 +1,270 @@
+[
+ {
+  "iso": "MX",
+  "nombre": "México",
+  "lada": "52",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "DE",
+  "nombre": "Alemania",
+  "lada": "49",
+  "largos": [
+   10,
+   11
+  ]
+ },
+ {
+  "iso": "AR",
+  "nombre": "Argentina",
+  "lada": "54",
+  "largos": [
+   10,
+   11
+  ]
+ },
+ {
+  "iso": "BO",
+  "nombre": "Bolivia",
+  "lada": "591",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "BR",
+  "nombre": "Brasil",
+  "lada": "55",
+  "largos": [
+   10,
+   11
+  ]
+ },
+ {
+  "iso": "CA",
+  "nombre": "Canadá",
+  "lada": "1",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "CL",
+  "nombre": "Chile",
+  "lada": "56",
+  "largos": [
+   9
+  ]
+ },
+ {
+  "iso": "CN",
+  "nombre": "China",
+  "lada": "86",
+  "largos": [
+   10,
+   11
+  ]
+ },
+ {
+  "iso": "CO",
+  "nombre": "Colombia",
+  "lada": "57",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "KR",
+  "nombre": "Corea del Sur",
+  "lada": "82",
+  "largos": [
+   9,
+   10
+  ]
+ },
+ {
+  "iso": "CR",
+  "nombre": "Costa Rica",
+  "lada": "506",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "CU",
+  "nombre": "Cuba",
+  "lada": "53",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "EC",
+  "nombre": "Ecuador",
+  "lada": "593",
+  "largos": [
+   8,
+   9
+  ]
+ },
+ {
+  "iso": "SV",
+  "nombre": "El Salvador",
+  "lada": "503",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "ES",
+  "nombre": "España",
+  "lada": "34",
+  "largos": [
+   9
+  ]
+ },
+ {
+  "iso": "US",
+  "nombre": "Estados Unidos",
+  "lada": "1",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "FR",
+  "nombre": "Francia",
+  "lada": "33",
+  "largos": [
+   9
+  ]
+ },
+ {
+  "iso": "GT",
+  "nombre": "Guatemala",
+  "lada": "502",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "HN",
+  "nombre": "Honduras",
+  "lada": "504",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "IN",
+  "nombre": "India",
+  "lada": "91",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "IT",
+  "nombre": "Italia",
+  "lada": "39",
+  "largos": [
+   9,
+   10
+  ]
+ },
+ {
+  "iso": "JP",
+  "nombre": "Japón",
+  "lada": "81",
+  "largos": [
+   9,
+   10
+  ]
+ },
+ {
+  "iso": "NI",
+  "nombre": "Nicaragua",
+  "lada": "505",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "PA",
+  "nombre": "Panamá",
+  "lada": "507",
+  "largos": [
+   7,
+   8
+  ]
+ },
+ {
+  "iso": "PY",
+  "nombre": "Paraguay",
+  "lada": "595",
+  "largos": [
+   7,
+   8,
+   9
+  ]
+ },
+ {
+  "iso": "PE",
+  "nombre": "Perú",
+  "lada": "51",
+  "largos": [
+   8,
+   9
+  ]
+ },
+ {
+  "iso": "PT",
+  "nombre": "Portugal",
+  "lada": "351",
+  "largos": [
+   9
+  ]
+ },
+ {
+  "iso": "PR",
+  "nombre": "Puerto Rico",
+  "lada": "1",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "GB",
+  "nombre": "Reino Unido",
+  "lada": "44",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "DO",
+  "nombre": "República Dominicana",
+  "lada": "1",
+  "largos": [
+   10
+  ]
+ },
+ {
+  "iso": "UY",
+  "nombre": "Uruguay",
+  "lada": "598",
+  "largos": [
+   8
+  ]
+ },
+ {
+  "iso": "VE",
+  "nombre": "Venezuela",
+  "lada": "58",
+  "largos": [
+   10
+  ]
+ }
+]

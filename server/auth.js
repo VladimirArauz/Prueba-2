@@ -94,7 +94,7 @@ async function ensureInitialAdmin() {
 async function cargarAdmin(req) {
   if (!req.session || !req.session.adminId) return null;
   const { rows } = await pool.query(
-    `SELECT a.id, a.usuario, a.rol, a.activo, a.totp_activo,
+    `SELECT a.id, a.usuario, a.correo, a.rol, a.activo, a.totp_activo,
             COALESCE(array_agg(s.stand_id) FILTER (WHERE s.stand_id IS NOT NULL), '{}') AS tiendas
      FROM admins a LEFT JOIN admin_stands s ON s.admin_id = a.id
      WHERE a.id = $1 GROUP BY a.id`, [req.session.adminId]);
@@ -165,7 +165,7 @@ router.get("/sesion", async (req, res, next) => {
 // Entra a Necutools: sesión nueva (evita fijación de sesión). Si había un cliente en este navegador, se conserva.
 function entrar(req, res, next, admin) {
   anotar(admin, "entrar", "sesiones", null, "Inició sesión en Necutools");
-  renovarSesion(req, ["clienteId"], err => {
+  renovarSesion(req, ["clienteId", "clienteVersion"], err => {
     if (err) return next(err);
     req.session.adminId = admin.id;
     req.session.usuario = admin.usuario;
@@ -195,28 +195,45 @@ async function usarCodigo(admin, valor) {
 
 const PENDIENTE_MS = 5 * 60 * 1000;
 
-router.post("/login", loginLimiter, handle(async (req, res, next) => {
-  const usuario = typeof req.body.usuario === "string" ? req.body.usuario.trim() : "";
-  const password = typeof req.body.password === "string" ? req.body.password : "";
-  if (!usuario || !password || usuario.length > 50 || password.length > 200) {
-    return res.status(400).json({ error: "Escribe tu usuario y contraseña." });
+// Busca al admin por correo (con "@") o por usuario: primero el usuario exacto y, si no, sin importar
+// mayúsculas cuando solo hay uno (si chocan dos, como "Axel" y "axel", hay que escribirlo exacto)
+async function buscarAdmin(identificador) {
+  const campos = "SELECT id, usuario, password_hash, rol, activo, totp_activo FROM admins";
+  if (identificador.includes("@")) {
+    const { rows } = await pool.query(`${campos} WHERE lower(correo) = lower($1)`, [identificador]);
+    if (rows[0]) return rows[0];
+    // Un usuario viejo con "@" (ADMIN_USERNAME no se valida) sigue entrando con su usuario exacto
   }
-  await exigirNoFrenada("admin", usuario);
-  const { rows } = await pool.query(
-    "SELECT id, usuario, password_hash, rol, activo, totp_activo FROM admins WHERE usuario = $1", [usuario]);
-  const admin = rows[0];
+  const exacto = await pool.query(`${campos} WHERE usuario = $1`, [identificador]);
+  if (exacto.rows[0]) return exacto.rows[0];
+  const { rows } = await pool.query(`${campos} WHERE lower(usuario) = lower($1) LIMIT 2`, [identificador]);
+  return rows.length === 1 ? rows[0] : null;
+}
+
+// Un solo campo "Usuario o correo". `usuario` se sigue aceptando.
+router.post("/login", loginLimiter, handle(async (req, res, next) => {
+  const crudo = req.body.identificador !== undefined ? req.body.identificador : req.body.usuario;
+  const identificador = typeof crudo === "string" ? crudo.trim() : "";
+  const password = typeof req.body.password === "string" ? req.body.password : "";
+  if (!identificador || !password || identificador.length > 120 || password.length > 200) {
+    return res.status(400).json({ error: "Escribe tu usuario o correo y tu contraseña." });
+  }
+  const admin = await buscarAdmin(identificador);
+  // El freno por cuenta usa el id: así no se esquiva alternando el usuario y el correo
+  const freno = admin ? `id:${admin.id}` : identificador;
+  await exigirNoFrenada("admin", freno);
   const valido = await bcrypt.compare(password, admin ? admin.password_hash : DUMMY_HASH);
   if (!admin || !valido) {
-    await registrarFallo("admin", usuario);
-    return res.status(401).json({ error: "Usuario o contraseña incorrectos." });
+    await registrarFallo("admin", freno);
+    return res.status(401).json({ error: "Usuario, correo o contraseña incorrectos." });
   }
-  await limpiarFallos("admin", usuario);
+  await limpiarFallos("admin", freno);
   if (!admin.activo) {
     return res.status(403).json({ error: "Tu cuenta está desactivada. Pídele a un dueño de Necutla que la active." });
   }
   if (!admin.totp_activo) return entrar(req, res, next, admin);
   // Con verificación en dos pasos: la sesión queda a medias (sin adminId) hasta mandar el código
-  renovarSesion(req, ["clienteId"], err => {
+  renovarSesion(req, ["clienteId", "clienteVersion"], err => {
     if (err) return next(err);
     req.session.pendiente = { adminId: admin.id, hasta: Date.now() + PENDIENTE_MS };
     res.json({ autenticado: false, segundoPaso: true });
@@ -248,7 +265,7 @@ router.post("/login/codigo", loginLimiter, handle(async (req, res, next) => {
 // Si en este navegador también hay una cuenta de cliente, solo se cierra la de Necutools (con otro id de sesión)
 router.post("/logout", (req, res, next) => {
   if (req.session.clienteId) {
-    return renovarSesion(req, ["clienteId", "creada"], err => (err ? next(err) : res.json({ autenticado: false })));
+    return renovarSesion(req, ["clienteId", "clienteVersion", "creada"], err => (err ? next(err) : res.json({ autenticado: false })));
   }
   destruirSesion(req, res, next, { autenticado: false });
 });

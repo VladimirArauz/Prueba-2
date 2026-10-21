@@ -63,7 +63,7 @@ function imagenDe(body) {
 
 // ================= Mi sesión =================
 router.get("/yo", (req, res) => {
-  res.json({ id: req.admin.id, usuario: req.admin.usuario, rol: req.admin.rol, tiendas: req.admin.tiendas, totp_activo: req.admin.totp_activo });
+  res.json({ id: req.admin.id, usuario: req.admin.usuario, rol: req.admin.rol, tiendas: req.admin.tiendas, totp_activo: req.admin.totp_activo, correo: req.admin.correo });
 });
 
 router.get("/iconos", (req, res) => res.json(ICONOS_TIENDA));
@@ -543,8 +543,21 @@ router.delete("/promociones/:id", requireDueno, handle(async (req, res) => {
 }));
 
 // ================= Usuarios de Necutools (solo dueños) =================
-const contrasena = (valor, usuario, campo = "La contraseña") =>
-  validarContrasena(valor, { minimo: 12, campo, contiene: [usuario] });
+// confirmar: "Repite la contraseña" (obligatorio en toda contraseña nueva). Tampoco puede llevar el
+// usuario ni la parte del correo antes de la @.
+const contrasena = (valor, confirmar, usuario, campo = "La contraseña", correo = null) =>
+  validarContrasena(valor, {
+    minimo: 12, campo, contiene: [usuario, correo ? correo.split("@")[0] : ""],
+    confirmar: typeof confirmar === "string" ? confirmar : ""
+  });
+
+// Correo opcional del admin (para entrar con él en vez del usuario). Vacío = sin correo.
+async function correoOpcional(valor) {
+  if (valor === undefined || valor === null || (typeof valor === "string" && !valor.trim())) return null;
+  return v.correoReal(valor, "el correo");
+}
+
+const CORREO_REPETIDO = "Ese correo ya lo usa otro usuario de Necutools.";
 
 async function tiendasValidas(lista) {
   if (lista === undefined || lista === null) return [];
@@ -566,7 +579,7 @@ async function asignarTiendas(cliente, adminId, tiendas) {
 
 router.get("/usuarios", requireDueno, handle(async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT a.id, a.usuario, a.rol, a.activo, a.totp_activo, a.creado_en,
+    `SELECT a.id, a.usuario, a.correo, a.rol, a.activo, a.totp_activo, a.creado_en,
             COALESCE(array_agg(s.stand_id ORDER BY s.stand_id) FILTER (WHERE s.stand_id IS NOT NULL), '{}') AS tiendas
      FROM admins a LEFT JOIN admin_stands s ON s.admin_id = a.id
      GROUP BY a.id ORDER BY a.rol DESC, a.usuario`);
@@ -578,14 +591,24 @@ router.post("/usuarios", requireDueno, handle(async (req, res) => {
   if (!/^[a-z0-9._-]{3,50}$/.test(usuario)) {
     throw new ErrorDeDatos("El usuario debe tener de 3 a 50 letras sin acentos, números, punto, guion o guion bajo.");
   }
-  const password = contrasena(req.body.password, usuario);
+  const correo = await correoOpcional(req.body.correo);
+  const password = contrasena(req.body.password, req.body.confirmar, usuario, "La contraseña", correo);
   const rol = v.opcion(req.body.rol, ROLES, "el rol");
   const tiendas = rol === "encargado" ? await tiendasValidas(req.body.tiendas) : [];
+  // Sin importar mayúsculas: "Axel" y "axel" serían la misma persona al entrar
+  const { rows: existe } = await pool.query("SELECT 1 FROM admins WHERE lower(usuario) = $1", [usuario]);
+  if (existe[0]) throw new ErrorHttp(409, "Ya existe un usuario con ese nombre.");
   const hash = await bcrypt.hash(password, BCRYPT_COST);
   const creado = await enTransaccion(async cliente => {
-    const { rows } = await cliente.query(
-      "INSERT INTO admins (usuario, password_hash, rol) VALUES ($1, $2, $3) ON CONFLICT (usuario) DO NOTHING RETURNING id, usuario, rol",
-      [usuario, hash, rol]);
+    let rows;
+    try {
+      ({ rows } = await cliente.query(
+        "INSERT INTO admins (usuario, correo, password_hash, rol) VALUES ($1, $2, $3, $4) ON CONFLICT (usuario) DO NOTHING RETURNING id, usuario, rol",
+        [usuario, correo, hash, rol]));
+    } catch (err) {
+      if (err.code === "23505") throw new ErrorHttp(409, err.constraint === "admins_correo_idx" ? CORREO_REPETIDO : "Ya existe un usuario con ese nombre.");
+      throw err;
+    }
     if (!rows[0]) throw new ErrorHttp(409, "Ya existe un usuario con ese nombre.");
     await asignarTiendas(cliente, rows[0].id, tiendas);
     return rows[0];
@@ -596,14 +619,19 @@ router.post("/usuarios", requireDueno, handle(async (req, res) => {
 
 router.put("/usuarios/:id", requireDueno, handle(async (req, res) => {
   const id = v.idValido(req.params.id);
-  const { rows } = id ? await pool.query("SELECT id, usuario, rol, activo FROM admins WHERE id = $1", [id]) : { rows: [] };
+  const { rows } = id ? await pool.query("SELECT id, usuario, correo, rol, activo FROM admins WHERE id = $1", [id]) : { rows: [] };
   const usuario = rows[0];
   if (!usuario) throw new ErrorHttp(404, "Ese usuario no existe.");
 
   const rol = v.opcion(req.body.rol, ROLES, "el rol");
   const activo = v.booleano(req.body.activo, true);
   const tiendas = rol === "encargado" ? await tiendasValidas(req.body.tiendas) : [];
-  const password = req.body.password ? contrasena(req.body.password, usuario.usuario, "La contraseña nueva") : null;
+  // correo: undefined = no se toca; "" = se quita
+  const cambiaCorreo = req.body.correo !== undefined;
+  const correo = cambiaCorreo ? await correoOpcional(req.body.correo) : null;
+  const password = req.body.password
+    ? contrasena(req.body.password, req.body.confirmar, usuario.usuario, "La contraseña nueva", cambiaCorreo ? correo : usuario.correo)
+    : null;
   // Un dueño puede quitarle la verificación en dos pasos a otro usuario que perdió su celular
   const quitar2fa = v.booleano(req.body.quitar_2fa, false);
   if (quitar2fa && usuario.id === req.admin.id) {
@@ -620,16 +648,23 @@ router.put("/usuarios/:id", requireDueno, handle(async (req, res) => {
 
   const hash = password ? await bcrypt.hash(password, BCRYPT_COST) : null;
   await enTransaccion(async cliente => {
-    await cliente.query(
-      `UPDATE admins SET rol = $1, activo = $2, password_hash = COALESCE($3, password_hash),
-         totp_activo = totp_activo AND NOT $5, totp_secreto = CASE WHEN $5 THEN NULL ELSE totp_secreto END,
-         totp_respaldo = CASE WHEN $5 THEN '{}' ELSE totp_respaldo END
-       WHERE id = $4`,
-      [rol, activo, hash, usuario.id, quitar2fa]);
+    try {
+      await cliente.query(
+        `UPDATE admins SET rol = $1, activo = $2, password_hash = COALESCE($3, password_hash),
+           totp_activo = totp_activo AND NOT $5, totp_secreto = CASE WHEN $5 THEN NULL ELSE totp_secreto END,
+           totp_respaldo = CASE WHEN $5 THEN '{}' ELSE totp_respaldo END,
+           correo = CASE WHEN $6 THEN $7 ELSE correo END
+         WHERE id = $4`,
+        [rol, activo, hash, usuario.id, quitar2fa, cambiaCorreo, correo]);
+    } catch (err) {
+      if (err.code === "23505") throw new ErrorHttp(409, CORREO_REPETIDO);
+      throw err;
+    }
     await asignarTiendas(cliente, usuario.id, tiendas);
   });
   if (!activo || password) await cerrarSesionesDe(usuario.id);
-  const cambios = [rol, activo ? "activa" : "desactivada", password ? "contraseña nueva" : "", quitar2fa ? "sin 2 pasos" : ""];
+  const cambios = [rol, activo ? "activa" : "desactivada", password ? "contraseña nueva" : "", quitar2fa ? "sin 2 pasos" : "",
+    cambiaCorreo ? (correo ? "correo nuevo" : "sin correo") : ""];
   await anotar(req.admin, "editar", "usuarios", usuario.id, `${usuario.usuario}: ${cambios.filter(Boolean).join(", ")}`);
   res.json({ id: usuario.id, usuario: usuario.usuario, rol, activo });
 }));
@@ -667,7 +702,7 @@ async function exigirPasswordActual(req, valor) {
 }
 
 router.put("/mi-password", handle(async (req, res) => {
-  const nueva = contrasena(req.body.nueva, req.admin.usuario, "La contraseña nueva");
+  const nueva = contrasena(req.body.nueva, req.body.confirmar, req.admin.usuario, "La contraseña nueva", req.admin.correo);
   const actual = await exigirPasswordActual(req, req.body.actual);
   if (actual === nueva) throw new ErrorDeDatos("La contraseña nueva debe ser distinta a la actual.");
   const hash = await bcrypt.hash(nueva, BCRYPT_COST);
@@ -675,6 +710,20 @@ router.put("/mi-password", handle(async (req, res) => {
   await cerrarSesionesDe(req.admin.id, req.sessionID);
   await anotar(req.admin, "contraseña", "usuarios", req.admin.id, "Cambió su contraseña");
   res.json({ ok: true });
+}));
+
+// Correo para entrar con él (opcional). Pide la contraseña actual: con una sesión robada no se cambia.
+router.put("/mi-correo", handle(async (req, res) => {
+  const correo = await correoOpcional(req.body.correo);
+  await exigirPasswordActual(req, req.body.password);
+  try {
+    await pool.query("UPDATE admins SET correo = $1 WHERE id = $2", [correo, req.admin.id]);
+  } catch (err) {
+    if (err.code === "23505") throw new ErrorHttp(409, CORREO_REPETIDO);
+    throw err;
+  }
+  await anotar(req.admin, "editar", "usuarios", req.admin.id, correo ? "Cambió su correo" : "Quitó su correo");
+  res.json({ correo });
 }));
 
 // ================= Verificación en dos pasos =================

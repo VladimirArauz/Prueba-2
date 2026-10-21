@@ -1,5 +1,6 @@
 /**
- * Reglas para contraseñas nuevas (admins y clientes). Las cuentas que ya existen siguen entrando igual.
+ * Reglas para contraseñas nuevas (admins y clientes): largo, minúscula, mayúscula, número y carácter especial.
+ * Las cuentas que ya existen siguen entrando igual.
  */
 const { ErrorDeDatos } = require("./validar");
 
@@ -17,13 +18,31 @@ const COMUNES = new Set([
   "administrator", "admin12345", "admin123456", "welcome123", "bienvenido1", "bienvenido123", "changeme123", "cambiame123"
 ]);
 
-function validarContrasena(valor, { minimo, campo = "La contraseña", contiene = [] }) {
+// Tipos de carácter obligatorios. Misma lista y mismo orden que public/js/validacion.js
+// Letras de cualquier idioma (ç, ß, à…) cuentan como letras, no como caracteres especiales
+const TIPOS = [
+  [/\p{Ll}/u, "una minúscula"],
+  [/\p{Lu}/u, "una mayúscula"],
+  [/\p{Nd}/u, "un número"],
+  [/[^\p{L}\p{N}\s]/u, "un carácter especial (ej. ! # $ % & * ?)"]
+];
+
+// "una mayúscula y un número" (lo que le falta a la contraseña), o "" si no le falta nada
+function tiposFaltantes(valor) {
+  const faltan = TIPOS.filter(([regla]) => !regla.test(valor)).map(([, nombre]) => nombre);
+  return faltan.length > 1 ? `${faltan.slice(0, -1).join(", ")} y ${faltan[faltan.length - 1]}` : faltan.join("");
+}
+
+// confirmar: lo que se escribió en "Repite la contraseña" (undefined = no se pide)
+function validarContrasena(valor, { minimo, campo = "La contraseña", contiene = [], confirmar }) {
   if (typeof valor !== "string" || valor.length < minimo) {
     throw new ErrorDeDatos(`${campo} debe tener ${minimo} caracteres o más.`);
   }
   if (Buffer.byteLength(valor, "utf8") > MAX_BYTES) {
     throw new ErrorDeDatos(`${campo} es demasiado larga: usa hasta ${MAX_BYTES} letras (menos si llevan acentos).`);
   }
+  const faltan = tiposFaltantes(valor);
+  if (faltan) throw new ErrorDeDatos(`${campo} necesita al menos ${faltan}.`);
   const minus = valor.toLowerCase();
   if (COMUNES.has(minus) || new Set(minus).size < 4) {
     throw new ErrorDeDatos(`${campo} es de las más usadas y fáciles de adivinar. Elige otra.`);
@@ -33,7 +52,10 @@ function validarContrasena(valor, { minimo, campo = "La contraseña", contiene =
       throw new ErrorDeDatos(`${campo} no puede llevar tu usuario o tu correo.`);
     }
   }
+  if (confirmar !== undefined && confirmar !== valor) {
+    throw new ErrorDeDatos("Las contraseñas no coinciden. Escribe la misma en los dos campos.");
+  }
   return valor;
 }
 
-module.exports = { validarContrasena, MAX_BYTES };
+module.exports = { validarContrasena, tiposFaltantes, MAX_BYTES };

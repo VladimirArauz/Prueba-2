@@ -27,6 +27,7 @@ async function api(path, { method = "GET", body } = {}) {
   if (!response.ok) {
     const error = new Error(data.error || "No se pudo completar la acción. Intenta de nuevo.");
     error.status = response.status;
+    error.datos = data; // ej. la sugerencia de correo de /clientes/revisar-correo
     throw error;
   }
   return data;

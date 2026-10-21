@@ -65,10 +65,24 @@ async function loginAdmin(usuario, password, ip) {
   return sesion;
 }
 
+// Contraseñas de prueba que cumplen las reglas (mayúscula, minúscula, número y carácter especial)
+const PASS_CLIENTE = "Clave-cliente-larga-1";
+let telSeq = 0;
+// Cuerpo completo de registro; `extra` cambia o agrega campos
+function datosCliente(nombre, extra = {}) {
+  telSeq += 1;
+  return {
+    nombre, usuario: `${nombre}-${SUFIJO}`.toLowerCase().slice(0, 30), correo: `${nombre}-${SUFIJO}@prueba.local`,
+    pais: "MX", telefono: `55${String(Date.now() % 1e4).padStart(4, "0")}${String(telSeq).padStart(4, "0")}`,
+    password: PASS_CLIENTE, confirmar: PASS_CLIENTE, ...extra
+  };
+}
+
 async function registrarCliente(nombre) {
   const sesion = {};
-  const correo = `${nombre}-${SUFIJO}@prueba.local`;
-  const r = await pedir("POST", "/api/clientes/registro", { body: { nombre, correo, password: "clave-cliente-larga-1" }, sesion });
+  const body = datosCliente(nombre);
+  const correo = body.correo;
+  const r = await pedir("POST", "/api/clientes/registro", { body, sesion });
   if (r.status !== 200) throw new Error(`registro ${nombre}: ${r.status} ${r.texto}`);
   return { sesion, correo };
 }
@@ -90,10 +104,10 @@ async function preparar() {
   const tiendas = (await pedir("GET", "/api/admin/tiendas", { sesion: dueno })).json;
   if (!Array.isArray(tiendas) || tiendas.length < 2) throw new Error("Hacen falta al menos 2 tiendas en la base local.");
   const [A, B] = tiendas;
-  const pass = "clave-encargado-larga-1";
+  const pass = "Clave-encargado-larga-1";
   for (const [nombre, tienda] of [["enc-a", A], ["enc-b", B]]) {
     const r = await pedir("POST", "/api/admin/usuarios", {
-      body: { usuario: `${nombre}-${SUFIJO}`, password: pass, rol: "encargado", tiendas: [tienda.id] }, sesion: dueno });
+      body: { usuario: `${nombre}-${SUFIJO}`, password: pass, confirmar: pass, rol: "encargado", tiendas: [tienda.id] }, sesion: dueno });
     if (r.status !== 201) throw new Error(`crear ${nombre}: ${r.status} ${r.texto}`);
   }
   const encA = await loginAdmin(`enc-a-${SUFIJO}`, pass);
@@ -267,7 +281,7 @@ async function main() {
   });
   await prueba("—", "asignación masiva: el registro ignora rol, activo e id", async () => {
     const sesion = {};
-    const crudo = `{"nombre":"Masivo","correo":"masivo-${SUFIJO}@prueba.local","password":"clave-cliente-larga-1",` +
+    const crudo = JSON.stringify(datosCliente("masivo")).slice(0, -1) + "," +
       `"id":1,"activo":true,"rol":"dueno","adminId":1,"__proto__":{"adminId":1},"constructor":{"prototype":{"adminId":1}}}`;
     await pedir("POST", "/api/clientes/registro", { sesion, crudo, headers: { "Content-Type": "application/json" } });
     const r = await pedir("GET", "/api/admin/yo", { sesion });
@@ -310,7 +324,7 @@ async function main() {
   });
   await prueba("H9", "cerrar Necutools con un cliente en el mismo navegador cambia el id de sesión", async () => {
     const s = {};
-    await pedir("POST", "/api/clientes/login", { body: { correo: cli1.correo, password: "clave-cliente-larga-1" }, sesion: s });
+    await pedir("POST", "/api/clientes/login", { body: { correo: cli1.correo, password: PASS_CLIENTE }, sesion: s });
     await pedir("POST", "/api/auth/login", { body: { usuario: DUENO, password: DUENO_PASS }, sesion: s });
     const antes = s.cookie;
     await pedir("POST", "/api/auth/logout", { sesion: s });
@@ -334,7 +348,7 @@ async function main() {
   });
   await prueba("H7", "login admin: 15 fallos desde 15 IPs contra la misma cuenta se frenan (también con la contraseña correcta)", async () => {
     const usuario = `frenado-${SUFIJO}`;
-    await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario, password: ctx.pass, rol: "encargado", tiendas: [A.id] } });
+    await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario, password: ctx.pass, confirmar: ctx.pass, rol: "encargado", tiendas: [A.id] } });
     let ultimo;
     for (let i = 0; i < 15; i++) ultimo = await pedir("POST", "/api/auth/login", { body: { usuario, password: `mala-${i}` } });
     const correcta = await pedir("POST", "/api/auth/login", { body: { usuario, password: ctx.pass } });
@@ -354,13 +368,13 @@ async function main() {
     const s = await loginAdmin(`enc-a-${SUFIJO}`, ctx.pass, nuevaIp());
     // Cada intento desde otra IP: el freno es por cuenta, no por IP
     let ultimo;
-    for (let i = 0; i < 12; i++) ultimo = await pedir("PUT", "/api/admin/mi-password", { sesion: s, body: { actual: `mala-${i}`, nueva: "otra-clave-larga-123" } });
+    for (let i = 0; i < 12; i++) ultimo = await pedir("PUT", "/api/admin/mi-password", { sesion: s, body: { actual: `mala-${i}`, nueva: "Otra-clave-larga-123", confirmar: "Otra-clave-larga-123" } });
     return espera(ultimo.status === 429, `último: ${ultimo.status}`);
   });
   await prueba("H16", "registro con correo repetido cuenta para el límite (bcrypt sin freno)", async () => {
     const ip = nuevaIp();
     let ultimo;
-    for (let i = 0; i < 32; i++) ultimo = await pedir("POST", "/api/clientes/registro", { ip, body: { nombre: "Repetido", correo: cli1.correo, password: "clave-cliente-larga-1" } });
+    for (let i = 0; i < 32; i++) ultimo = await pedir("POST", "/api/clientes/registro", { ip, body: datosCliente("repetido", { correo: cli1.correo }) });
     return espera(ultimo.status === 429, `último: ${ultimo.status}`);
   });
   await prueba("—", "login: mismo tiempo con usuario existente y no existente", async () => {
@@ -372,7 +386,7 @@ async function main() {
   // ---------- Verificación en dos pasos ----------
   await (async () => {
     const usuario = `tfa-${SUFIJO}`;
-    await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario, password: ctx.pass, rol: "encargado", tiendas: [A.id] } });
+    await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario, password: ctx.pass, confirmar: ctx.pass, rol: "encargado", tiendas: [A.id] } });
     const s = await loginAdmin(usuario, ctx.pass);
     let secreto, respaldo;
     await prueba("H14", "2 pasos: iniciar pide la contraseña", async () => {
@@ -442,7 +456,7 @@ async function main() {
   // ---------- Contraseñas ----------
   await prueba("H12", "contraseñas de más de 72 bytes se rechazan (bcrypt ignora el resto)", async () => {
     const base = "a".repeat(72);
-    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `largo-${SUFIJO}`, password: `${base}uno`, rol: "encargado", tiendas: [A.id] } });
+    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `largo-${SUFIJO}`, password: `${base}Uno-1`, confirmar: `${base}Uno-1`, rol: "encargado", tiendas: [A.id] } });
     if (r.status !== 201) return true;
     const l = await pedir("POST", "/api/auth/login", { body: { usuario: `largo-${SUFIJO}`, password: `${base}otra-distinta` } });
     await pedir("PUT", `/api/admin/usuarios/${r.json.id}`, { sesion: dueno, body: { rol: "encargado", activo: false, tiendas: [] } });
@@ -450,13 +464,13 @@ async function main() {
   });
   for (const password of ["12345678", "1234567890", "contraseña123", "aaaaaaaaaaaa", `comun-${SUFIJO}-clave`]) {
     await prueba("H12", `cliente: contraseña débil "${password}" se rechaza`, async () => {
-      const r = await pedir("POST", "/api/clientes/registro", { body: { nombre: "Comun", correo: `comun-${SUFIJO}@prueba.local`, password } });
-      return espera(r.status === 400, r.status);
+      const r = await pedir("POST", "/api/clientes/registro", { body: datosCliente("comun", { password, confirmar: password }) });
+      return espera(r.status === 400 && /contraseña/i.test(r.json && r.json.error), `${r.status} ${r.texto}`);
     });
   }
   await prueba("H12", "admin: contraseña con el nombre de usuario se rechaza", async () => {
-    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `debil-${SUFIJO}`, password: `debil-${SUFIJO}-2026`, rol: "encargado", tiendas: [A.id] } });
-    return espera(r.status === 400, r.status);
+    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `debil-${SUFIJO}`, password: `Debil-${SUFIJO}-2026!`, confirmar: `Debil-${SUFIJO}-2026!`, rol: "encargado", tiendas: [A.id] } });
+    return espera(r.status === 400 && /usuario/.test(r.json && r.json.error), `${r.status} ${r.texto}`);
   });
 
   // ---------- Cuerpos enormes y JSON roto ----------
@@ -549,6 +563,170 @@ async function main() {
     const a = await pedir("GET", `/api/productos/${id}`);
     const b = await pedir("GET", `/api/buscar?q=${encodeURIComponent(`Oculto ${SUFIJO}`)}`);
     return espera(a.status === 404 && Array.isArray(b.json) && !b.json.length, `${a.status} ${b.texto.slice(0, 60)}`);
+  });
+
+  // ---------- Registro con usuario y teléfono; login con usuario o correo (plan 2026-10-20-registro-validacion-y-login) ----------
+  const registro = body => pedir("POST", "/api/clientes/registro", { body });
+  const error400 = (r, patron) => espera(r.status === 400 && patron.test((r.json && r.json.error) || ""), `${r.status} ${r.texto}`);
+  for (const [nombre, extra, patron] of [
+    ["sin usuario", { usuario: "" }, /usuario/],
+    ["usuario con @", { usuario: "ana@algo" }, /usuario/],
+    ["usuario de 2 letras", { usuario: "ab" }, /usuario/],
+    ["teléfono de México con 9 dígitos", { telefono: "551234567" }, /10 dígitos/],
+    ["teléfono de México con 11 dígitos", { telefono: "55123456789" }, /10 dígitos/],
+    ["sin teléfono", { telefono: "" }, /teléfono/],
+    ["país que no existe", { pais: "XX" }, /país/],
+    ["correo sin dominio real", { correo: `nadie-${SUFIJO}@sin-correo.prueba.local` }, /no recibe correos/],
+    ["correo con dominio .invalid", { correo: `nadie-${SUFIJO}@algo.invalid` }, /no recibe correos/],
+    ["correo sin punto en el dominio", { correo: `nadie-${SUFIJO}@gmail` }, /correo válido/],
+    ["correo con dos @", { correo: `na@die-${SUFIJO}@gmail.com` }, /correo válido/],
+    ["contraseña sin mayúscula", { password: "clave-larga-sin-1", confirmar: "clave-larga-sin-1" }, /mayúscula/],
+    ["contraseña sin minúscula", { password: "CLAVE-LARGA-SIN-1", confirmar: "CLAVE-LARGA-SIN-1" }, /minúscula/],
+    ["contraseña sin número", { password: "Clave-larga-sin-n", confirmar: "Clave-larga-sin-n" }, /número/],
+    ["contraseña sin carácter especial", { password: "ClaveLargaSin1", confirmar: "ClaveLargaSin1" }, /especial/],
+    ["contraseña de 9 caracteres", { password: "Clave-12a", confirmar: "Clave-12a" }, /10 caracteres/],
+    ["confirmación distinta", { confirmar: `${PASS_CLIENTE}x` }, /no coinciden/],
+    ["sin confirmación", { confirmar: undefined }, /no coinciden/]
+  ]) {
+    await prueba("R", `registro: ${nombre} → 400`, async () => error400(await registro(datosCliente(`val-${nombre.length}`, extra)), patron));
+  }
+  await prueba("R", "revisar-correo: un error de dedo trae la sugerencia (sin bloquear si el dominio recibe correos)", async () => {
+    const r = await pedir("POST", "/api/clientes/revisar-correo", { body: { correo: `dedo-${SUFIJO}@gmial.com` } });
+    return espera(r.status === 200 && r.json.sugerencia === `dedo-${SUFIJO}@gmail.com`, r.texto);
+  });
+  await prueba("R", "admin: una contraseña con la parte del correo antes de la @ se rechaza", async () => {
+    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `pc-${SUFIJO}`, correo: `fernanda.${SUFIJO}@prueba.local`, password: `Fernanda.${SUFIJO}!1`, confirmar: `Fernanda.${SUFIJO}!1`, rol: "encargado", tiendas: [A.id] } });
+    return error400(r, /usuario o tu correo/);
+  });
+  await prueba("R", "contraseña: letras de otros idiomas cuentan como letras, no como especiales", async () => {
+    const r = await registro(datosCliente("idioma", { password: "Çàèabcxyz12", confirmar: "Çàèabcxyz12" }));
+    return error400(r, /especial/);
+  });
+  await prueba("R", "registro: teléfono de España con 9 dígitos se acepta y se guarda privado", async () => {
+    const r = await registro(datosCliente("espana", { pais: "ES", telefono: "612 345 678" }));
+    return espera(r.status === 200 && !/612345678|telefono/.test(r.texto) && r.json.usuario === `espana-${SUFIJO}`, `${r.status} ${r.texto}`);
+  });
+  await prueba("R", "registro: usuario o correo repetido → 409 con el mismo mensaje (no dice cuál)", async () => {
+    const a = await registro(datosCliente("cliente1", { correo: `otro-${SUFIJO}@prueba.local` }));
+    const b = await registro(datosCliente("otro-usuario", { correo: cli1.correo }));
+    const c = await registro(datosCliente("cliente1", { usuario: `CLIENTE1-${SUFIJO}`, correo: `otro2-${SUFIJO}@prueba.local` }));
+    return espera(a.status === 409 && b.status === 409 && c.status === 409 && a.json.error === b.json.error, `${a.status} ${b.status} ${c.status}`);
+  });
+  await prueba("R", "revisar-correo: misma respuesta si el correo ya tiene cuenta o no", async () => {
+    const a = await pedir("POST", "/api/clientes/revisar-correo", { body: { correo: cli1.correo } });
+    const b = await pedir("POST", "/api/clientes/revisar-correo", { body: { correo: `libre-${SUFIJO}@prueba.local` } });
+    const c = await pedir("POST", "/api/clientes/revisar-correo", { body: { correo: "x@algo.invalid" } });
+    return espera(a.status === 200 && b.status === 200 && Object.keys(a.json).join() === Object.keys(b.json).join() && c.status === 400,
+      `${a.texto} ${b.texto} ${c.status}`);
+  });
+  await prueba("R", "revisar-correo: sin Origin → 403", async () => {
+    const r = await pedir("POST", "/api/clientes/revisar-correo", { origin: null, body: { correo: cli1.correo } });
+    return espera(r.status === 403, r.status);
+  });
+  const loginCliente = (identificador, password = PASS_CLIENTE, sesion = {}) =>
+    pedir("POST", "/api/clientes/login", { body: { identificador, password }, sesion });
+  await prueba("R", "cliente: entra con el usuario (sin importar mayúsculas)", async () => {
+    const r = await loginCliente(`CLIENTE1-${SUFIJO}`.toUpperCase());
+    return espera(r.status === 200 && r.json.usuario === `cliente1-${SUFIJO}`, `${r.status} ${r.texto}`);
+  });
+  await prueba("R", "cliente: entra con el correo (sin importar mayúsculas)", async () => {
+    const r = await loginCliente(cli1.correo.toUpperCase());
+    return espera(r.status === 200, `${r.status} ${r.texto}`);
+  });
+  await prueba("R", "cliente: el campo viejo `correo` sigue funcionando", async () => {
+    const r = await pedir("POST", "/api/clientes/login", { body: { correo: cli1.correo, password: PASS_CLIENTE } });
+    return espera(r.status === 200, r.status);
+  });
+  await prueba("R", "cliente: el freno por cuenta se comparte entre usuario y correo", async () => {
+    const { correo } = await registrarCliente("freno");
+    for (let i = 0; i < 5; i++) await loginCliente(`freno-${SUFIJO}`, `Mala-clave-${i}`);
+    for (let i = 0; i < 5; i++) await loginCliente(correo, `Mala-clave-${i}`);
+    const r = await loginCliente(`freno-${SUFIJO}`);
+    return espera(r.status === 429, `${r.status} ${r.texto}`);
+  });
+  await prueba("R", "cliente: el teléfono no sale en /sesion ni en las opiniones", async () => {
+    const s = {};
+    await loginCliente(cli1.correo, PASS_CLIENTE, s);
+    await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: s, body: { estrellas: 5, comentario: "Muy bueno" } });
+    const a = await pedir("GET", "/api/clientes/sesion", { sesion: s });
+    const b = await pedir("GET", `/api/productos/${prodA}/resenas`);
+    return espera(!/\+52|telefono|pais/.test(a.texto + b.texto) && a.json.incompleta === false, `${a.texto} ${b.texto.slice(0, 120)}`);
+  });
+  await prueba("R", "cliente: cambiar contraseña pide la actual, la confirma y saca a los otros navegadores", async () => {
+    const { correo } = await registrarCliente("cambio");
+    const s1 = {};
+    const s2 = {};
+    await loginCliente(correo, PASS_CLIENTE, s1);
+    await loginCliente(correo, PASS_CLIENTE, s2);
+    const nueva = "Nueva-clave-cliente-2";
+    const malaActual = await pedir("PUT", "/api/clientes/password", { sesion: s1, body: { actual: "Otra-cosa-1", nueva, confirmar: nueva } });
+    const distinta = await pedir("PUT", "/api/clientes/password", { sesion: s1, body: { actual: PASS_CLIENTE, nueva, confirmar: `${nueva}x` } });
+    const debil = await pedir("PUT", "/api/clientes/password", { sesion: s1, body: { actual: PASS_CLIENTE, nueva: "nueva-clave-2", confirmar: "nueva-clave-2" } });
+    const ok = await pedir("PUT", "/api/clientes/password", { sesion: s1, body: { actual: PASS_CLIENTE, nueva, confirmar: nueva } });
+    const vieja = await loginCliente(correo);
+    const otra = await pedir("GET", "/api/clientes/sesion", { sesion: s2 });
+    const sigue = await pedir("GET", "/api/clientes/sesion", { sesion: s1 });
+    return espera(malaActual.status === 400 && distinta.status === 400 && debil.status === 400 && ok.status === 200 &&
+      vieja.status === 401 && otra.json.autenticado === false && sigue.json.autenticado === true,
+      [malaActual.status, distinta.status, debil.status, ok.status, vieja.status, otra.texto, sigue.texto].join(" "));
+  });
+  await prueba("R", "cliente: cambiar contraseña sin sesión → 401", async () => {
+    const r = await pedir("PUT", "/api/clientes/password", { body: { actual: "a", nueva: "b", confirmar: "b" } });
+    return espera(r.status === 401, r.status);
+  });
+  await prueba("R", "cliente: completar cuenta valida el teléfono", async () => {
+    const r = await pedir("PUT", "/api/clientes/completar", { sesion: cli2.sesion, body: { pais: "MX", telefono: "123" } });
+    return espera(r.status === 400, `${r.status} ${r.texto}`);
+  });
+
+  // Necutools: correo opcional y login con usuario o correo
+  const passC = "Clave-encargado-larga-1";
+  const correoC = `enc-c-${SUFIJO}@prueba.local`;
+  await prueba("R", "admin: crear usuario sin confirmar la contraseña → 400", async () => {
+    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `sinconf-${SUFIJO}`, password: passC, rol: "encargado", tiendas: [A.id] } });
+    return error400(r, /no coinciden/);
+  });
+  await prueba("R", "admin: contraseña sin carácter especial → 400", async () => {
+    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `sinesp-${SUFIJO}`, password: "ClaveEncargado12", confirmar: "ClaveEncargado12", rol: "encargado", tiendas: [A.id] } });
+    return error400(r, /especial/);
+  });
+  let encC = null;
+  await prueba("R", "admin: crear usuario con correo", async () => {
+    const r = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `enc-c-${SUFIJO}`, correo: correoC, password: passC, confirmar: passC, rol: "encargado", tiendas: [A.id] } });
+    encC = r.json && r.json.id;
+    return espera(r.status === 201, `${r.status} ${r.texto}`);
+  });
+  await prueba("R", "admin: correo repetido → 409 y usuario repetido en mayúsculas → 409", async () => {
+    const a = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `enc-d-${SUFIJO}`, correo: correoC.toUpperCase(), password: passC, confirmar: passC, rol: "encargado", tiendas: [A.id] } });
+    const b = await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario: `ENC-C-${SUFIJO}`, password: passC, confirmar: passC, rol: "encargado", tiendas: [A.id] } });
+    return espera(a.status === 409 && b.status === 409, `${a.status} ${b.status}`);
+  });
+  await prueba("R", "admin: entra con el correo y con el usuario en mayúsculas", async () => {
+    const a = await pedir("POST", "/api/auth/login", { body: { identificador: correoC.toUpperCase(), password: passC } });
+    const b = await pedir("POST", "/api/auth/login", { body: { identificador: `ENC-C-${SUFIJO}`, password: passC } });
+    const c = await pedir("POST", "/api/auth/login", { body: { usuario: `enc-c-${SUFIJO}`, password: passC } });
+    return espera(a.status === 200 && b.status === 200 && c.status === 200, `${a.status} ${b.status} ${c.status}`);
+  });
+  await prueba("R", "admin: el freno por cuenta se comparte entre usuario y correo", async () => {
+    const usuario = `enc-f-${SUFIJO}`;
+    const correo = `${usuario}@prueba.local`;
+    await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario, correo, password: passC, confirmar: passC, rol: "encargado", tiendas: [A.id] } });
+    for (let i = 0; i < 5; i++) await pedir("POST", "/api/auth/login", { body: { identificador: usuario, password: `Mala-${i}` } });
+    for (let i = 0; i < 5; i++) await pedir("POST", "/api/auth/login", { body: { identificador: correo, password: `Mala-${i}` } });
+    const r = await pedir("POST", "/api/auth/login", { body: { identificador: usuario, password: passC } });
+    return espera(r.status === 429, `${r.status} ${r.texto}`);
+  });
+  await prueba("R", "admin: mi-correo pide la contraseña actual", async () => {
+    const s = {};
+    await pedir("POST", "/api/auth/login", { sesion: s, body: { identificador: correoC, password: passC } });
+    const mala = await pedir("PUT", "/api/admin/mi-correo", { sesion: s, body: { correo: `nuevo-${SUFIJO}@prueba.local`, password: "Mala-clave-1" } });
+    const ok = await pedir("PUT", "/api/admin/mi-correo", { sesion: s, body: { correo: `nuevo-${SUFIJO}@prueba.local`, password: passC } });
+    const yo = await pedir("GET", "/api/admin/yo", { sesion: s });
+    return espera(mala.status === 400 && ok.status === 200 && yo.json.correo === `nuevo-${SUFIJO}@prueba.local`, `${mala.status} ${ok.status} ${yo.texto}`);
+  });
+  await prueba("R", "admin: reiniciar contraseña de otro exige confirmación", async () => {
+    const r = await pedir("PUT", `/api/admin/usuarios/${encC}`, { sesion: dueno, body: { rol: "encargado", activo: true, tiendas: [A.id], password: "Otra-clave-larga-12" } });
+    return error400(r, /no coinciden/);
   });
 
   // ---------- Errores sin detalles ----------
