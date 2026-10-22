@@ -23,6 +23,7 @@ Cómo se usa:
 | `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado y unido a `main` (commit `8d2e868`, la rama `seguridad` se borró en local). Falta el push de `main` y los pasos de Render | 2026-10-20 |
 | `2026-10-20-registro-validacion-y-login.md` | Aplicado, commit `97fd422` en `main` y subido (ya se ve en Render) | 2026-10-20 |
 | `2026-10-20-servicios-por-tienda.md` | Aplicado y con commit en `main`. Falta el push | 2026-10-20 |
+| `2026-10-21-colores-por-producto.md` | Propuesto: plan y 4 prompts listos, sin aplicar | 2026-10-21 |
 
 ---
 
