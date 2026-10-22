@@ -23,7 +23,7 @@ Cómo se usa:
 | `2026-10-20-seguridad-auditoria-y-endurecimiento.md` | Aplicado y unido a `main` (commit `8d2e868`, la rama `seguridad` se borró en local). Falta el push de `main` y los pasos de Render | 2026-10-20 |
 | `2026-10-20-registro-validacion-y-login.md` | Aplicado, commit `97fd422` en `main` y subido (ya se ve en Render) | 2026-10-20 |
 | `2026-10-20-servicios-por-tienda.md` | Aplicado y con commit en `main`. Falta el push | 2026-10-20 |
-| `2026-10-21-colores-por-producto.md` | Propuesto: plan y 4 prompts listos, sin aplicar | 2026-10-21 |
+| `2026-10-21-colores-por-producto.md` | Aplicado y probado en local (prompts 1 a 4). Falta revisarlo en el navegador y el push | 2026-10-21 |
 
 ---
 
@@ -57,6 +57,7 @@ Cómo se usa:
 20. **Pedidos que no se cierran:** el pedido se guarda al tocar "Enviar pedido por WhatsApp", aunque el cliente no lo mande en WhatsApp. Por eso "Ventas" solo cuenta los que el vendedor marca como vendidos; los demás se quedan pendientes hasta que alguien los cancele.
 21. **Seguridad (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`):** unido a `main` el 2026-10-20 (fast-forward a `8d2e868`; la rama local `seguridad` se borró, en GitHub sigue `origin/seguridad`). **Regla del usuario: no crear ramas, trabajar siempre en `main`.** Para publicar: `git push origin main` (también sube el dashboard, pendiente 19). Después, en Render: restringir la IP de la base (pendiente 4), activar los 2 pasos en los dueños y leer en Logs las líneas "Revisión de proxy" (deben decir 1 dirección). Al desplegar, todos tendrán que volver a iniciar sesión una vez (la cookie cambia a `__Host-necutla.sid`). Informe: `plans/auditorias/2026-10-20-seguridad.md`.
 22. **Registro y login (plan `2026-10-20-registro-validacion-y-login.md`):** (a) el usuario autorizó usar el verde `--wa` solo para el estado "campo válido" (y para el nivel "súper segura" del medidor y las reglas cumplidas), como excepción a `plans/CLAUDE.md`; si quiere que sea regla permanente, tiene que pedir que se actualice. (b) En producción existen los admins `Axel` (id 1) y `axel` (id 3): mientras existan los dos, el login busca el usuario exacto primero y no se crea el índice único de `lower(usuario)` (el `DO $$` de `db/schema.sql` lo salta). Hay que preguntarle al usuario cuál renombrar o desactivar; al quitar el choque, el índice se crea solo en el siguiente arranque. (c) Falta commit y push.
+23. **Colores por producto (plan `2026-10-21-colores-por-producto.md`):** (a) excepción de diseño por confirmar con el usuario: la muestra de la barra lleva el color real del producto (dato del vendedor, en `--muestra`), no un color de interfaz. (b) Revisar en el navegador Necutools → Editar producto → Colores y la barra en `/p/<id>` a 1280 y 360 px. (c) Los paquetes de promociones no piden color: si incluyen un producto con colores, el color se acuerda por WhatsApp. (d) Ojo: el `.env` local apunta a la base de Render; para probar en local se usó `DATABASE_URL` de la línea comentada. (e) Falta el push.
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -103,6 +104,15 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-21: colores de un mismo producto (plan `2026-10-21-colores-por-producto.md`, prompts 1 a 4)
+- Pedido del usuario: no crear el mismo producto varias veces por color; agregar solo los colores que se manejan, cada uno con su foto, y que el cliente vea una barra con los colores.
+- **Base**: tabla `producto_colores` en `db/schema.sql` (nombre, hex, foto, disponible, orden; nombre único por producto sin importar mayúsculas).
+- **API Necutools** (`server/admin.js`): `GET /admin/productos` trae `colores`; `POST /admin/productos/:id/colores`, `PUT /admin/colores/:id`, `DELETE /admin/colores/:id` con permisos de tienda, foto sin metadatos, máximo 12 y bitácora (`producto_colores`). Al volverse servicio se borran sus colores. `server/index.js`: esas rutas aceptan cuerpo de 2 MB.
+- **API pública** (`server/api.js`): `/api/colores/:id/imagen`, `colores_total` en tarjetas y `colores` en `/api/productos/:id`. El carrito acepta `color`: un producto con colores sin color elegido, con color agotado o de otro producto va a faltantes; el nombre del renglón lleva el color ("Audífonos (Rojo)"). `server/pedidos.js` guarda el color y el resumen sigue agrupando por producto.
+- **Necutools** (`public/necutools.html`, `public/js/necutools.js`): tarjeta "Colores de …" al editar un producto (lista, agregar, editar, borrar, disponible); un producto nuevo se queda abierto para agregar colores; "· N colores" en el catálogo.
+- **Público**: barra de colores en `public/producto.html` / `public/js/producto.js` (cambia la foto, `?color=`, agotados deshabilitados); en las tarjetas, etiqueta "N colores" y botón "Elegir color" (`public/js/comun.js`); `claveItem()` y `pintarMuestras()` en `comun.js`; `public/js/carrito.js` maneja un renglón por color. Estilos en `public/style.css`.
+- **Pruebas** (base local, puerto 3077, nunca Render): 29 pruebas de API de colores (permisos de encargado, validaciones, carrito, pedido) y `scripts/seguridad/ataques.js` 225 de 225 (con `CORREO_DNS_PRUEBA=1`; en una primera corrida falló una vez una prueba de 2 pasos por el reloj del código). No se revisó en navegador (sin herramienta de navegador en la sesión).
 
 ### 2026-10-20: apartado de Servicios en cada tienda (plan `2026-10-20-servicios-por-tienda.md`, prompts 1 a 3)
 - Pedido del usuario: que cada tienda tenga, aparte de los productos, un apartado de servicios (dulceros en Dulces, estampado de logos en Ropa, reparaciones en Tecnología). Los servicios ya existían en la base y en Necutools, pero la pestaña se escondía si la tienda no tenía ninguno y no había ninguno cargado.

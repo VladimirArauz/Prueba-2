@@ -344,3 +344,20 @@ END $$;
 
 -- Al cambiar la contraseña de un cliente sube la versión: las sesiones con la versión anterior dejan de valer
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS sesion_version INTEGER NOT NULL DEFAULT 0;
+
+-- ---------- Colores de un mismo producto (plan 2026-10-21-colores-por-producto) ----------
+-- Mismo precio y ofertas que el producto; cada color tiene su foto y si está disponible
+CREATE TABLE IF NOT EXISTS producto_colores (
+  id              SERIAL PRIMARY KEY,
+  producto_id     INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  nombre          VARCHAR(30) NOT NULL,
+  hex             CHAR(7) NOT NULL CHECK (hex ~ '^#[0-9a-f]{6}$'),
+  imagen          BYTEA,
+  imagen_tipo     VARCHAR(30),
+  disponible      BOOLEAN NOT NULL DEFAULT true,
+  orden           INTEGER NOT NULL DEFAULT 0,
+  creado_en       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS producto_colores_nombre_idx ON producto_colores (producto_id, lower(nombre));
+CREATE INDEX IF NOT EXISTS producto_colores_producto_idx ON producto_colores (producto_id, orden);

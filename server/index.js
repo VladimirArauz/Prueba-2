@@ -99,7 +99,7 @@ function sameOrigin(req, res, next) {
 }
 
 // Solo las rutas de Necutools que suben imágenes aceptan cuerpos grandes; el resto, 20 KB
-const CON_IMAGEN = /^\/admin\/(tiendas|productos|promociones)(\/[0-9]+)?$/;
+const CON_IMAGEN = /^\/admin\/((tiendas|productos|promociones)(\/[0-9]+)?|productos\/[0-9]+\/colores|colores\/[0-9]+)$/;
 const jsonChico = express.json({ limit: "20kb" });
 const jsonConImagen = express.json({ limit: "2mb" });
 const leerJson = (req, res, next) => (CON_IMAGEN.test(req.path) ? jsonConImagen : jsonChico)(req, res, next);

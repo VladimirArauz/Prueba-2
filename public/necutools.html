@@ -320,7 +320,7 @@
                   </select>
                 </div>
                 <div class="form-group"><label for="prod-orden">Orden</label><input id="prod-orden" name="orden" type="number" min="0" max="9999" value="0"><span class="form-hint">Los números más bajos salen primero.</span></div>
-                <div class="form-group"><label for="prod-imagen">Imagen (hasta 1 MB)</label><input id="prod-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+                <div class="form-group"><label for="prod-imagen">Imagen (hasta 1 MB)</label><input id="prod-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span class="form-hint">¿Lo tienes en varios colores? Al guardar podrás agregar cada color con su foto.</span></div>
                 <div class="form-group full-width"><label for="prod-desc">Descripción</label><textarea id="prod-desc" name="descripcion" rows="3" maxlength="1000" placeholder="Materiales, tallas, colores o qué incluye el servicio"></textarea></div>
                 <div class="form-group full-width">
                   <div class="check-group">
@@ -332,6 +332,29 @@
               <div class="form-actions">
                 <button type="submit" class="btn">Guardar</button>
                 <button type="button" class="btn secondary" data-action="cancelar" data-form="producto" hidden>Cancelar edición</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="admin-card" id="colores-card" hidden>
+            <h3 id="colores-title">Colores</h3>
+            <p>Agrega solo los colores que tienes de este producto, cada uno con su foto. Todos cuestan lo mismo. En la tienda salen en una barra para que el cliente elija.</p>
+            <ul class="sub-list" id="color-list"></ul>
+            <form id="form-color">
+              <div class="admin-form-grid">
+                <div class="form-group"><label for="color-nombre">Nombre del color</label><input id="color-nombre" name="nombre" maxlength="30" placeholder="Ej. Rojo" required></div>
+                <div class="form-group"><label for="color-hex">Color</label><input id="color-hex" name="hex" type="color" value="#17295c" class="color-input"></div>
+                <div class="form-group"><label for="color-imagen">Foto en ese color (hasta 1 MB)</label><input id="color-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span class="form-hint" id="color-imagen-hint">Obligatoria para un color nuevo.</span></div>
+                <div class="form-group"><label for="color-orden">Orden</label><input id="color-orden" name="orden" type="number" min="0" max="9999" value="0"><span class="form-hint">Los números más bajos salen primero.</span></div>
+                <div class="form-group full-width">
+                  <div class="check-group">
+                    <label><input type="checkbox" name="disponible" checked> Disponible (si no, sale como agotado)</label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn secondary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span id="color-submit-texto">Agregar color</span></button>
+                <button type="button" class="btn secondary" data-action="color-cancelar" hidden>Cancelar edición</button>
               </div>
             </form>
           </div>

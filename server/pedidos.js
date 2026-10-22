@@ -49,7 +49,10 @@ router.post("/pedidos", pedidoLimiter, handle(async (req, res) => {
   const grupo = grupos.find(g => g.clave === clave);
   if (!grupo) throw new ErrorDeDatos("Ese pedido ya no está disponible. Recarga el carrito.");
 
-  const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, nombre: i.nombre, cantidad: i.cantidad, subtotal: i.subtotal }));
+  const items = grupo.items.map(i => ({
+    tipo: i.tipo, id: i.id, nombre: i.nombre, cantidad: i.cantidad, subtotal: i.subtotal,
+    ...(i.color ? { color: i.color.id, producto: i.producto } : {})
+  }));
   const piezas = items.reduce((suma, i) => suma + i.cantidad, 0);
   if (piezas > MAX_PIEZAS || items.length > MAX_PRODUCTOS) {
     throw new ErrorDeDatos(`Un pedido puede tener hasta ${MAX_PIEZAS} piezas y ${MAX_PRODUCTOS} productos. Para más, escríbele a la tienda.`);
@@ -58,7 +61,7 @@ router.post("/pedidos", pedidoLimiter, handle(async (req, res) => {
   // El mismo pedido desde la misma conexión en 10 minutos es el mismo (se tocó dos veces el botón).
   // Se guarda una huella con HMAC, no la IP.
   const huella = crypto.createHmac("sha256", process.env.SESSION_SECRET)
-    .update(JSON.stringify([req.ip, clave, items.map(i => [i.tipo, i.id, i.cantidad])])).digest("hex");
+    .update(JSON.stringify([req.ip, clave, items.map(i => [i.tipo, i.id, i.color || null, i.cantidad])])).digest("hex");
   const { rows: previo } = await pool.query(
     "SELECT id FROM pedidos WHERE huella = $1 AND creado_en > now() - $2::interval ORDER BY id DESC LIMIT 1", [huella, REPETIDO]);
   if (previo[0]) return res.status(200).json({ id: previo[0].id, repetido: true });
@@ -195,7 +198,7 @@ adminRouter.get("/resumen", requireAdmin, handle(async (req, res) => {
       `SELECT pe.estado, count(*)::int AS pedidos FROM pedidos pe
        WHERE ${EN_ALCANCE("pe")} AND ${periodo} GROUP BY pe.estado`, base),
     pool.query(
-      `SELECT i->>'tipo' AS tipo, (i->>'id')::int AS id, max(i->>'nombre') AS nombre,
+      `SELECT i->>'tipo' AS tipo, (i->>'id')::int AS id, max(COALESCE(i->>'producto', i->>'nombre')) AS nombre,
               sum((i->>'cantidad')::int)::int AS piezas, sum((i->>'subtotal')::numeric)::float AS total
        FROM pedidos pe CROSS JOIN LATERAL jsonb_array_elements(pe.items) AS i
        WHERE ${EN_ALCANCE("pe")} AND ${periodo} AND pe.estado <> 'cancelado'

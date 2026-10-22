@@ -1,7 +1,7 @@
 # Plan: colores de un mismo producto (barra de colores)
 
 - **Fecha:** 2026-10-21
-- **Estado:** propuesto
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-10-21-colores-por-producto.md`
 - **Alcance:** Necutools (formulario de productos), base de datos, API pública, página del producto, tarjetas, carrito, mensaje de WhatsApp y pedidos.
 

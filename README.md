@@ -77,6 +77,9 @@ Se crean en Necutools → Productos y servicios con el tipo "Servicio" y se pide
   `WHATSAPP_NUMBERS`. Las direcciones viejas (`/ropa/playeras/`) redirigen a la nueva.
 - **Productos y servicios**: los productos se agregan al carrito; los servicios (precio fijo, "desde"
   o "a cotizar") se piden por WhatsApp directo a la tienda.
+- **Colores de un producto**: un mismo producto puede tener hasta 12 colores, cada uno con su foto y si
+  está disponible (Necutools → Productos y servicios → Editar → Colores). Todos cuestan lo mismo. En la
+  página del producto sale una barra de colores; el color elegido llega al carrito y al mensaje de WhatsApp.
 - **Ofertas de la tienda**: se repiten por día de la semana (porcentaje, precio especial o 2x1) sobre un
   producto, una subcategoría o toda la tienda. El servidor las calcula con la hora de Ciudad de México.
 - **Promociones generales**: paquetes con precio propio y fechas de inicio y fin. Al pedir uno se avisa
@@ -144,7 +147,7 @@ Cada `git push` a la rama principal vuelve a desplegar el sitio.
    - *Connection*: Host = host externo, Port = `5432`, Maintenance database = `necutla`,
      Username y Password de Render.
    - *Parameters*: **SSL mode = require**.
-3. Tablas: `stands` (tiendas), `subcategorias`, `productos` (productos y servicios), `ofertas`,
+3. Tablas: `stands` (tiendas), `subcategorias`, `productos` (productos y servicios), `producto_colores`, `ofertas`,
    `promociones`, `promocion_items`, `admins`, `admin_stands` (tiendas de cada encargado),
    `migraciones` y `session`.
 

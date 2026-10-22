@@ -76,10 +76,24 @@ function leerCarrito() {
     const items = JSON.parse(localStorage.getItem(CARRITO_KEY));
     if (!Array.isArray(items)) return [];
     return items.filter(i => i && (i.tipo === "producto" || i.tipo === "paquete")
-      && Number.isInteger(i.id) && Number.isInteger(i.cantidad) && i.cantidad > 0);
+      && Number.isInteger(i.id) && Number.isInteger(i.cantidad) && i.cantidad > 0
+      && (i.color === undefined || Number.isInteger(i.color)));
   } catch (e) {
     return [];
   }
+}
+
+// Un mismo producto en dos colores son dos renglones del carrito
+function claveItem(i) {
+  return i.color ? `${i.tipo}-${i.id}-c${i.color}` : `${i.tipo}-${i.id}`;
+}
+
+// Las muestras de color llevan el color real del producto (dato del vendedor) en data-hex;
+// se pinta por CSSOM porque la CSP no permite style="" en el HTML
+function pintarMuestras(raiz = document) {
+  raiz.querySelectorAll("[data-hex]").forEach(el => {
+    if (/^#[0-9a-f]{6}$/i.test(el.dataset.hex)) el.style.setProperty("--muestra", el.dataset.hex);
+  });
 }
 
 function guardarCarrito(items) {
@@ -89,18 +103,19 @@ function guardarCarrito(items) {
   actualizarContador(true);
 }
 
-function agregarAlCarrito(tipo, id, nombre) {
+function agregarAlCarrito(tipo, id, nombre, color = null) {
   const items = leerCarrito();
-  const existente = items.find(i => i.tipo === tipo && i.id === id);
+  const nuevo = color ? { tipo, id, color, cantidad: 1 } : { tipo, id, cantidad: 1 };
+  const existente = items.find(i => claveItem(i) === claveItem(nuevo));
   if (existente) existente.cantidad = Math.min(MAX_CANTIDAD, existente.cantidad + 1);
-  else items.push({ tipo, id, cantidad: 1 });
+  else items.push(nuevo);
   guardarCarrito(items);
   showToast(`Agregado al carrito: ${nombre}`);
 }
 
-function cambiarCantidad(tipo, id, delta) {
+function cambiarCantidad(clave, delta) {
   const items = leerCarrito();
-  const item = items.find(i => i.tipo === tipo && i.id === id);
+  const item = items.find(i => claveItem(i) === clave);
   if (!item) return;
   item.cantidad = Math.min(MAX_CANTIDAD, item.cantidad + delta);
   guardarCarrito(items.filter(i => i.cantidad > 0));
@@ -108,7 +123,7 @@ function cambiarCantidad(tipo, id, delta) {
 
 function quitarDelCarrito(claves) {
   const quitar = new Set(claves);
-  guardarCarrito(leerCarrito().filter(i => !quitar.has(`${i.tipo}-${i.id}`)));
+  guardarCarrito(leerCarrito().filter(i => !quitar.has(claveItem(i))));
 }
 
 function actualizarContador(pulso = false) {
@@ -202,7 +217,8 @@ function etiquetasProducto(p) {
   const oferta = p.oferta;
   return [
     oferta ? `<span class="tag-oferta${oferta.clase === "remate" ? " is-remate" : ""}">${icon("tag")}${escapeHTML(oferta.titulo)}</span>` : "",
-    p.disponibilidad && p.disponibilidad !== "Disponible" ? `<span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""
+    p.disponibilidad && p.disponibilidad !== "Disponible" ? `<span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : "",
+    p.colores_total > 1 ? `<span class="status-badge">${p.colores_total} colores</span>` : ""
   ].join("");
 }
 
@@ -219,6 +235,10 @@ function accionProducto(p, opciones = {}) {
   }
   if (p.tipo === "servicio") {
     return `<button type="button" class="btn wa" data-action="pedir-servicio" data-id="${Number(p.id)}">${icon("message-circle")}Pedir información por WhatsApp</button>`;
+  }
+  // Con colores, el color se elige en la página del producto
+  if (p.colores_total > 0 && !opciones.enDetalle) {
+    return `<a class="btn secondary" href="/p/${Number(p.id)}">${icon("palette")}Elegir color</a>`;
   }
   return `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}">${icon("shopping-cart")}Agregar al carrito</button>`;
 }
@@ -314,7 +334,7 @@ function tarjetaPromocion(promo) {
 
 // ================= Eventos (delegados, sin onclick en el HTML) =================
 const ACCIONES = {
-  agregar: el => agregarAlCarrito(el.dataset.tipo, Number(el.dataset.id), el.dataset.nombre),
+  agregar: el => agregarAlCarrito(el.dataset.tipo, Number(el.dataset.id), el.dataset.nombre, Number(el.dataset.color) || null),
   "vitrina-mas": el => {
     const bloque = el.closest(".vitrina-bloque");
     bloque.querySelectorAll(".card[hidden]").forEach(card => { card.hidden = false; });

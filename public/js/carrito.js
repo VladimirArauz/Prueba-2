@@ -8,8 +8,11 @@ let grupos = [];
 // Pedidos ya registrados en esta visita: no se duplican si se vuelve a tocar el botón
 const registrados = new Set();
 
+// El servidor manda el color como {id, nombre}; el carrito guardado, solo el id
+const claveDe = item => claveItem({ tipo: item.tipo, id: item.id, color: item.color ? item.color.id : null });
+
 function filaItem(item) {
-  const clave = `${item.tipo}-${item.id}`;
+  const clave = claveDe(item);
   const descuento = item.subtotal < item.subtotal_base;
   return `
     <div class="cart-row">
@@ -20,9 +23,9 @@ function filaItem(item) {
       </div>
       <div class="cart-col-center">
         <div class="qty-control">
-          <button type="button" data-action="cantidad" data-tipo="${item.tipo}" data-id="${item.id}" data-delta="-1" aria-label="Quitar uno de ${escapeHTML(item.nombre)}">${icon("minus")}</button>
+          <button type="button" data-action="cantidad" data-clave="${clave}" data-delta="-1" aria-label="Quitar uno de ${escapeHTML(item.nombre)}">${icon("minus")}</button>
           <span class="qty-value">${item.cantidad}</span>
-          <button type="button" data-action="cantidad" data-tipo="${item.tipo}" data-id="${item.id}" data-delta="1" aria-label="Agregar uno de ${escapeHTML(item.nombre)}">${icon("plus")}</button>
+          <button type="button" data-action="cantidad" data-clave="${clave}" data-delta="1" aria-label="Agregar uno de ${escapeHTML(item.nombre)}">${icon("plus")}</button>
         </div>
       </div>
       <div class="cart-col-right subtotal">
@@ -102,7 +105,7 @@ async function cargar() {
     const respuesta = await api("/carrito/precios", { method: "POST", body: { items } });
     grupos = respuesta.grupos;
     if (respuesta.faltantes.length) {
-      quitarDelCarrito(respuesta.faltantes.map(f => `${f.tipo}-${f.id}`));
+      quitarDelCarrito(respuesta.faltantes.map(claveItem));
       document.getElementById("cart-alert").innerHTML = `
         <div class="notice">${icon("info")}<span>Quitamos ${respuesta.faltantes.length === 1 ? "1 producto que ya no está disponible" : `${respuesta.faltantes.length} productos que ya no están disponibles`}.</span></div>`;
     }
@@ -139,8 +142,8 @@ function mensajeDe(grupo) {
 
 // Guarda el pedido para el resumen de Necutools. No bloquea ni avisa si falla: WhatsApp ya se abrió.
 function registrarPedido(grupo) {
-  const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, cantidad: i.cantidad }));
-  const firma = `${grupo.clave}|${items.map(i => `${i.tipo}-${i.id}x${i.cantidad}`).join(",")}`;
+  const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, ...(i.color ? { color: i.color.id } : {}), cantidad: i.cantidad }));
+  const firma = `${grupo.clave}|${items.map(i => `${claveItem(i)}x${i.cantidad}`).join(",")}`;
   if (registrados.has(firma)) return;
   registrados.add(firma);
   api("/pedidos", { method: "POST", body: { clave: grupo.clave, items } }).catch(() => registrados.delete(firma));
@@ -152,7 +155,7 @@ function enviar(clave) {
   const contenedor = document.querySelector(`[data-enviado="${CSS.escape(clave)}"]`);
   if (!abrirWhatsApp(grupo.whatsapp, mensajeDe(grupo), contenedor)) return;
   registrarPedido(grupo);
-  const claves = grupo.items.map(i => `${i.tipo}-${i.id}`).join(",");
+  const claves = grupo.items.map(claveDe).join(",");
   contenedor.insertAdjacentHTML("beforeend", `
     <div class="form-actions">
       <button type="button" class="btn secondary btn-sm" data-action="quitar" data-claves="${escapeHTML(claves)}">
@@ -163,7 +166,7 @@ function enviar(clave) {
 
 Object.assign(ACCIONES, {
   cantidad: el => {
-    cambiarCantidad(el.dataset.tipo, Number(el.dataset.id), Number(el.dataset.delta));
+    cambiarCantidad(el.dataset.clave, Number(el.dataset.delta));
     cargar();
   },
   quitar: el => {

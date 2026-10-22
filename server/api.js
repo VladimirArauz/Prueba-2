@@ -48,6 +48,7 @@ function productoPublico(fila, ofertas = []) {
     imagen_url: imagenProducto(fila),
     calificacion: fila.calificacion ?? null,
     resenas: fila.total_resenas || 0,
+    colores_total: fila.total_colores || 0,
     oferta: fila.tipo === "producto" && fila.precio_modo === "fijo" ? ofertaParaTarjeta(fila, ofertas) : null
   };
 }
@@ -56,7 +57,8 @@ const COLUMNAS_PRODUCTO = `
   p.id, p.stand_id, p.subcategoria_id, p.tipo, p.nombre, p.precio::float AS precio, p.precio_modo,
   p.disponibilidad, p.descripcion, (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.actualizado_en,
   (SELECT round(avg(r.calificacion), 1)::float FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS calificacion,
-  (SELECT count(*)::int FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS total_resenas`;
+  (SELECT count(*)::int FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS total_resenas,
+  (SELECT count(*)::int FROM producto_colores c WHERE c.producto_id = p.id) AS total_colores`;
 
 // ================= Configuración pública =================
 router.get("/config", (req, res) => {
@@ -144,6 +146,16 @@ router.get("/productos/:id/imagen", handle(async (req, res) => {
   await servirImagen(req, res, rows[0], r => puedeEditarStand(r, rows[0].stand_id));
 }));
 
+router.get("/colores/:id/imagen", handle(async (req, res) => {
+  const id = idValido(req.params.id);
+  if (!id) return res.status(404).end();
+  const { rows } = await pool.query(
+    `SELECT c.imagen, c.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+     FROM producto_colores c JOIN productos p ON p.id = c.producto_id JOIN stands s ON s.id = p.stand_id
+     WHERE c.id = $1`, [id]);
+  await servirImagen(req, res, rows[0], r => puedeEditarStand(r, rows[0].stand_id));
+}));
+
 // ================= Detalle de un producto o servicio =================
 router.get("/productos/:id", handle(async (req, res) => {
   const id = idValido(req.params.id);
@@ -156,8 +168,16 @@ router.get("/productos/:id", handle(async (req, res) => {
   const fila = rows[0];
   if (!fila) return res.status(404).json({ error: "Este producto no existe o ya no está disponible." });
   const ofertas = fila.tipo === "producto" ? await ofertasDeHoy([fila.stand_id]) : [];
+  const producto = productoPublico(fila, ofertas);
+  const { rows: colores } = await pool.query(
+    `SELECT id, nombre, hex, disponible, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
+     FROM producto_colores WHERE producto_id = $1 ORDER BY orden, id`, [fila.id]);
   res.json({
-    ...productoPublico(fila, ofertas),
+    ...producto,
+    colores: colores.map(c => ({
+      id: c.id, nombre: c.nombre, hex: c.hex, disponible: c.disponible,
+      imagen_url: c.tiene_imagen ? `/api/colores/${c.id}/imagen?v=${version(c.actualizado_en)}` : producto.imagen_url
+    })),
     tienda: fila.tienda, slug: fila.slug, icono: fila.icono, subcategoria: fila.subcategoria,
     whatsapp: fila.tipo === "servicio" ? numerosDe(fila) : []
   });
@@ -293,12 +313,15 @@ function leerCarrito(body) {
     const tipo = item && (item.tipo === "paquete" ? "paquete" : item.tipo === "producto" ? "producto" : null);
     const id = item ? idValido(item.id) : null;
     const cantidad = item ? Number(item.cantidad) : 0;
-    if (!tipo || !id || !Number.isInteger(cantidad) || cantidad < 1 || cantidad > 99) {
+    // Color elegido (solo productos con colores)
+    const color = tipo === "producto" && item.color !== undefined && item.color !== null ? idValido(item.color) : null;
+    if (!tipo || !id || !Number.isInteger(cantidad) || cantidad < 1 || cantidad > 99
+        || (tipo === "producto" && item.color != null && !color)) {
       throw new ErrorDeDatos("El carrito no es válido.");
     }
-    const clave = `${tipo}-${id}`;
+    const clave = color ? `${tipo}-${id}-c${color}` : `${tipo}-${id}`;
     const previo = porClave.get(clave);
-    porClave.set(clave, { tipo, id, cantidad: Math.min(99, (previo ? previo.cantidad : 0) + cantidad) });
+    porClave.set(clave, { tipo, id, color, cantidad: Math.min(99, (previo ? previo.cantidad : 0) + cantidad) });
   }
   return [...porClave.values()];
 }
@@ -315,6 +338,10 @@ async function calcularCarrito(items) {
      WHERE p.id = ANY($1) AND p.visible AND s.visible AND p.tipo = 'producto' AND p.precio_modo = 'fijo'`,
     [idsProductos]) : { rows: [] };
   const ofertas = productos.length ? await ofertasDeHoy([...new Set(productos.map(p => p.stand_id))]) : [];
+  // Colores de esos productos: si un producto tiene colores, hay que elegir uno disponible
+  const { rows: colores } = productos.length ? await pool.query(
+    "SELECT id, producto_id, nombre, disponible FROM producto_colores WHERE producto_id = ANY($1)",
+    [productos.map(p => p.id)]) : { rows: [] };
   const paquetes = idsPaquetes.length ? await promocionesVigentes({ ids: idsPaquetes }) : [];
 
   const grupos = new Map();
@@ -324,13 +351,17 @@ async function calcularCarrito(items) {
     if (item.tipo === "producto") {
       const p = productos.find(x => x.id === item.id);
       if (!p) { faltantes.push(item); continue; }
+      const tieneColores = colores.some(c => c.producto_id === p.id);
+      const color = item.color ? colores.find(c => c.id === item.color && c.producto_id === p.id) : null;
+      if (tieneColores ? !color || !color.disponible : item.color) { faltantes.push(item); continue; }
       const clave = `tienda-${p.stand_id}`;
       if (!grupos.has(clave)) {
         grupos.set(clave, { clave, tipo: "tienda", nombre: p.tienda, slug: p.slug, orden: p.orden, whatsapp: numerosDe(p), items: [] });
       }
       const { total, oferta } = mejorPrecio(p, ofertas, item.cantidad);
       grupos.get(clave).items.push({
-        tipo: "producto", id: p.id, nombre: p.nombre, cantidad: item.cantidad, precio: p.precio,
+        tipo: "producto", id: p.id, color: color ? { id: color.id, nombre: color.nombre } : null, producto: p.nombre,
+        nombre: color ? `${p.nombre} (${color.nombre})` : p.nombre, cantidad: item.cantidad, precio: p.precio,
         subtotal_base: redondear(p.precio * item.cantidad), subtotal: total, oferta: oferta ? oferta.titulo : null
       });
     } else {

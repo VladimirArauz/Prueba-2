@@ -3,7 +3,7 @@
  * Leer opiniones es libre; para opinar hace falta una cuenta de cliente (cuenta.html).
  */
 
-const est = { id: 0, producto: null, opiniones: null, orden: "recientes", pagina: 1, editando: false };
+const est = { id: 0, producto: null, color: null, opiniones: null, orden: "recientes", pagina: 1, editando: false };
 const $ = id => document.getElementById(id);
 
 function idDeLaUrl() {
@@ -38,7 +38,49 @@ function renderProducto() {
   $("producto-oferta").textContent = p.oferta ? detalleOferta(p.oferta) : "";
   $("producto-desc").textContent = p.descripcion;
   $("producto-precio").innerHTML = precioProducto(p);
-  $("producto-accion").innerHTML = accionProducto(p);
+  $("producto-accion").innerHTML = accionProducto(p, { enDetalle: true });
+  renderColores();
+}
+
+// ================= Barra de colores =================
+// Al entrar se elige el color de la URL (?color=) o el primero disponible
+function renderColores() {
+  const colores = est.producto.colores || [];
+  $("producto-colores").hidden = !colores.length;
+  if (!colores.length) return;
+  const pedido = Number(new URLSearchParams(location.search).get("color"));
+  const inicial = colores.find(c => c.id === pedido && c.disponible) || colores.find(c => c.disponible) || null;
+  $("producto-color-opciones").innerHTML = colores.map(c => `
+    <input type="radio" class="visually-hidden" id="color-${c.id}" name="color" value="${c.id}"${c.disponible ? "" : " disabled"}${inicial && inicial.id === c.id ? " checked" : ""}>
+    <label class="color-opcion" for="color-${c.id}">
+      <span class="color-muestra" data-hex="${escapeHTML(c.hex)}"></span>
+      <span>${escapeHTML(c.nombre)}${c.disponible ? "" : `<span class="color-agotado"> · Agotado</span>`}</span>
+    </label>`).join("");
+  pintarMuestras($("producto-color-opciones"));
+  elegirColor(inicial);
+}
+
+function elegirColor(color) {
+  const p = est.producto;
+  est.color = color;
+  $("producto-color-texto").textContent = color ? `Color: ${color.nombre}` : "Color";
+  if (color) {
+    $("producto-img").src = color.imagen_url || imagenDe(p);
+    $("producto-img").alt = `${p.nombre}, color ${color.nombre.toLowerCase()}`;
+    const url = new URL(location.href);
+    url.searchParams.set("color", color.id);
+    history.replaceState(null, "", url);
+  }
+  const boton = $("producto-accion").querySelector('[data-action="agregar"]');
+  if (!boton) return;
+  if (color) {
+    boton.dataset.color = color.id;
+    boton.dataset.nombre = `${p.nombre} (${color.nombre})`;
+  } else {
+    // Ningún color disponible
+    boton.disabled = true;
+    boton.innerHTML = `${icon("shopping-cart")}Agotado en todos los colores`;
+  }
 }
 
 function pedirServicio() {
@@ -233,6 +275,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   renderProducto();
+  $("producto-color-opciones").addEventListener("change", event => {
+    elegirColor(est.producto.colores.find(c => c.id === Number(event.target.value)) || null);
+  });
   $("orden").addEventListener("change", event => {
     est.orden = event.target.value;
     est.pagina = 1;

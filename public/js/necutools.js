@@ -22,7 +22,8 @@ const TITULOS_PANEL = {
 
 const NOMBRE_TABLA = {
   tiendas: "Tienda", subcategorias: "Subcategoría", productos: "Producto", ofertas: "Oferta", opiniones: "Opinión",
-  promociones: "Promoción", usuarios: "Usuario", pedidos: "Pedido", sesiones: "Sesión"
+  promociones: "Promoción", usuarios: "Usuario", pedidos: "Pedido", sesiones: "Sesión",
+  producto_colores: "Color"
 };
 
 const st = {
@@ -42,7 +43,7 @@ const st = {
   resenas: [],
   promos: [],
   usuarios: [],
-  editando: { tienda: null, producto: null, oferta: null, resena: null, promo: null, usuario: null }
+  editando: { tienda: null, producto: null, color: null, oferta: null, resena: null, promo: null, usuario: null }
 };
 
 const $ = id => document.getElementById(id);
@@ -670,12 +671,108 @@ function renderProductos() {
   $("productos-tbody").innerHTML = lista.length ? lista.map(p => `
     <tr>
       <td><img class="admin-thumb" src="${escapeHTML(imagenDe(p))}" alt=""></td>
-      <td><div class="cell-title">${escapeHTML(p.nombre)}</div><div class="cell-sub">${p.tipo === "servicio" ? "Servicio" : "Producto"}${p.subcategoria ? ` · ${escapeHTML(p.subcategoria)}` : ""}</div></td>
+      <td><div class="cell-title">${escapeHTML(p.nombre)}</div><div class="cell-sub">${p.tipo === "servicio" ? "Servicio" : "Producto"}${p.subcategoria ? ` · ${escapeHTML(p.subcategoria)}` : ""}${p.colores.length ? ` · ${p.colores.length} ${p.colores.length === 1 ? "color" : "colores"}` : ""}</div></td>
       <td>${escapeHTML(p.stand)}</td>
       <td class="cell-price">${escapeHTML(textoPrecio(p))}</td>
       <td>${estadoBadge(p.visible)}${p.disponibilidad !== "Disponible" ? ` <span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""}</td>
       <td class="col-actions">${botonesFila("producto", p.id, p.nombre)}</td>
     </tr>`).join("") : filaVacia(6, "Todavía no hay productos aquí. Agrega el primero con el formulario de arriba.");
+  renderColores();
+}
+
+// ================= Colores de un producto =================
+// Solo mientras se edita un producto (no servicio): se agregan uno por uno, cada uno con su foto
+function productoConColores() {
+  const editando = st.editando.producto;
+  if (!editando) return null;
+  const p = st.productos.find(x => x.id === editando.id);
+  return p && p.tipo === "producto" ? p : null;
+}
+
+function renderColores() {
+  const p = productoConColores();
+  $("colores-card").hidden = !p;
+  if (!p) return;
+  $("colores-title").textContent = `Colores de ${p.nombre}`;
+  $("color-list").innerHTML = p.colores.length ? p.colores.map(c => `
+    <li class="sub-row color-row">
+      <img class="admin-thumb" src="${escapeHTML(c.imagen_url || imagenDe(p))}" alt="">
+      <span class="color-nombre"><span class="color-muestra" data-hex="${escapeHTML(c.hex)}"></span><span class="cell-title">${escapeHTML(c.nombre)}</span></span>
+      ${estadoBadge(c.disponible, "Disponible", "Agotado")}
+      <span class="sub-actions">
+        <button type="button" class="btn secondary btn-sm btn-icon" data-action="color-editar" data-id="${c.id}" aria-label="Editar el color ${escapeHTML(c.nombre)}" title="Editar">${icon("pencil")}</button>
+        <button type="button" class="btn danger btn-sm btn-icon" data-action="color-borrar" data-id="${c.id}" aria-label="Eliminar el color ${escapeHTML(c.nombre)}" title="Eliminar">${icon("trash-2")}</button>
+      </span>
+    </li>`).join("") : `<li class="sub-row color-row-vacia"><span class="form-hint">Este producto todavía no tiene colores. Agrega el primero abajo.</span></li>`;
+  pintarMuestras($("color-list"));
+}
+
+function modoColor(editando) {
+  $("color-submit-texto").textContent = editando ? "Guardar color" : "Agregar color";
+  $("color-imagen-hint").textContent = editando ? "Déjala vacía para conservar la foto actual." : "Obligatoria para un color nuevo.";
+  document.querySelector('[data-action="color-cancelar"]').hidden = !editando;
+}
+
+function editarColor(id) {
+  const p = productoConColores();
+  const c = p && p.colores.find(x => x.id === id);
+  if (!c) return;
+  st.editando.color = c;
+  const form = $("form-color");
+  campo(form, "nombre").value = c.nombre;
+  campo(form, "hex").value = c.hex;
+  campo(form, "orden").value = c.orden;
+  campo(form, "disponible").checked = c.disponible;
+  campo(form, "imagen").value = "";
+  modoColor(true);
+  campo(form, "nombre").focus();
+}
+
+function cancelarColor() {
+  st.editando.color = null;
+  const form = $("form-color");
+  form.reset();
+  const p = productoConColores();
+  campo(form, "orden").value = p ? p.colores.length : 0;
+  modoColor(false);
+}
+
+async function guardarColor(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const p = productoConColores();
+  if (!p) return;
+  await enviar(form, async () => {
+    const body = {
+      nombre: campo(form, "nombre").value,
+      hex: campo(form, "hex").value,
+      orden: campo(form, "orden").value,
+      disponible: campo(form, "disponible").checked,
+      imagen: await leerImagen(campo(form, "imagen"))
+    };
+    const editando = st.editando.color;
+    if (!editando && !body.imagen) throw new Error("Sube la foto del producto en ese color.");
+    const guardado = editando
+      ? await api(`/admin/colores/${editando.id}`, { method: "PUT", body })
+      : await api(`/admin/productos/${p.id}/colores`, { method: "POST", body });
+    await recargar("productos");
+    cancelarColor();
+    showToast(`${editando ? "Color actualizado" : "Color agregado"}: ${guardado.nombre}`);
+  });
+}
+
+async function borrarColor(id) {
+  const p = productoConColores();
+  const c = p && p.colores.find(x => x.id === id);
+  if (!c || !confirm(`¿Eliminar el color "${c.nombre}" de ${p.nombre}?`)) return;
+  try {
+    await api(`/admin/colores/${c.id}`, { method: "DELETE" });
+    if (st.editando.color && st.editando.color.id === c.id) cancelarColor();
+    await recargar("productos");
+    showToast(`Color eliminado: ${c.nombre}`);
+  } catch (error) {
+    manejarError(error);
+  }
 }
 
 function editarProducto(id) {
@@ -694,12 +791,14 @@ function editarProducto(id) {
   campo(form, "visible").checked = p.visible;
   campo(form, "quitar_imagen").checked = false;
   renderProductos();
+  cancelarColor();
   modoEdicion(form, "producto", true, "Agregar producto o servicio", `Editar: ${p.nombre}`);
   form.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function cancelarProducto() {
   st.editando.producto = null;
+  st.editando.color = null;
   const form = $("form-producto");
   const tienda = campo(form, "stand_id").value;
   form.reset();
@@ -733,6 +832,11 @@ async function guardarProducto(event) {
     cancelarProducto();
     await recargar("productos", "tiendas");
     showToast(`${editando ? "Actualizado" : "Guardado"}: ${guardado.nombre}`);
+    // Un producto nuevo se queda abierto para agregarle sus colores
+    if (!editando && body.tipo === "producto") {
+      editarProducto(guardado.id);
+      $("colores-card").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   });
 }
 
@@ -1386,6 +1490,9 @@ Object.assign(ACCIONES, {
   editar: el => EDITAR[el.dataset.tipo](Number(el.dataset.id)),
   borrar: el => BORRAR[el.dataset.tipo](Number(el.dataset.id)),
   cancelar: el => CANCELAR[el.dataset.form](),
+  "color-editar": el => editarColor(Number(el.dataset.id)),
+  "color-borrar": el => borrarColor(Number(el.dataset.id)),
+  "color-cancelar": () => cancelarColor(),
   "sub-guardar": el => guardarSubcategoria(Number(el.dataset.id)),
   "sub-borrar": el => borrarSubcategoria(Number(el.dataset.id)),
   "promo-item-agregar": () => $("promo-items").insertAdjacentHTML("beforeend", filaItemPaquete()),
@@ -1399,6 +1506,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("form-tienda").addEventListener("submit", guardarTienda);
   $("form-subcategoria").addEventListener("submit", agregarSubcategoria);
   $("form-producto").addEventListener("submit", guardarProducto);
+  $("form-color").addEventListener("submit", guardarColor);
   $("form-oferta").addEventListener("submit", guardarOferta);
   $("form-resena").addEventListener("submit", guardarResena);
   $("form-promo").addEventListener("submit", guardarPromo);

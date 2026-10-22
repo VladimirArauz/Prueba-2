@@ -195,15 +195,25 @@ router.get("/productos", handle(async (req, res) => {
   const { rows } = await pool.query(
     `SELECT p.id, p.stand_id, s.nombre AS stand, p.subcategoria_id, sc.nombre AS subcategoria, p.tipo, p.nombre,
             p.precio::float AS precio, p.precio_modo, p.disponibilidad, p.descripcion, p.visible, p.orden,
-            (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.creado_en, p.actualizado_en
+            (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.creado_en, p.actualizado_en,
+            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'nombre', c.nombre, 'hex', c.hex,
+                        'disponible', c.disponible, 'orden', c.orden, 'tiene_imagen', c.imagen IS NOT NULL,
+                        'actualizado_en', c.actualizado_en) ORDER BY c.orden, c.id)
+                      FROM producto_colores c WHERE c.producto_id = p.id), '[]') AS colores
      FROM productos p JOIN stands s ON s.id = p.stand_id
      LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
      WHERE ($1::int IS NULL OR p.stand_id = $1) AND ($2::int[] IS NULL OR p.stand_id = ANY($2))
      ORDER BY s.orden, p.tipo, p.orden, p.creado_en DESC, p.id DESC`, [stand, tiendasDe(req)]);
-  res.json(rows.map(({ tiene_imagen, imagen_ruta, ...p }) => ({
-    ...p,
-    imagen_url: tiene_imagen ? `/api/productos/${p.id}/imagen?v=${new Date(p.actualizado_en).getTime()}` : imagen_ruta
-  })));
+  res.json(rows.map(({ tiene_imagen, imagen_ruta, colores, ...p }) => {
+    const imagen_url = tiene_imagen ? `/api/productos/${p.id}/imagen?v=${new Date(p.actualizado_en).getTime()}` : imagen_ruta;
+    return {
+      ...p,
+      imagen_url,
+      colores: colores.map(({ tiene_imagen: conFoto, actualizado_en, ...c }) => ({
+        ...c, imagen_url: conFoto ? `/api/colores/${c.id}/imagen?v=${new Date(actualizado_en).getTime()}` : imagen_url
+      }))
+    };
+  }));
 }));
 
 async function datosProducto(req) {
@@ -269,6 +279,8 @@ router.put("/productos/:id", handle(async (req, res) => {
      WHERE id = $14`,
     [d.standId, d.subcategoriaId, d.tipo, d.nombre, d.precioModo, d.precio, d.disponibilidad, d.descripcion,
      d.visible, d.orden, d.imagen ? d.imagen.buffer : null, d.imagen ? d.imagen.tipo : null, d.quitarImagen, producto.id]);
+  // Los servicios no tienen colores
+  if (d.tipo === "servicio") await pool.query("DELETE FROM producto_colores WHERE producto_id = $1", [producto.id]);
   // Si el producto cambió de tienda, sus ofertas de la tienda anterior ya no aplican
   if (d.standId !== producto.stand_id) {
     await pool.query("DELETE FROM ofertas WHERE producto_id = $1 AND stand_id <> $2", [producto.id, d.standId]);
@@ -281,6 +293,80 @@ router.delete("/productos/:id", handle(async (req, res) => {
   const producto = await exigirProducto(req, req.params.id);
   await pool.query("DELETE FROM productos WHERE id = $1", [producto.id]);
   await anotar(req.admin, "borrar", "productos", producto.id, producto.nombre);
+  res.status(204).end();
+}));
+
+// ================= Colores de un producto =================
+// Cada color va en su propia petición: el cuerpo con imagen tiene límite de 2 MB
+const MAX_COLORES = 12;
+
+function datosColor(body, { nuevo }) {
+  const hex = typeof body.hex === "string" ? body.hex.trim().toLowerCase() : "";
+  if (!/^#[0-9a-f]{6}$/.test(hex)) throw new ErrorDeDatos("Elige el color con el selector.");
+  const imagen = imagenDe(body);
+  if (nuevo && !imagen) throw new ErrorDeDatos("Sube la foto del producto en ese color.");
+  return {
+    nombre: v.texto(body.nombre, "el nombre del color", { max: 30, requerido: true }),
+    hex,
+    imagen,
+    disponible: v.booleano(body.disponible, true),
+    orden: v.entero(body.orden, "El orden", { defecto: 0 })
+  };
+}
+
+const colorRepetido = err => {
+  if (err.code === "23505") throw new ErrorHttp(409, "Ese color ya está en el producto.");
+  throw err;
+};
+
+async function exigirColor(req, id) {
+  const colorId = v.idValido(id);
+  const { rows } = colorId ? await pool.query(
+    `SELECT c.id, c.nombre, c.producto_id, p.stand_id, p.nombre AS producto
+     FROM producto_colores c JOIN productos p ON p.id = c.producto_id WHERE c.id = $1`, [colorId]) : { rows: [] };
+  if (!rows[0]) throw new ErrorHttp(404, "Ese color no existe.");
+  await exigirStand(req, rows[0].stand_id);
+  return rows[0];
+}
+
+const tocarProducto = id => pool.query("UPDATE productos SET actualizado_en = now() WHERE id = $1", [id]);
+
+router.post("/productos/:id/colores", handle(async (req, res) => {
+  const producto = await exigirProducto(req, req.params.id);
+  const { rows: [info] } = await pool.query(
+    "SELECT p.tipo, (SELECT count(*)::int FROM producto_colores c WHERE c.producto_id = p.id) AS colores FROM productos p WHERE p.id = $1",
+    [producto.id]);
+  if (info.tipo !== "producto") throw new ErrorDeDatos("Los colores son solo para productos.");
+  if (info.colores >= MAX_COLORES) throw new ErrorDeDatos(`Un producto puede tener hasta ${MAX_COLORES} colores.`);
+  const d = datosColor(req.body, { nuevo: true });
+  const { rows } = await pool.query(
+    `INSERT INTO producto_colores (producto_id, nombre, hex, imagen, imagen_tipo, disponible, orden)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nombre`,
+    [producto.id, d.nombre, d.hex, d.imagen.buffer, d.imagen.tipo, d.disponible, d.orden]).catch(colorRepetido);
+  await tocarProducto(producto.id);
+  await anotar(req.admin, "crear", "producto_colores", rows[0].id, `${producto.nombre}: ${d.nombre}`);
+  res.status(201).json(rows[0]);
+}));
+
+router.put("/colores/:id", handle(async (req, res) => {
+  const color = await exigirColor(req, req.params.id);
+  const d = datosColor(req.body, { nuevo: false });
+  await pool.query(
+    `UPDATE producto_colores SET nombre = $1, hex = $2, disponible = $3, orden = $4,
+       imagen = COALESCE($5::bytea, imagen), imagen_tipo = COALESCE($6, imagen_tipo), actualizado_en = now()
+     WHERE id = $7`,
+    [d.nombre, d.hex, d.disponible, d.orden, d.imagen ? d.imagen.buffer : null, d.imagen ? d.imagen.tipo : null, color.id])
+    .catch(colorRepetido);
+  await tocarProducto(color.producto_id);
+  await anotar(req.admin, "editar", "producto_colores", color.id, `${color.producto}: ${d.nombre}`);
+  res.json({ id: color.id, nombre: d.nombre });
+}));
+
+router.delete("/colores/:id", handle(async (req, res) => {
+  const color = await exigirColor(req, req.params.id);
+  await pool.query("DELETE FROM producto_colores WHERE id = $1", [color.id]);
+  await tocarProducto(color.producto_id);
+  await anotar(req.admin, "borrar", "producto_colores", color.id, `${color.producto}: ${color.nombre}`);
   res.status(204).end();
 }));
 
