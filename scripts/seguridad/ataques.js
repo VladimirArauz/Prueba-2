@@ -1,7 +1,7 @@
 /**
- * NECUTLA — Pruebas de ataque contra el servidor LOCAL (nunca contra Render).
+ * NECUTLA — Pruebas de ataque contra el servidor LOCAL (nunca contra IONOS ni Render).
  *
- *   node scripts/seguridad/ataques.js [http://localhost:3000]
+ *   node scripts/seguridad/ataques.js [http://localhost:8081]
  *
  * Variables opcionales: NECUTLA_DUENO_USUARIO y NECUTLA_DUENO_PASSWORD (un dueño de la base local).
  * Crea datos de prueba (encargados, clientes, productos) con un sufijo único y desactiva a los
@@ -9,9 +9,9 @@
  * plans/auditorias/2026-10-20-seguridad.md corresponde. Sale con código 1 si alguna falla.
  *
  * Cada petición lleva su propia IP en X-Forwarded-For para que el límite general de la API no
- * mezcle las pruebas (en local, "trust proxy" la acepta; en Render la pone su proxy).
+ * mezcle las pruebas (en local, app/config.php la acepta con confiar_x_forwarded_for; en IONOS se usa REMOTE_ADDR).
  */
-const BASE = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
+const BASE = (process.argv[2] || "http://localhost:8081").replace(/\/$/, "");
 const host = new URL(BASE).hostname;
 if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(host)) {
   console.error("Estas pruebas solo corren contra localhost.");
@@ -20,7 +20,7 @@ if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(host)) {
 const DUENO = process.env.NECUTLA_DUENO_USUARIO || "dueno";
 const DUENO_PASS = process.env.NECUTLA_DUENO_PASSWORD || "prueba-dueno-123";
 const SUFIJO = Date.now().toString(36);
-const totp = require("../../server/totp");
+const totp = require("./totp");
 
 // ================= Utilidades =================
 let ipSeq = 0;
@@ -132,11 +132,11 @@ async function main() {
 
   // ---------- Archivos privados y recorrido de rutas ----------
   for (const ruta of ["/.env", "/plans/CLAUDE.md", "/server/index.js", "/package.json", "/.git/config", "/db/schema.sql",
-    "/render.yaml", "/scripts/seguridad/ataques.js", "/%2e%2e/package.json", "/..%2fpackage.json", "/js/..%2f..%2fpackage.json",
+    "/render.yaml", "/app/config.php", "/app/arranque.php", "/scripts/seguridad/ataques.js", "/%2e%2e/package.json", "/..%2fpackage.json", "/js/..%2f..%2fpackage.json",
     "/js/%2e%2e/%2e%2e/server/db.js", "/imagenes/..%5c..%5cpackage.json", "/node_modules/chart.js/package.json"]) {
     await prueba("—", `archivo privado ${ruta} no se sirve`, async () => {
       const r = await pedir("GET", ruta);
-      return espera(r.status === 404 || r.status === 400 || r.status === 403, `${r.status}`) && espera(!/"dependencies"|DATABASE_URL|require\(/.test(r.texto), "contenido filtrado");
+      return espera(r.status === 404 || r.status === 400 || r.status === 403, `${r.status}`) && espera(!/"dependencies"|DATABASE_URL|require\(|<\?php|'secreto'/.test(r.texto), "contenido filtrado");
     });
   }
 
@@ -727,6 +727,33 @@ async function main() {
   await prueba("R", "admin: reiniciar contraseña de otro exige confirmación", async () => {
     const r = await pedir("PUT", `/api/admin/usuarios/${encC}`, { sesion: dueno, body: { rol: "encargado", activo: true, tiendas: [A.id], password: "Otra-clave-larga-12" } });
     return error400(r, /no coinciden/);
+  });
+
+  // ---------- Correo y usuario: sin importar mayúsculas, pero sí los acentos ----------
+  {
+    const body = datosCliente("acento");
+    await pedir("POST", "/api/clientes/registro", { body });
+    const entrar = identificador => pedir("POST", "/api/clientes/login", { body: { identificador, password: PASS_CLIENTE } });
+    await prueba("C", "login cliente: el correo en mayúsculas entra", async () => {
+      const r = await entrar(body.correo.toUpperCase());
+      return espera(r.status === 200, `${r.status} ${r.texto}`);
+    });
+    await prueba("C", "login cliente: el usuario en mayúsculas entra", async () => {
+      const r = await entrar(body.usuario.toUpperCase());
+      return espera(r.status === 200, `${r.status} ${r.texto}`);
+    });
+    await prueba("C", "login cliente: el correo con acento (acénto-…) no es la misma cuenta → 401", async () => {
+      const r = await entrar(body.correo.replace("acento", "acénto"));
+      return espera(r.status === 401, `${r.status} ${r.texto}`);
+    });
+    await prueba("C", "login cliente: el usuario con acento no es la misma cuenta → 401", async () => {
+      const r = await entrar(body.usuario.replace("acento", "acénto"));
+      return espera(r.status === 401, `${r.status} ${r.texto}`);
+    });
+  }
+  await prueba("C", "rutas privadas en mayúsculas (/api/Admin/yo) también van con no-store", async () => {
+    const r = await pedir("GET", "/api/Admin/yo");
+    return espera(/no-store/.test(r.headers.get("cache-control") || ""), r.headers.get("cache-control"));
   });
 
   // ---------- Errores sin detalles ----------

@@ -1,6 +1,7 @@
 /**
- * Verificación en dos pasos (TOTP, RFC 6238) con crypto de Node: la usan Google Authenticator,
- * Microsoft Authenticator y similares. SHA-1, 6 dígitos, cada 30 segundos.
+ * Verificación en dos pasos (TOTP, RFC 6238) para las pruebas de scripts/seguridad/ataques.js: genera
+ * los mismos códigos que app/totp.php (Google Authenticator,
+ * Microsoft Authenticator y similares). SHA-1, 6 dígitos, cada 30 segundos.
  */
 const crypto = require("crypto");
 

@@ -24,6 +24,8 @@ Cómo se usa:
 | `2026-10-20-registro-validacion-y-login.md` | Aplicado, commit `97fd422` en `main` y subido (ya se ve en Render) | 2026-10-20 |
 | `2026-10-20-servicios-por-tienda.md` | Aplicado y con commit en `main`. Falta el push | 2026-10-20 |
 | `2026-10-21-colores-por-producto.md` | Aplicado, probado en local y subido a GitHub (`762ff7f`). Render todavía no lo despliega (ver pendiente 23e) | 2026-10-21 |
+| `2026-10-25-migracion-ionos-php-mariadb.md` | En curso: prompts 1 a 6 aplicados (servidor en PHP, probado en local). Falta el 7: el cambio en IONOS, con el usuario | 2026-10-25 |
+| `2026-10-25-php85-y-puntos-debiles.md` | Aplicado (PHP 8.5 y puntos débiles de la revisión) | 2026-10-25 |
 
 ---
 
@@ -58,6 +60,8 @@ Cómo se usa:
 21. **Seguridad (plan `2026-10-20-seguridad-auditoria-y-endurecimiento.md`):** unido a `main` el 2026-10-20 (fast-forward a `8d2e868`; la rama local `seguridad` se borró, en GitHub sigue `origin/seguridad`). **Regla del usuario: no crear ramas, trabajar siempre en `main`.** Para publicar: `git push origin main` (también sube el dashboard, pendiente 19). Después, en Render: restringir la IP de la base (pendiente 4), activar los 2 pasos en los dueños y leer en Logs las líneas "Revisión de proxy" (deben decir 1 dirección). Al desplegar, todos tendrán que volver a iniciar sesión una vez (la cookie cambia a `__Host-necutla.sid`). Informe: `plans/auditorias/2026-10-20-seguridad.md`.
 22. **Registro y login (plan `2026-10-20-registro-validacion-y-login.md`):** (a) el usuario autorizó usar el verde `--wa` solo para el estado "campo válido" (y para el nivel "súper segura" del medidor y las reglas cumplidas), como excepción a `plans/CLAUDE.md`; si quiere que sea regla permanente, tiene que pedir que se actualice. (b) En producción existen los admins `Axel` (id 1) y `axel` (id 3): mientras existan los dos, el login busca el usuario exacto primero y no se crea el índice único de `lower(usuario)` (el `DO $$` de `db/schema.sql` lo salta). Hay que preguntarle al usuario cuál renombrar o desactivar; al quitar el choque, el índice se crea solo en el siguiente arranque. (c) Falta commit y push.
 23. **Colores por producto (plan `2026-10-21-colores-por-producto.md`):** (a) excepción de diseño por confirmar con el usuario: la muestra de la barra lleva el color real del producto (dato del vendedor, en `--muestra`), no un color de interfaz. (b) Revisar en el navegador Necutools → Editar producto → Colores y la barra en `/p/<id>` a 1280 y 360 px. (c) Los paquetes de promociones no piden color: si incluyen un producto con colores, el color se acuerda por WhatsApp. (d) Ojo: el `.env` local apunta a la base de Render; para probar en local se usó `DATABASE_URL` de la línea comentada. (e) Push hecho el 2026-10-21 (`762ff7f`), pero **Render no despliega**: `necutla.onrender.com` sigue sirviendo `8e36c1b`; tampoco llegó `d8bc76d` (servicios, de Vladi). Revisar en Render → servicio `necutla` → Events/Logs si el deploy falló, si el Auto-Deploy está apagado o si el servicio está conectado a otro repo (fork); si no hay error, usar Manual Deploy → Deploy latest commit.
+
+24. **Cambio a IONOS (plan `2026-10-25-migracion-ionos-php-mariadb.md`):** el usuario eligió hosting web compartido (solo PHP + MariaDB). El servidor ya está en PHP 8.5 (prompts 1 a 6); falta el prompt 7, que se hace con el usuario en el panel de IONOS (base, phpMyAdmin, SFTP de `app/` y `public/`, `app/config.php` de producción con permisos 600, dominio a `necutla/public`, SSL, **PHP 8.5**, `/healthz`). (a) Choque con `plans/CLAUDE.md` secciones 1 y 4 (Render, Node, PostgreSQL): pedir permiso para actualizarlas al terminar. (b) **Hacer el cambio antes de que caduque la base gratis de Render (creada el 2026-10-17, ~2026-11-16).** (c) El día del cambio, sacar un respaldo nuevo de Render y convertirlo otra vez; `~/necutla-mariadb.sql` es del 2026-10-25. (d) Ese archivo lleva hashes, correos y teléfonos: nunca a git. (e) En XAMPP quedó la base de prueba `necutla_prueba_ionos` con esos datos. (f) Mientras no se haga el cambio, los pasos de Render de abajo siguen valiendo; después ya no. (g) Commit en `main` ("Servidor en PHP 8.5 + MariaDB para el cambio a IONOS"); falta el push (preguntar antes). Al subirlo, Render ya no puede desplegar (no hay Node): subirlo el día del cambio o justo antes. (h) En esta máquina quedó el dueño de prueba `dueno` en las bases locales (PostgreSQL de prueba y MariaDB `necutla`), solo para las pruebas. (i) `.env` y `node_modules/` ya no se usan; se pueden borrar cuando el usuario quiera. (j) XAMPP: el PHP 8.2.12 (`mod_php`) quedó apagado y todo el PHP del Apache de XAMPP va al PHP 8.5 de Ubuntu (copias de antes en `/opt/lampp/etc/extra/*.antes-php85`); el `php` de la terminal sigue siendo el 8.2 de XAMPP: usar `php8.5`. Mantener al día con `sudo apt upgrade`. (k) Puntos de la revisión que se dejaron a propósito: encargado edita su propia tienda (diseño) y `Sec-Fetch-Site` opcional (el `Origin` es obligatorio).
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -104,6 +108,32 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-25: PHP 8.5 y cierre de los puntos débiles (plan `2026-10-25-php85-y-puntos-debiles.md`)
+- Pedido del usuario: revisar los puntos débiles de la revisión de seguridad, cerrarlos y usar la versión más reciente de PHP por la vulnerabilidad PHP2Shell (CVE-2026-109618/109619, corregida el 2026-10-21 en 8.5.12).
+- **Local:** `php8.5-fpm`, `-cli`, `-mysql`, `-mbstring`, `-intl` de Ubuntu (`8.5.4-0ubuntu1.5`, ya parchado, USN-8948-1). Pools `/etc/php/8.5/fpm/pool.d/necutla.conf` (como el dueño de la carpeta, `open_basedir`, sin funciones de comandos ni `allow_url_fopen`) y `xampp.conf`. `/opt/lampp/etc/extra/httpd-xampp.conf` (sin `mod_php`) y `necutla.conf` mandan los `.php` a FPM. phpMyAdmin y el dashboard de XAMPP siguen abriendo (200).
+- `app/arranque.php`: la API exige PHP 8.5 (503 y aviso en el log; en terminal, mensaje y salida 1); `PRIVADAS` sin importar mayúsculas. `app/bd.php`: `Pdo\Mysql::ATTR_FOUND_ROWS` (lo de antes es obsoleto en 8.5).
+- Correos y usuarios en `utf8mb4_nopad_bin` (`db/mariadb/schema.sql`; `app/auth.php` busca el correo del admin en minúsculas): ya no se juntan acentos ni espacios al final. Se cambiaron las bases locales con `ALTER TABLE` y se volvió a generar `~/necutla-mariadb.sql` (importa bien, 37 productos, 2 clientes, 3 admins).
+- `public/.htaccess`: la redirección a HTTPS ya no se salta con una cabecera `X-Forwarded-Proto` falsa (probado: 301).
+- `scripts/seguridad/ataques.js`: 5 pruebas nuevas. `README.md`: PHP 8.5, FPM en local, checklist de IONOS con PHP 8.5 y permisos 600.
+- **Verificación con PHP 8.5:** ataques 232 de 232; Node contra PHP con los mismos datos 54 de 54 iguales; navegador 94 de 94 (solo el aviso de consola de siempre, que también sale con Node); `crear-admin.php` con `php8.5` bien y con el PHP 8.2 da el aviso.
+
+### 2026-10-25: servidor en PHP para IONOS (plan `2026-10-25-migracion-ionos-php-mariadb.md`, prompts 1 a 6)
+- `app/` (nuevo, fuera de `public/`): las 63 rutas de `server/` pasadas a PHP sin Composer, con el mismo JSON (`arranque.php`, `bd.php`, `http.php`, `seguridad.php`, `sesiones.php`, `validar.php`, `contrasenas.php`, `intentos.php`, `totp.php`, `bitacora.php`, `imagenes.php`, `ofertas.php`, `auth.php`, `clientes.php`, `api.php`, `resenas.php`, `pedidos.php`, `admin.php`, `config.ejemplo.php`). `app/config.php` local, ignorado por git.
+- `public/.htaccess` (direcciones, redirecciones, cabeceras, caché), `public/api/index.php`, `public/404.txt`, `public/vendor/chart.umd.js` (Chart.js 4.4.7, mismo sha512 que el `package-lock`).
+- `scripts/crear-admin.php` (reemplaza `ADMIN_USERNAME`/`ADMIN_PASSWORD`); `scripts/seguridad/totp.js` (antes `server/totp.js`); `ataques.js` apunta a `http://localhost:8081`.
+- Se borraron `server/`, `package.json`, `package-lock.json`, `.node-version`, `render.yaml`, `db/schema.sql`, `scripts/importar-ejemplos.js`, `db/ejemplos.json`, `db/servicios-ejemplo.json` y `.env.example` (siguen en el historial de git). `README.md` reescrito para XAMPP e IONOS.
+- XAMPP: virtual host en el puerto 8081 (`/opt/lampp/etc/extra/necutla.conf`) y permiso de paso (`setfacl`) al usuario `daemon` en la carpeta personal.
+- **Verificación** (nunca contra Render ni IONOS): Node viejo (puerto 3077, PostgreSQL de prueba 54329) contra PHP con los mismos datos, 54 de 54 respuestas iguales; ataques 225 de 225; navegador 94 de 94 a 1280 y 360 px; `/security-review` sin vulnerabilidades de confianza alta (los 8 puntos que se descartaron se revisaron en la entrada de arriba).
+
+### 2026-10-25: base para IONOS en MariaDB y plan del cambio de hoster (plan `2026-10-25-migracion-ionos-php-mariadb.md`)
+- Pedido del usuario: preparar el cambio de Render a IONOS (hosting compartido, MariaDB, sin PostgreSQL) y un query para crear la base nueva con los datos del respaldo `~/Descargas/necutla` (pg_dump custom de Render).
+- `db/mariadb/schema.sql` (nuevo): las 15 tablas en MariaDB 10.4+ más `sesiones` y `limites` para el servidor en PHP. Equivalencias en la sección 2 del plan.
+- `scripts/migracion/pg-a-mariadb.py` (nuevo): convierte un respaldo de PostgreSQL al `.sql` de MariaDB (fechas a UTC, booleanos, bytea en hex, arreglos a JSON, sin `session`).
+- `~/necutla-mariadb.sql` (fuera del repo, permisos 600): esquema + datos (7 tiendas, 24 subcategorías, 37 productos, 3 admins, 2 clientes, 4 migraciones, 2 de bitácora).
+- Verificado en el MariaDB 10.4.32 de XAMPP (base `necutla_prueba_ionos`): importa sin error, conteos iguales, foto idéntica (MD5), acentos, esquema 2 veces sin error, CHECK del color, correo único sin importar mayúsculas, `Axel`/`AXEL` distintos.
+- Plan y 7 prompts nuevos (`plans/planes/` y `plans/prompts/`). No se cambió el servidor ni el frontend.
+- Se arrancó el `apache2` del sistema para pgAdmin (http://localhost:8080/pgadmin4); XAMPP ya estaba corriendo.
 
 ### 2026-10-21: colores de un mismo producto (plan `2026-10-21-colores-por-producto.md`, prompts 1 a 4)
 - Pedido del usuario: no crear el mismo producto varias veces por color; agregar solo los colores que se manejan, cada uno con su foto, y que el cliente vea una barra con los colores.
@@ -433,13 +463,7 @@ Pedido del usuario: ver hasta abajo las ofertas de temporada ("Temporada de Navi
 
 ## Cómo ver la página
 
-En local (necesita PostgreSQL y un `.env`, ver `README.md`):
+En local (XAMPP con el PHP 8.5 de Ubuntu, ver `README.md`): arrancar XAMPP (`sudo /opt/lampp/lampp start`;
+`php8.5-fpm` arranca solo) y abrir http://localhost:8081/
 
-```
-npm install
-npm run dev
-```
-
-y abrir http://localhost:3000/
-
-En producción: la URL que asigne Render al servicio `necutla` (ver `README.md`).
+En producción: hasta el cambio a IONOS, la URL de Render (`necutla.onrender.com`); después, el dominio de IONOS.

@@ -1,0 +1,92 @@
+# =========================================================
+# NECUTLA — Apache (IONOS hosting compartido y XAMPP en local)
+# Hace lo que hacía server/index.js: direcciones, redirecciones, cabeceras de seguridad y caché.
+# La API (/api/* y /healthz) la atiende api/index.php; el código del servidor está fuera, en app/.
+# =========================================================
+
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+AddDefaultCharset utf-8
+ErrorDocument 404 /404.txt
+ErrorDocument 403 /404.txt
+
+<IfModule mod_mime.c>
+    AddType text/javascript .js
+    AddType image/svg+xml .svg
+    AddCharset utf-8 .txt .html .css .js .json .svg
+    AddType application/manifest+json .webmanifest
+</IfModule>
+
+RewriteEngine On
+RewriteBase /
+
+# TRACE y TRACK no se aceptan
+RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK)$
+RewriteRule ^ - [R=405,L]
+
+# HTTPS siempre en el servidor de verdad (no en localhost). Solo vale lo que dice Apache (%{HTTPS}):
+# la cabecera X-Forwarded-Proto la puede mandar cualquiera, así que no sirve para saltarse la redirección.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Archivos y carpetas que empiezan con punto no se sirven (.htaccess, .user.ini, .git…), salvo .well-known
+RewriteRule (^|/)\.(?!well-known/) - [R=404,L]
+
+# La API y la revisión de salud
+RewriteRule ^api(/.*)?$ api/index.php [END,QSA]
+RewriteRule ^healthz/?$ api/index.php [END,QSA]
+
+# Una sola página para todas las tiendas: /t/ropa, /t/tecnologia?sub=cables…
+RewriteRule ^t/[a-z0-9-]{1,60}/?$ tienda.html [END]
+# Página de un producto o servicio con sus opiniones: /p/12
+RewriteRule ^p/[1-9][0-9]{0,9}/?$ producto.html [END]
+
+# Las direcciones de las páginas fijas que había antes siguen funcionando
+RewriteRule ^(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)/carrito\.html$ /carrito.html [R=301,L]
+RewriteRule ^(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)(/(index\.html)?)?$ /t/$1 [R=301,L]
+RewriteRule ^(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)/([a-z0-9-]+)(/(index\.html)?)?$ /t/$1?sub=$2 [R=301,L]
+
+# Ningún otro .php se ejecuta (solo api/index.php)
+RewriteCond %{REQUEST_URI} !^/api/index\.php$
+RewriteRule \.(php[0-9]?|phtml|phar)$ - [R=404,L]
+
+<IfModule mod_headers.c>
+    # Cabeceras de seguridad (las mismas que ponía helmet). "always" también las pone en las respuestas de PHP.
+    Header always set Content-Security-Policy "default-src 'self';script-src 'self';script-src-attr 'none';style-src 'self' https://fonts.googleapis.com;font-src 'self' https://fonts.gstatic.com;img-src 'self' data:;connect-src 'self';object-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'none'"
+    Header always set Content-Security-Policy "default-src 'self';script-src 'self';script-src-attr 'none';style-src 'self' https://fonts.googleapis.com;font-src 'self' https://fonts.gstatic.com;img-src 'self' data:;connect-src 'self';object-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'none';upgrade-insecure-requests" "expr=%{HTTPS} == 'on'"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    Header always set Cross-Origin-Resource-Policy "same-origin"
+    Header always set Origin-Agent-Cluster "?1"
+    Header always set X-DNS-Prefetch-Control "off"
+    Header always set X-Download-Options "noopen"
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+    Header always set X-XSS-Protection "0"
+    # Funciones del navegador que el sitio no usa: apagadas para cualquier script
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), display-capture=()"
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
+
+    # HTML, CSS y JS se revalidan siempre (304 si no cambiaron): si no, tras subir cambios el navegador
+    # mezcla el HTML nuevo con el style.css o comun.js viejo de su caché. Lo demás, 1 hora.
+    <FilesMatch "\.(html|css|js)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpe?g|webp|gif|svg|ico|json|txt|woff2?)$">
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+
+    # Necutools no debe aparecer en buscadores
+    <Files "necutools.html">
+        Header set X-Robots-Tag "noindex, nofollow"
+    </Files>
+</IfModule>
+
+# Contacto para reportar fallas de seguridad
+<Files "security.txt">
+    ForceType "text/plain; charset=utf-8"
+</Files>
