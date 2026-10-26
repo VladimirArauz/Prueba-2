@@ -7,22 +7,32 @@
 ## 1. Qué es el proyecto
 
 **Necutla — La Ciudad del Estudiante** es un directorio comercial estudiantil donde la comunidad
-recorre 7 tiendas o "stands" (Ropa, Tecnología, Dulces, Propaganda, Papelería, Regalos y Otra),
-agrega productos a un carrito y envía el pedido por WhatsApp para confirmarlo.
+recorre las tiendas o "stands" (al inicio 7: Ropa, Tecnología, Dulces, Propaganda, Papelería, Regalos y
+Otra; los dueños pueden crear más desde Necutools), agrega productos a un carrito agrupado por tienda y
+envía cada pedido por WhatsApp a los vendedores de esa tienda para confirmarlo.
 
-Se publica en **Render**: un servidor **Node.js + Express** sirve el sitio y una API, con datos en
-**PostgreSQL** (administrable con pgAdmin). Frontend en HTML, CSS y JavaScript sin frameworks.
+Se publica en el **hosting compartido de IONOS**: Apache con **PHP 8.5** (sin Node, sin Composer) sirve el
+sitio y una API, con datos en **MariaDB** (administrable con phpMyAdmin de IONOS). Frontend en HTML, CSS y
+JavaScript sin frameworks.
 
-- `public/`: lo único que se publica. `index.html` + `app.js` + `style.css` + `iconos.js` (página
-  principal con secciones Tienda, Carrito y Necutools) y una carpeta por tienda (`ropa/`,
-  `tecnologia/`…) con subcategorías, `carrito.html` y `js/carrito.js`.
-- `server/`: `index.js` (seguridad y arranque), `db.js` (conexión y migración), `auth.js` (sesiones y
-  login), `api.js` (`/api/config`, `/api/stands`, `/api/productos`).
-- `db/schema.sql`: estructura de la base; se aplica sola en cada arranque.
-- **Necutools**: panel de administración con login real (bcrypt + sesión en PostgreSQL). Productos y
-  stands se guardan en la base y los ven todos los visitantes. El carrito vive en el navegador.
-- Configuración por variables de entorno (`.env` local, Environment en Render; plantilla en
-  `.env.example`). Despliegue definido en `render.yaml`. Guía completa en `README.md`.
+- `public/`: lo único que se publica (el dominio apunta aquí). Páginas `index.html` (portada con el
+  tablero de tiendas), `tienda.html` (una sola página para todas las tiendas: `/t/<slug>`),
+  `producto.html` (`/p/<id>`), `carrito.html`, `promociones.html`, `cuenta.html` y `necutools.html`;
+  `style.css`, `iconos.js`, `js/` (un archivo por página más `comun.js`), `vendor/chart.umd.js`,
+  `.htaccess` (direcciones, redirecciones, cabeceras de seguridad y caché) y `api/index.php`, el único
+  `.php` que se ejecuta.
+- `app/`: el servidor en PHP, fuera de `public/` (`arranque.php` atiende cada petición; un archivo por
+  tema: `auth.php`, `api.php`, `admin.php`, `pedidos.php`…). Configuración y secretos en
+  `app/config.php` (plantilla en `app/config.ejemplo.php`).
+- `db/mariadb/schema.sql`: estructura de la base. **No se aplica sola**: los cambios se corren en
+  phpMyAdmin (local e IONOS).
+- `scripts/`: `crear-admin.php` (crear un dueño desde la terminal), `migracion/` (respaldo de PostgreSQL de
+  Render a MariaDB) y `seguridad/ataques.js` (pruebas de ataque, solo contra localhost).
+- **Necutools**: panel de administración con login real (bcrypt + sesión en la tabla `sesiones`), dueños y
+  encargados por tienda. Tiendas, productos, servicios, ofertas, promociones y pedidos se guardan en la
+  base y los ven todos los visitantes. El carrito vive en el navegador; los precios los pone el servidor.
+- En local se prueba con el Apache y el MariaDB de XAMPP y el PHP 8.5 de Ubuntu por PHP-FPM, en
+  http://localhost:8081/. Guía completa en `README.md`.
 
 La prioridad del proyecto es que un estudiante encuentre la tienda, arme su pedido y lo mande por
 WhatsApp sin fricción. Todo lo visual está al servicio de eso.
@@ -146,20 +156,31 @@ Lo nuevo debe ser sobrio y no competir con él.
 - No cambiar la lógica del carrito, la API, Necutools ni el envío a WhatsApp cuando la tarea es solo
   de diseño.
 - Conservar los `id`, `data-action`, `data-section` y clases que usa el JavaScript.
-- Las 7 tiendas comparten `public/style.css`: un cambio de estilo se hace ahí, no por tienda.
-- No agregar frameworks, build tools ni dependencias nuevas sin que el usuario lo pida.
-- Todo archivo que deba verse en el navegador va dentro de `public/`. Nada sensible ahí.
+- Todas las tiendas comparten `public/style.css`: un cambio de estilo se hace ahí, no por tienda.
+- No agregar frameworks, build tools, Composer ni dependencias nuevas sin que el usuario lo pida.
+- Todo archivo que deba verse en el navegador va dentro de `public/`. Nada sensible ahí: el código del
+  servidor va en `app/`.
+- **PHP 8.5 o más nuevo, con los parches de seguridad al día** (en IONOS: Hosting → PHP; en local:
+  `sudo apt upgrade`). La API no arranca con una versión más vieja. No usar funciones marcadas como
+  obsoletas en 8.5.
+- La API responde el mismo JSON que espera el frontend: si cambia una respuesta, se cambia también el JS
+  que la usa.
 
 ### Seguridad (obligatoria)
 
 - **Prohibido** `onclick="…"` y cualquier JavaScript o `<script>` en línea, y `style="…"` en el HTML:
   la CSP del servidor los bloquea. Los eventos se manejan con `data-action` / `data-section` y un
   listener delegado; los estilos, con clases en `style.css`.
-- Recursos externos solo si se agregan a la CSP de `server/index.js` (hoy solo Google Fonts).
+- Recursos externos solo si se agregan a la CSP de `public/.htaccess` (hoy solo Google Fonts).
 - Todo texto que venga de datos se escapa (`escapeHTML`) antes de insertarlo con `innerHTML`.
-- SQL siempre con parámetros (`$1`, `$2`…), nunca concatenando texto.
-- Toda ruta de la API que modifique datos usa `requireAdmin` y valida cada campo en el servidor.
-- Secretos y configuración solo en variables de entorno. **`.env` nunca se sube a git**; si se agrega
-  una variable nueva, documentarla en `.env.example`, `README.md` y `render.yaml`.
-- Cambios a la base: agregar sentencias idempotentes a `db/schema.sql` (`IF NOT EXISTS`,
-  `ON CONFLICT`), nunca borrar datos en una migración sin permiso del usuario.
+- SQL siempre con parámetros de PDO (`?`), nunca concatenando texto del usuario.
+- Toda ruta de la API que modifique datos usa `requiere_admin()` (o la sesión de cliente que corresponda)
+  y valida cada campo en el servidor.
+- Secretos y configuración solo en `app/config.php`. **`app/config.php` nunca se sube a git** (en IONOS,
+  con permisos 600); si se agrega una opción nueva, documentarla en `app/config.ejemplo.php` y `README.md`.
+- Los respaldos de la base (`.sql` con datos) llevan contraseñas cifradas, correos y teléfonos: nunca a
+  git ni al chat.
+- Cambios a la base: agregar sentencias idempotentes a `db/mariadb/schema.sql` (`IF NOT EXISTS`,
+  `INSERT IGNORE`, `ON DUPLICATE KEY UPDATE`) y correrlas en phpMyAdmin; nunca borrar datos en una
+  migración sin permiso del usuario.
+- Las pruebas de ataque (`scripts/seguridad/ataques.js`) solo contra localhost, nunca contra IONOS.
