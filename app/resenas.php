@@ -81,6 +81,7 @@ function rutas_resenas(): void
             'paginas' => max(1, (int) ceil($total / RESENAS_POR_PAGINA)),
             'resenas' => array_map('resena_publica', $lista),
             'cliente' => $cliente ? ['nombre' => $cliente['nombre']] : null,
+            'cuentas' => cuentas_clientes(),
             'mia' => $mia,
         ];
     });

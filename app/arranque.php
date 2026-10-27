@@ -45,6 +45,10 @@ function config(string $clave)
     return $config[$clave] ?? null;
 }
 
+// Interruptores que valen true si no están en app/config.php
+function cuentas_clientes(): bool { return config('cuentas_clientes') !== false; }
+function con_https(): bool { return config('produccion') && config('https') !== false; }
+
 require __DIR__ . '/bd.php';
 require __DIR__ . '/http.php';
 require __DIR__ . '/seguridad.php';

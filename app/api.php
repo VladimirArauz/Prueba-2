@@ -52,16 +52,26 @@ function producto_publico(array $f, array $ofertas = []): array
         'calificacion' => $f['calificacion'],
         'resenas' => $f['total_resenas'] ?: 0,
         'colores_total' => $f['total_colores'] ?: 0,
+        'agotado' => a_bool($f['agotado']),
         'oferta' => $f['tipo'] === 'producto' && $f['precio_modo'] === 'fijo' ? oferta_para_tarjeta($f, $ofertas) : null,
     ];
 }
+
+// Un producto está agotado si no tiene stock (0 o sin capturar) o, si tiene colores, si ningún color disponible
+// tiene stock. Los servicios nunca. El número exacto de piezas no se publica.
+const SQL_AGOTADO = "(p.tipo = 'producto' AND IF(
+    EXISTS (SELECT 1 FROM producto_colores c WHERE c.producto_id = p.id),
+    NOT EXISTS (SELECT 1 FROM producto_colores c WHERE c.producto_id = p.id AND c.disponible AND c.stock > 0),
+    COALESCE(p.stock, 0) <= 0))";
 
 const COLUMNAS_PRODUCTO = '
   p.id, p.stand_id, p.subcategoria_id, p.tipo, p.nombre, p.precio, p.precio_modo,
   p.disponibilidad, p.descripcion, (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.actualizado_en,
   (SELECT ROUND(AVG(r.calificacion), 1) FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS calificacion,
   (SELECT COUNT(*) FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS total_resenas,
-  (SELECT COUNT(*) FROM producto_colores c WHERE c.producto_id = p.id) AS total_colores';
+  (SELECT COUNT(*) FROM producto_colores c WHERE c.producto_id = p.id) AS total_colores,
+  ' . SQL_AGOTADO . ' AS agotado';
+
 
 // ================= Imágenes guardadas en la base =================
 // La de algo oculto solo la ve en Necutools quien puede editarlo, y sin caché pública
@@ -97,7 +107,10 @@ function promociones_vigentes(?array $ids = null, bool $soloDestacadas = false):
     $idsPromos = array_column($promos, 'id');
     $items = filas(
         'SELECT i.promocion_id, i.cantidad, p.id AS producto_id, p.nombre, p.precio, p.precio_modo,
-                s.id AS stand_id, s.nombre AS tienda, s.slug, s.whatsapp, (p.visible AND s.visible) AS publico
+                s.id AS stand_id, s.nombre AS tienda, s.slug, s.whatsapp, (p.visible AND s.visible) AS publico,
+                IF(EXISTS (SELECT 1 FROM producto_colores c WHERE c.producto_id = p.id),
+                   (SELECT COALESCE(MAX(c.stock), 0) FROM producto_colores c WHERE c.producto_id = p.id AND c.disponible),
+                   COALESCE(p.stock, 0)) AS stock_max
          FROM promocion_items i
          JOIN productos p ON p.id = i.producto_id
          JOIN stands s ON s.id = p.stand_id
@@ -131,6 +144,8 @@ function promociones_vigentes(?array $ids = null, bool $soloDestacadas = false):
                 'tienda' => $i['tienda'], 'slug' => $i['slug']], $suyos),
             'tiendas' => array_values(array_map(fn($t) => $t['tienda'], $tiendas)),
             'whatsapp' => array_values(array_unique($whatsapp)),
+            // Algún producto no alcanza (con colores: ningún color tiene las piezas que pide el paquete)
+            'agotado' => (bool) array_filter($suyos, fn($i) => (int) $i['stock_max'] < $i['cantidad']),
         ];
     }
     return $salida;
@@ -167,7 +182,7 @@ function calcular_carrito(array $items): array
     $idsPaquetes = array_values(array_unique(array_column(array_filter($items, fn($i) => $i['tipo'] === 'paquete'), 'id')));
 
     $productos = $idsProductos ? filas(
-        'SELECT p.id, p.stand_id, p.subcategoria_id, p.nombre, p.precio, s.nombre AS tienda, s.slug, s.orden, s.whatsapp
+        'SELECT p.id, p.stand_id, p.subcategoria_id, p.nombre, p.precio, p.stock, s.nombre AS tienda, s.slug, s.orden, s.whatsapp
          FROM productos p JOIN stands s ON s.id = p.stand_id
          WHERE p.id IN (' . marcas($idsProductos) . ") AND p.visible AND s.visible AND p.tipo = 'producto' AND p.precio_modo = 'fijo'",
         $idsProductos) : [];
@@ -176,7 +191,7 @@ function calcular_carrito(array $items): array
     $ofertas = $productos ? ofertas_de_hoy(array_values(array_unique(array_column($productos, 'stand_id')))) : [];
     // Colores de esos productos: si un producto tiene colores, hay que elegir uno disponible
     $idsConPrecio = array_column($productos, 'id');
-    $colores = $idsConPrecio ? filas('SELECT id, producto_id, nombre, disponible FROM producto_colores WHERE producto_id IN (' . marcas($idsConPrecio) . ')', $idsConPrecio) : [];
+    $colores = $idsConPrecio ? filas('SELECT id, producto_id, nombre, disponible, stock FROM producto_colores WHERE producto_id IN (' . marcas($idsConPrecio) . ')', $idsConPrecio) : [];
     $paquetes = $idsPaquetes ? promociones_vigentes($idsPaquetes) : [];
 
     $grupos = [];
@@ -190,6 +205,9 @@ function calcular_carrito(array $items): array
             $color = null;
             if ($item['color']) foreach ($colores as $c) if ($c['id'] === $item['color'] && $c['producto_id'] === $p['id']) $color = $c;
             if ($tieneColores ? (!$color || !a_bool($color['disponible'])) : $item['color']) { $faltantes[] = $item; continue; }
+            // Stock: agotado (o sin capturar) se quita; si pide más de lo que hay, el carrito baja a lo que queda
+            $quedan = max(0, (int) ($color ? $color['stock'] : $p['stock']));
+            if ($item['cantidad'] > $quedan) { $faltantes[] = $item + ['quedan' => $quedan]; continue; }
             $clave = "tienda-{$p['stand_id']}";
             $grupos[$clave] ??= ['clave' => $clave, 'tipo' => 'tienda', 'nombre' => $p['tienda'], 'slug' => $p['slug'], 'orden' => $p['orden'],
                 'whatsapp' => numeros_de($p), 'items' => []];
@@ -204,7 +222,7 @@ function calcular_carrito(array $items): array
         } else {
             $promo = null;
             foreach ($paquetes as $x) if ($x['id'] === $item['id']) $promo = $x;
-            if (!$promo) { $faltantes[] = $item; continue; }
+            if (!$promo || $promo['agotado']) { $faltantes[] = $item; continue; }
             $subtotal = redondear($promo['precio'] * $item['cantidad']);
             $grupos["paquete-{$promo['id']}"] = [
                 'clave' => "paquete-{$promo['id']}", 'tipo' => 'paquete', 'nombre' => $promo['titulo'], 'orden' => -1,
@@ -225,12 +243,14 @@ function calcular_carrito(array $items): array
     }, $lista);
 
     // En el JSON, cada faltante sale como lo leyó leerCarrito en Node
-    return ['grupos' => $salida, 'faltantes' => array_map(fn($i) => ['tipo' => $i['tipo'], 'id' => $i['id'], 'color' => $i['color'], 'cantidad' => $i['cantidad']], $faltantes)];
+    // "quedan" solo cuando el producto sí tiene piezas pero menos de las pedidas
+    return ['grupos' => $salida, 'faltantes' => array_map(fn($i) => ['tipo' => $i['tipo'], 'id' => $i['id'], 'color' => $i['color'], 'cantidad' => $i['cantidad']]
+        + (($i['quedan'] ?? 0) > 0 ? ['quedan' => $i['quedan']] : []), $faltantes)];
 }
 
 function rutas_api(): void
 {
-    get('/api/config', fn() => ['whatsapp' => numeros_respaldo()]);
+    get('/api/config', fn() => ['whatsapp' => numeros_respaldo(), 'cuentas' => cuentas_clientes()]);
 
     // ================= Tiendas =================
     get('/api/stands', function () {
@@ -313,7 +333,7 @@ function rutas_api(): void
         $f = producto_de_fila($f);
         $ofertas = $f['tipo'] === 'producto' ? ofertas_de_hoy([$f['stand_id']]) : [];
         $producto = producto_publico($f, $ofertas);
-        $colores = filas('SELECT id, nombre, hex, disponible, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
+        $colores = filas('SELECT id, nombre, hex, (disponible AND stock > 0) AS disponible, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
                           FROM producto_colores WHERE producto_id = ? ORDER BY orden, id', [$f['id']]);
         return [
             ...$producto,

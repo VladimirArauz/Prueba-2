@@ -114,7 +114,7 @@ async function preparar() {
   const encB = await loginAdmin(`enc-b-${SUFIJO}`, pass);
   const producto = async (tienda, extra = {}) => {
     const r = await pedir("POST", "/api/admin/productos", {
-      body: { stand_id: tienda.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, ...extra }, sesion: dueno });
+      body: { stand_id: tienda.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, stock: 100, ...extra }, sesion: dueno });
     if (r.status !== 201) throw new Error(`producto: ${r.status} ${r.texto}`);
     return r.json.id;
   };
@@ -260,8 +260,24 @@ async function main() {
   });
   await prueba("—", "encargado B no cambia el estado de un pedido de A", async () => {
     const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
-    const r = await pedir("PUT", `/api/admin/pedidos/${p.json.id}`, { body: { estado: "vendido" }, sesion: encB });
+    const r = await pedir("PUT", `/api/admin/pedidos/${p.json.id}`, { body: { estado: "pagado" }, sesion: encB });
     return espera(r.status === 403, r.status);
+  });
+  await prueba("—", "encargado A no agrega un producto de B a su pedido", async () => {
+    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
+    const r = await pedir("PUT", `/api/admin/pedidos/${p.json.id}/items`, {
+      body: { items: [{ tipo: "producto", id: prodA, cantidad: 1 }, { tipo: "producto", id: prodB, cantidad: 1 }] }, sesion: encA });
+    return espera(r.status === 403, r.status);
+  });
+  await prueba("—", "pagar más piezas de las que hay en stock → 409 y el stock no cambia", async () => {
+    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
+    await pedir("PUT", `/api/admin/pedidos/${p.json.id}/items`, { body: { items: [{ tipo: "producto", id: prodA, cantidad: 30 }] }, sesion: encA });
+    const antes = (await pedir("GET", "/api/admin/productos", { sesion: dueno })).json.find(x => x.id === prodA).stock;
+    await pedir("PUT", `/api/admin/productos/${prodA}`, { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, stock: 5 } });
+    const r = await pedir("PUT", `/api/admin/pedidos/${p.json.id}`, { body: { estado: "pagado" }, sesion: encA });
+    const despues = (await pedir("GET", "/api/admin/productos", { sesion: dueno })).json.find(x => x.id === prodA).stock;
+    await pedir("PUT", `/api/admin/productos/${prodA}`, { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, stock: antes } });
+    return espera(r.status === 409 && despues === 5, `${r.status} stock ${despues}`);
   });
   await prueba("—", "la lista de usuarios no devuelve hashes", async () => {
     const r = await pedir("GET", "/api/admin/usuarios", { sesion: dueno });
@@ -496,7 +512,7 @@ async function main() {
   });
   await prueba("—", "precio enorme o negativo → 400", async () => {
     for (const precio of [-5, 1e20, "NaN", "1e400"]) {
-      const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "p", precio } });
+      const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "p", precio, stock: 1 } });
       if (r.status !== 400) return no(`${precio} → ${r.status}`);
     }
     return true;
@@ -530,12 +546,12 @@ async function main() {
 
   // ---------- Imágenes ----------
   await prueba("—", "imagen falsa (texto con cabecera PNG declarada) → 400", async () => {
-    const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "img", precio: 1,
+    const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "img", precio: 1, stock: 1,
       imagen: dataUrl("image/png", Buffer.from("<script>alert(1)</script>")) } });
     return espera(r.status === 400, r.status);
   });
   await prueba("—", "SVG no se acepta", async () => {
-    const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "svg", precio: 1,
+    const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "svg", precio: 1, stock: 1,
       imagen: `data:image/svg+xml;base64,${Buffer.from("<svg onload=alert(1)>").toString("base64")}` } });
     return espera(r.status === 400, r.status);
   });

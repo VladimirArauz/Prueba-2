@@ -13,7 +13,7 @@ const NOMBRES_ICONOS = {
 };
 const NOMBRE_TIPO_OFERTA = { porcentaje: "Descuento", precio_especial: "Precio especial", dos_por_uno: "2x1" };
 const NOMBRE_CLASE_OFERTA = { semanal: "Semanal", temporada: "De temporada", remate: "Remate" };
-const NOMBRE_ESTADO = { pendiente: "Pendiente", vendido: "Vendido", cancelado: "Cancelado" };
+const NOMBRE_ESTADO = { en_proceso: "En proceso", pagado: "Pagado", cancelado: "Cancelado" };
 const TITULOS_PANEL = {
   resumen: "Resumen", pedidos: "Pedidos", tiendas: "Tiendas", productos: "Productos y servicios",
   ofertas: "Ofertas de la tienda", resenas: "Opiniones", promociones: "Promociones generales",
@@ -33,6 +33,7 @@ const st = {
   pedidos: { pedidos: [], pagina: 1, paginas: 1, total: 0, pendientes: 0 },
   pedidosEstado: "",
   pedidosPagina: 1,
+  editorPedido: null,
   bitacora: { registros: [], pagina: 1, paginas: 1, total: 0 },
   bitacoraUsuario: "",
   bitacoraPagina: 1,
@@ -374,7 +375,7 @@ function renderResumen({ animar = false } = {}) {
 
   const t = r.por_hacer;
   const tareas = [
-    [t.pedidos_pendientes, "pedidos", "pedido pendiente de confirmar", "pedidos pendientes de confirmar"],
+    [t.pedidos_pendientes, "pedidos", "pedido en proceso", "pedidos en proceso"],
     [t.opiniones_sin_responder, "resenas", "opinión sin responder", "opiniones sin responder"],
     [t.sin_foto, "productos", "producto con imagen de ejemplo", "productos con imagen de ejemplo"],
     [t.texto_ejemplo, "productos", "producto con texto de ejemplo", "productos con texto de ejemplo"],
@@ -455,15 +456,10 @@ function renderPedidos() {
         <div class="cell-sub">${escapeHTML(fechaPedido(p.creado_en))}</div>
         <div class="cell-sub">${escapeHTML(tiendaPedido(p))}</div>
       </td>
-      <td><ul class="pedido-items">${p.items.map(i => `<li>${i.cantidad} × ${escapeHTML(i.nombre)}</li>`).join("")}</ul></td>
+      <td><ul class="pedido-items">${p.items.map(i => `<li>${i.cantidad} × ${escapeHTML(i.nombre)}${p.estado === "en_proceso" ? avisoStock(i) : ""}</li>`).join("")}</ul></td>
       <td class="cell-price">${money(p.total)}<div class="cell-sub">${p.piezas} ${p.piezas === 1 ? "pieza" : "piezas"}</div></td>
       <td>${estadoPedido(p.estado)}${p.nota ? `<div class="pedido-nota">${escapeHTML(p.nota)}</div>` : ""}</td>
-      <td class="col-actions"><div class="pedido-acciones">
-        ${p.estado !== "vendido" ? `<button type="button" class="btn btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="vendido">${icon("check")}Marcar como vendido</button>` : ""}
-        ${p.estado === "pendiente" ? `<button type="button" class="btn danger btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="cancelado">Cancelar pedido</button>` : ""}
-        ${p.estado !== "pendiente" ? `<button type="button" class="btn secondary btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="pendiente">Volver a pendiente</button>` : ""}
-        <button type="button" class="btn secondary btn-sm btn-icon" data-action="pedido-nota" data-id="${p.id}" aria-label="Agregar nota al pedido ${p.id}" title="Agregar nota">${icon("pencil")}</button>
-      </div></td>
+      <td class="col-actions"><div class="pedido-acciones">${accionesPedido(p)}</div></td>
     </tr>`).join("") : filaVacia(5, st.pedidosEstado
       ? "No hay pedidos con este estado."
       : "Aún no hay pedidos. Cuando un cliente envíe su carrito por WhatsApp, aparecerá aquí.");
@@ -483,13 +479,181 @@ async function cargarPedidos() {
   renderContadores();
 }
 
+// Debajo de cada artículo de un pedido en proceso: si alcanza el stock o falta elegir un color
+function avisoStock(i) {
+  const aviso = texto => `<div class="pedido-nota">${escapeHTML(texto)}</div>`;
+  if (i.tipo === "paquete") {
+    const sinColor = (i.contenido || []).filter(c => c.colores.length && !c.color_id).map(c => c.nombre);
+    return sinColor.length ? aviso(`Falta elegir el color de: ${sinColor.join(", ")}`) : "";
+  }
+  if (i.id === null) return aviso("Este producto ya no existe");
+  if (i.falta_color) return aviso("Falta elegir el color");
+  if (i.stock === null) return aviso("Sin stock capturado");
+  if (i.stock < i.cantidad) return aviso(i.stock ? `Solo hay ${i.stock} en stock` : "Agotado");
+  return "";
+}
+
+// Un solo botón principal por pedido: "Marcar como pagado" mientras está en proceso
+function accionesPedido(p) {
+  const boton = (estado, clase, texto, icono = "") =>
+    `<button type="button" class="btn ${clase} btn-sm" data-action="pedido-estado" data-id="${p.id}" data-estado="${estado}">${icono ? icon(icono) : ""}${texto}</button>`;
+  const nota = `<button type="button" class="btn secondary btn-sm btn-icon" data-action="pedido-nota" data-id="${p.id}" aria-label="Agregar nota al pedido ${p.id}" title="Agregar nota">${icon("pencil")}</button>`;
+  if (p.estado === "en_proceso") {
+    return `${boton("pagado", "", "Marcar como pagado", "check")}
+      <button type="button" class="btn secondary btn-sm" data-action="pedido-editar" data-id="${p.id}">${icon("clipboard-list")}Editar pedido</button>
+      ${boton("cancelado", "danger", "Cancelar pedido")}${nota}`;
+  }
+  if (p.estado === "pagado") return `${boton("en_proceso", "secondary", "Regresar a en proceso", "arrow-left")}${boton("cancelado", "danger", "Cancelar pedido")}${nota}`;
+  return `${boton("en_proceso", "secondary", "Reabrir pedido", "arrow-left")}${nota}`;
+}
+
 async function guardarPedido(id, cambios, aviso) {
   try {
     await api(`/admin/pedidos/${id}`, { method: "PUT", body: cambios });
-    await recargar("pedidos");
+    // El stock cambia al pagar o al regresar un pedido pagado
+    await recargar("pedidos", "productos");
+    if (st.editorPedido && st.editorPedido.id === id) cerrarEditorPedido();
     showToast(aviso);
   } catch (error) {
     manejarError(error);
+  }
+}
+
+// ================= Editar un pedido en proceso =================
+// Copia de las líneas mientras se edita; solo se guarda con "Guardar cambios"
+async function abrirEditorPedido(id) {
+  const p = st.pedidos.pedidos.find(x => x.id === id);
+  if (!p || p.estado !== "en_proceso") return;
+  let articulos = [];
+  if (p.stand_id) {
+    try {
+      articulos = await api(`/admin/pedidos/articulos?tienda=${p.stand_id}`);
+    } catch (error) {
+      return manejarError(error);
+    }
+  }
+  st.editorPedido = {
+    id: p.id, deTienda: Boolean(p.stand_id), articulos,
+    lineas: p.items.map(i => ({
+      tipo: i.tipo, id: i.id, color: i.color ? i.color.id : null, cantidad: i.cantidad, nombre: i.nombre, stock: i.stock,
+      contenido: i.contenido || [],
+      colores: Object.fromEntries((i.contenido || []).filter(c => c.color_id).map(c => [c.producto_id, c.color_id]))
+    }))
+  };
+  $("pedido-editor-title").textContent = `Editar pedido ${p.id}`;
+  $("pedido-editor-desc").textContent = p.stand_id
+    ? `Cambia las piezas, quita artículos o agrega otros de ${p.tienda || "la tienda"}. Los precios y el total los calcula el servidor al guardar.`
+    : "Cambia las piezas del paquete y elige el color de los productos que lo necesitan. Solo un dueño edita paquetes.";
+  $("pedido-agregar").hidden = !p.stand_id;
+  $("pedido-articulo").innerHTML = `<option value="">Elige un artículo</option>` + articulos.map(a =>
+    `<option value="${a.id}">${escapeHTML(a.nombre)} · ${money(a.precio)} · ${escapeHTML(textoPiezas(a))}${a.visible ? "" : " · oculto"}</option>`).join("");
+  actualizarColorArticulo();
+  renderEditorPedido();
+  $("pedido-editor").hidden = false;
+  $("pedido-editor").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("pedido-editor-title").focus({ preventScroll: true });
+}
+
+function textoPiezas(a) {
+  if (a.colores.length) return a.colores.map(c => `${c.nombre}: ${c.stock ?? "sin stock"}`).join(", ");
+  return a.stock === null ? "sin stock capturado" : `${a.stock} en stock`;
+}
+
+function cerrarEditorPedido() {
+  st.editorPedido = null;
+  $("pedido-editor").hidden = true;
+}
+
+// Lo que se escribió en las piezas y los colores pasa a la copia antes de volver a pintar
+function leerEditorPedido() {
+  const ed = st.editorPedido;
+  document.querySelectorAll("#pedido-lineas [data-linea-cantidad]").forEach(input => {
+    ed.lineas[Number(input.dataset.lineaCantidad)].cantidad = Number(input.value);
+  });
+  document.querySelectorAll("#pedido-lineas [data-linea-color]").forEach(sel => {
+    const linea = ed.lineas[Number(sel.dataset.lineaColor)];
+    if (sel.value) linea.colores[sel.dataset.producto] = Number(sel.value);
+    else delete linea.colores[sel.dataset.producto];
+  });
+}
+
+function renderEditorPedido() {
+  const ed = st.editorPedido;
+  $("pedido-lineas").innerHTML = ed.lineas.length ? ed.lineas.map((l, n) => `
+    <li class="sub-row pedido-linea">
+      <div>
+        <div class="cell-title">${escapeHTML(l.nombre)}</div>
+        ${l.tipo === "producto" && l.stock !== null && l.stock !== undefined ? `<div class="cell-sub">${l.stock} en stock</div>` : ""}
+        ${l.contenido.filter(c => c.colores.length).map(c => `
+          <div class="form-group pedido-color">
+            <label for="pedido-color-${n}-${c.producto_id}">Color de ${escapeHTML(c.nombre)}</label>
+            <select id="pedido-color-${n}-${c.producto_id}" data-linea-color="${n}" data-producto="${c.producto_id}">
+              <option value="">Elige un color</option>
+              ${c.colores.map(o => `<option value="${o.id}" ${l.colores[c.producto_id] === o.id ? "selected" : ""}>${escapeHTML(o.nombre)} (${o.stock ?? "sin stock"})</option>`).join("")}
+            </select>
+          </div>`).join("")}
+      </div>
+      <div class="form-group">
+        <label class="visually-hidden" for="pedido-cantidad-${n}">Piezas de ${escapeHTML(l.nombre)}</label>
+        <input id="pedido-cantidad-${n}" type="number" min="1" max="30" step="1" inputmode="numeric" value="${Number(l.cantidad)}" data-linea-cantidad="${n}">
+      </div>
+      <span class="sub-actions">
+        <button type="button" class="btn danger btn-sm btn-icon" data-action="pedido-quitar" data-linea="${n}" aria-label="Quitar ${escapeHTML(l.nombre)} del pedido" title="Quitar">${icon("trash-2")}</button>
+      </span>
+    </li>`).join("") : `<li class="sub-row color-row-vacia"><span class="form-hint">El pedido no tiene artículos. Agrega uno o cancela el pedido.</span></li>`;
+}
+
+function actualizarColorArticulo() {
+  const ed = st.editorPedido;
+  const a = ed && ed.articulos.find(x => x.id === Number($("pedido-articulo").value));
+  const colores = a ? a.colores : [];
+  $("pedido-articulo-color-group").hidden = !colores.length;
+  $("pedido-articulo-color").innerHTML = colores.map(c =>
+    `<option value="${c.id}">${escapeHTML(c.nombre)} (${c.stock ?? "sin stock"})</option>`).join("");
+}
+
+function agregarArticuloPedido() {
+  const ed = st.editorPedido;
+  const a = ed.articulos.find(x => x.id === Number($("pedido-articulo").value));
+  if (!a) return alert("Elige el artículo que quieres agregar.");
+  const cantidad = Number($("pedido-articulo-cantidad").value);
+  if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 30) return alert("Escribe de 1 a 30 piezas.");
+  leerEditorPedido();
+  const color = a.colores.length ? a.colores.find(c => c.id === Number($("pedido-articulo-color").value)) : null;
+  if (a.colores.length && !color) return alert(`Elige el color de ${a.nombre}.`);
+  const previa = ed.lineas.find(l => l.tipo === "producto" && l.id === a.id && l.color === (color ? color.id : null));
+  if (previa) previa.cantidad += cantidad;
+  else ed.lineas.push({ tipo: "producto", id: a.id, color: color ? color.id : null, cantidad, contenido: [], colores: {},
+    nombre: color ? `${a.nombre} (${color.nombre})` : a.nombre, stock: color ? color.stock : a.stock });
+  $("pedido-articulo").value = "";
+  $("pedido-articulo-cantidad").value = 1;
+  actualizarColorArticulo();
+  renderEditorPedido();
+}
+
+function quitarLineaPedido(n) {
+  leerEditorPedido();
+  st.editorPedido.lineas.splice(n, 1);
+  renderEditorPedido();
+}
+
+async function guardarEditorPedido(boton) {
+  const ed = st.editorPedido;
+  leerEditorPedido();
+  const items = ed.lineas.map(l => l.tipo === "paquete"
+    ? { tipo: "paquete", id: l.id, cantidad: l.cantidad, colores: l.colores }
+    : { tipo: "producto", id: l.id, cantidad: l.cantidad, ...(l.color ? { color: l.color } : {}) });
+  boton.disabled = true;
+  try {
+    await api(`/admin/pedidos/${ed.id}/items`, { method: "PUT", body: { items } });
+    const id = ed.id;
+    cerrarEditorPedido();
+    await recargar("pedidos");
+    showToast(`Pedido actualizado: ${id}`);
+  } catch (error) {
+    manejarError(error);
+  } finally {
+    boton.disabled = false;
   }
 }
 
@@ -657,6 +821,24 @@ function actualizarFormProducto() {
   const cotizar = servicio && campo(form, "precio_modo").value === "cotizar";
   $("prod-precio-group").hidden = cotizar;
   campo(form, "precio").required = !cotizar;
+  // Stock obligatorio en productos; si el producto tiene colores, va en cada color
+  const editando = st.editando.producto && st.productos.find(x => x.id === st.editando.producto.id);
+  const conColores = Boolean(editando && editando.colores.length);
+  $("prod-stock-group").hidden = servicio || conColores;
+  campo(form, "stock").required = !servicio && !conColores;
+}
+
+// Piezas de un producto (o la suma de sus colores) para el catálogo
+function textoStock(p) {
+  if (p.tipo !== "producto") return "";
+  if (p.falta_stock) return `<span class="status-badge">Falta stock</span>`;
+  const piezas = p.colores.length ? p.colores.reduce((s, c) => s + (c.stock || 0), 0) : p.stock;
+  return piezas ? `<div class="cell-sub">${piezas} ${piezas === 1 ? "pieza" : "piezas"}</div>` : `<span class="status-badge is-off">Agotado</span>`;
+}
+
+function stockDe(p) {
+  if (p.tipo !== "producto") return null;
+  return p.colores.length ? p.colores.reduce((s, c) => s + (c.stock || 0), 0) : (p.stock || 0);
 }
 
 function renderProductos() {
@@ -667,16 +849,19 @@ function renderProductos() {
   actualizarFormProducto();
 
   const filtro = Number($("prod-filtro").value) || null;
-  const lista = st.productos.filter(p => !filtro || p.stand_id === filtro);
+  const filtroStock = $("prod-stock-filtro").value;
+  const lista = st.productos.filter(p => (!filtro || p.stand_id === filtro)
+    && (filtroStock !== "falta" || p.falta_stock)
+    && (filtroStock !== "agotado" || (!p.falta_stock && stockDe(p) === 0)));
   $("productos-tbody").innerHTML = lista.length ? lista.map(p => `
     <tr>
       <td><img class="admin-thumb" src="${escapeHTML(imagenDe(p))}" alt=""></td>
       <td><div class="cell-title">${escapeHTML(p.nombre)}</div><div class="cell-sub">${p.tipo === "servicio" ? "Servicio" : "Producto"}${p.subcategoria ? ` · ${escapeHTML(p.subcategoria)}` : ""}${p.colores.length ? ` · ${p.colores.length} ${p.colores.length === 1 ? "color" : "colores"}` : ""}</div></td>
       <td>${escapeHTML(p.stand)}</td>
       <td class="cell-price">${escapeHTML(textoPrecio(p))}</td>
-      <td>${estadoBadge(p.visible)}${p.disponibilidad !== "Disponible" ? ` <span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""}</td>
+      <td>${estadoBadge(p.visible)}${p.disponibilidad !== "Disponible" ? ` <span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""}${textoStock(p)}</td>
       <td class="col-actions">${botonesFila("producto", p.id, p.nombre)}</td>
-    </tr>`).join("") : filaVacia(6, "Todavía no hay productos aquí. Agrega el primero con el formulario de arriba.");
+    </tr>`).join("") : filaVacia(6, filtroStock ? "No hay productos con ese stock en esta tienda." : "Todavía no hay productos aquí. Agrega el primero con el formulario de arriba.");
   renderColores();
 }
 
@@ -698,7 +883,8 @@ function renderColores() {
     <li class="sub-row color-row">
       <img class="admin-thumb" src="${escapeHTML(c.imagen_url || imagenDe(p))}" alt="">
       <span class="color-nombre"><span class="color-muestra" data-hex="${escapeHTML(c.hex)}"></span><span class="cell-title">${escapeHTML(c.nombre)}</span></span>
-      ${estadoBadge(c.disponible, "Disponible", "Agotado")}
+      ${estadoBadge(c.disponible && c.stock > 0, "Disponible", "Agotado")}
+      <span class="cell-sub">${c.stock === null ? "Falta stock" : `${c.stock} ${c.stock === 1 ? "pieza" : "piezas"}`}</span>
       <span class="sub-actions">
         <button type="button" class="btn secondary btn-sm btn-icon" data-action="color-editar" data-id="${c.id}" aria-label="Editar el color ${escapeHTML(c.nombre)}" title="Editar">${icon("pencil")}</button>
         <button type="button" class="btn danger btn-sm btn-icon" data-action="color-borrar" data-id="${c.id}" aria-label="Eliminar el color ${escapeHTML(c.nombre)}" title="Eliminar">${icon("trash-2")}</button>
@@ -722,6 +908,7 @@ function editarColor(id) {
   campo(form, "nombre").value = c.nombre;
   campo(form, "hex").value = c.hex;
   campo(form, "orden").value = c.orden;
+  campo(form, "stock").value = c.stock ?? "";
   campo(form, "disponible").checked = c.disponible;
   campo(form, "imagen").value = "";
   modoColor(true);
@@ -746,6 +933,7 @@ async function guardarColor(event) {
     const body = {
       nombre: campo(form, "nombre").value,
       hex: campo(form, "hex").value,
+      stock: campo(form, "stock").value,
       orden: campo(form, "orden").value,
       disponible: campo(form, "disponible").checked,
       imagen: await leerImagen(campo(form, "imagen"))
@@ -757,7 +945,7 @@ async function guardarColor(event) {
       : await api(`/admin/productos/${p.id}/colores`, { method: "POST", body });
     await recargar("productos");
     cancelarColor();
-    showToast(`${editando ? "Color actualizado" : "Color agregado"}: ${guardado.nombre}`);
+    showToast(`${editando ? "Color actualizado" : "Color agregado"}: ${guardado.nombre} · ${Number(body.stock)} en stock`);
   });
 }
 
@@ -786,6 +974,7 @@ function editarProducto(id) {
   campo(form, "precio_modo").value = p.precio_modo;
   campo(form, "precio").value = p.precio ?? "";
   campo(form, "disponibilidad").value = p.disponibilidad;
+  campo(form, "stock").value = p.stock ?? "";
   campo(form, "orden").value = p.orden;
   campo(form, "descripcion").value = p.descripcion;
   campo(form, "visible").checked = p.visible;
@@ -819,6 +1008,7 @@ async function guardarProducto(event) {
       precio_modo: campo(form, "precio_modo").value,
       precio: campo(form, "precio").value,
       disponibilidad: campo(form, "disponibilidad").value,
+      stock: campo(form, "stock").value,
       orden: campo(form, "orden").value,
       descripcion: campo(form, "descripcion").value,
       visible: campo(form, "visible").checked,
@@ -831,7 +1021,10 @@ async function guardarProducto(event) {
       : await api("/admin/productos", { method: "POST", body });
     cancelarProducto();
     await recargar("productos", "tiendas");
-    showToast(`${editando ? "Actualizado" : "Guardado"}: ${guardado.nombre}`);
+    // El stock guardado se muestra en el aviso para que se vea si es el que se escribió
+    const guardadoP = st.productos.find(x => x.id === guardado.id);
+    const piezas = guardadoP && guardadoP.tipo === "producto" && !guardadoP.colores.length && guardadoP.stock !== null ? ` · ${guardadoP.stock} en stock` : "";
+    showToast(`${editando ? "Actualizado" : "Guardado"}: ${guardado.nombre}${piezas}`);
     // Un producto nuevo se queda abierto para agregarle sus colores
     if (!editando && body.tipo === "producto") {
       editarProducto(guardado.id);
@@ -1376,11 +1569,11 @@ function renderBitacora() {
 }
 
 async function cancelarPedidosViejos() {
-  if (!confirm("¿Cancelar todos los pedidos pendientes de más de 7 días? Puedes volver a ponerlos como pendientes uno por uno.")) return;
+  if (!confirm("¿Cancelar todos los pedidos en proceso de más de 7 días? Puedes reabrirlos uno por uno.")) return;
   try {
     const { cancelados } = await api("/admin/pedidos/cancelar-viejos", { method: "POST" });
     await recargar("pedidos");
-    showToast(cancelados ? `Pedidos cancelados: ${cancelados}` : "No había pedidos pendientes de más de 7 días.");
+    showToast(cancelados ? `Pedidos cancelados: ${cancelados}` : "No había pedidos en proceso de más de 7 días.");
   } catch (error) {
     manejarError(error);
   }
@@ -1477,10 +1670,22 @@ Object.assign(ACCIONES, {
   "pedido-estado": el => {
     const id = Number(el.dataset.id);
     const estado = el.dataset.estado;
-    if (estado === "cancelado" && !confirm(`¿Cancelar el pedido ${id}? Puedes volver a ponerlo como pendiente después.`)) return;
-    const avisos = { vendido: "Pedido marcado como vendido", cancelado: "Pedido cancelado", pendiente: "Pedido marcado como pendiente" };
+    const pedido = st.pedidos.pedidos.find(p => p.id === id);
+    const pagado = pedido && pedido.estado === "pagado";
+    const preguntas = {
+      pagado: `¿Marcar el pedido ${id} como pagado? Sus piezas se descuentan del stock.`,
+      cancelado: `¿Cancelar el pedido ${id}?${pagado ? " Sus piezas regresan al stock." : ""} Puedes reabrirlo después.`,
+      en_proceso: pagado ? `¿Regresar el pedido ${id} a en proceso? Sus piezas regresan al stock y podrás editarlo.` : null
+    };
+    if (preguntas[estado] && !confirm(preguntas[estado])) return;
+    const avisos = { pagado: "Pedido marcado como pagado", cancelado: "Pedido cancelado", en_proceso: pagado ? "Pedido regresado a en proceso" : "Pedido reabierto" };
     guardarPedido(id, { estado }, `${avisos[estado]}: ${id}`);
   },
+  "pedido-editar": el => abrirEditorPedido(Number(el.dataset.id)),
+  "pedido-quitar": el => quitarLineaPedido(Number(el.dataset.linea)),
+  "pedido-agregar": () => agregarArticuloPedido(),
+  "pedido-guardar": el => guardarEditorPedido(el),
+  "pedido-editor-cerrar": () => cerrarEditorPedido(),
   "pedido-nota": el => notaPedido(Number(el.dataset.id)),
   "pedidos-cancelar-viejos": () => cancelarPedidosViejos(),
   "bitacora-pagina": el => {
@@ -1521,6 +1726,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("sub-tienda").addEventListener("change", renderSubcategorias);
   $("prod-filtro").addEventListener("change", renderProductos);
+  $("prod-stock-filtro").addEventListener("change", renderProductos);
+  $("pedido-articulo").addEventListener("change", actualizarColorArticulo);
   $("oferta-filtro").addEventListener("change", renderOfertas);
   $("oferta-clase-filtro").addEventListener("change", renderOfertas);
   $("resena-filtro").addEventListener("change", renderResenas);

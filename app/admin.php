@@ -97,12 +97,27 @@ function datos_producto(array $b): array
         'precioModo' => $precioModo,
         'precio' => $precioModo === 'cotizar' ? null : v_precio($b['precio'] ?? null),
         'disponibilidad' => in_array($b['disponibilidad'] ?? null, DISPONIBILIDAD, true) ? $b['disponibilidad'] : 'Disponible',
+        // Obligatorio en productos sin colores (la ruta lo revisa); los servicios no llevan stock
+        'stock' => $tipo === 'producto' ? v_entero($b['stock'] ?? null, 'El stock', 0, MAX_STOCK, null) : null,
         'descripcion' => v_texto($b['descripcion'] ?? null, 'la descripción', 1000),
         'visible' => v_booleano($b['visible'] ?? null, true),
         'orden' => v_entero($b['orden'] ?? null, 'El orden', 0, 9999, 0),
         'imagen' => imagen_de($b),
         'quitarImagen' => v_booleano($b['quitar_imagen'] ?? null, false),
     ];
+}
+
+const MAX_STOCK = 99999;
+const FALTA_STOCK = 'Escribe cuántas piezas hay en stock (0 si no hay).';
+
+// Un cambio de stock hecho a mano en Necutools queda en movimientos_stock como "ajuste"
+function ajuste_stock(array $admin, int $productoId, ?int $colorId, ?int $antes, ?int $despues): void
+{
+    if ($despues === null) return;
+    $cambio = $despues - ($antes ?? 0);
+    if ($cambio === 0) return;
+    q("INSERT INTO movimientos_stock (producto_id, color_id, cambio, motivo, admin_id) VALUES (?, ?, ?, 'ajuste', ?)",
+      [$productoId, $colorId, $cambio, $admin['id']]);
 }
 
 function exigir_producto_admin($id): array
@@ -126,6 +141,7 @@ function datos_color(array $b, bool $nuevo): array
         'hex' => $hex,
         'imagen' => $imagen,
         'disponible' => v_booleano($b['disponible'] ?? null, true),
+        'stock' => v_entero($b['stock'] ?? null, 'El stock', 0, MAX_STOCK, null) ?? throw dato_invalido('Escribe cuántas piezas hay de este color (0 si no hay).'),
         'orden' => v_entero($b['orden'] ?? null, 'El orden', 0, 9999, 0),
     ];
 }
@@ -133,7 +149,7 @@ function datos_color(array $b, bool $nuevo): array
 function exigir_color($id): array
 {
     $colorId = id_valido($id);
-    $c = $colorId ? fila('SELECT c.id, c.nombre, c.producto_id, p.stand_id, p.nombre AS producto
+    $c = $colorId ? fila('SELECT c.id, c.nombre, c.stock, c.producto_id, p.stand_id, p.nombre AS producto
                          FROM producto_colores c JOIN productos p ON p.id = c.producto_id WHERE c.id = ?', [$colorId]) : null;
     if (!$c) throw new ErrorHttp(404, 'Ese color no existe.');
     exigir_stand($c['stand_id']);
@@ -456,14 +472,14 @@ function rutas_admin(): void
         requiere_admin();
         [$filtro, $params] = filtro_tiendas('p.stand_id', stand_filtro(consulta('stand')));
         $productos = filas("SELECT p.id, p.stand_id, s.nombre AS stand, p.subcategoria_id, sc.nombre AS subcategoria, p.tipo, p.nombre,
-                                   p.precio, p.precio_modo, p.disponibilidad, p.descripcion, p.visible, p.orden,
+                                   p.precio, p.precio_modo, p.disponibilidad, p.stock, p.descripcion, p.visible, p.orden,
                                    (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.creado_en, p.actualizado_en
                             FROM productos p JOIN stands s ON s.id = p.stand_id
                             LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
                             WHERE $filtro
                             ORDER BY s.orden, p.tipo, p.orden, p.creado_en DESC, p.id DESC", $params);
         $ids = array_column($productos, 'id');
-        $colores = $ids ? filas('SELECT id, producto_id, nombre, hex, disponible, orden, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
+        $colores = $ids ? filas('SELECT id, producto_id, nombre, hex, disponible, stock, orden, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
                                  FROM producto_colores WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
         return array_map(function ($p) use ($colores) {
             $imagenUrl = a_bool($p['tiene_imagen']) ? url_imagen('productos', $p['id'], $p['actualizado_en']) : $p['imagen_ruta'];
@@ -471,12 +487,15 @@ function rutas_admin(): void
             return [
                 'id' => $p['id'], 'stand_id' => $p['stand_id'], 'stand' => $p['stand'], 'subcategoria_id' => $p['subcategoria_id'],
                 'subcategoria' => $p['subcategoria'], 'tipo' => $p['tipo'], 'nombre' => $p['nombre'], 'precio' => a_float($p['precio']),
-                'precio_modo' => $p['precio_modo'], 'disponibilidad' => $p['disponibilidad'], 'descripcion' => $p['descripcion'],
+                'precio_modo' => $p['precio_modo'], 'disponibilidad' => $p['disponibilidad'], 'stock' => $p['stock'],
+                // Producto sin stock capturado (o, con colores, algún color sin stock): no se puede vender
+                'falta_stock' => $p['tipo'] === 'producto' && ($suyos ? (bool) array_filter($suyos, fn($c) => $c['stock'] === null) : $p['stock'] === null),
+                'descripcion' => $p['descripcion'],
                 'visible' => a_bool($p['visible']), 'orden' => $p['orden'], 'creado_en' => fecha_iso($p['creado_en']),
                 'actualizado_en' => fecha_iso($p['actualizado_en']),
                 'imagen_url' => $imagenUrl,
                 'colores' => array_map(fn($c) => [
-                    'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']), 'orden' => $c['orden'],
+                    'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']), 'stock' => $c['stock'], 'orden' => $c['orden'],
                     'imagen_url' => a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $imagenUrl,
                 ], $suyos),
             ];
@@ -486,12 +505,14 @@ function rutas_admin(): void
     post('/api/admin/productos', function () {
         $admin = requiere_admin();
         $d = datos_producto(cuerpo());
-        q("INSERT INTO productos (stand_id, subcategoria_id, tipo, nombre, precio_modo, precio, disponibilidad, descripcion,
+        if ($d['tipo'] === 'producto' && $d['stock'] === null) throw dato_invalido(FALTA_STOCK);
+        q("INSERT INTO productos (stand_id, subcategoria_id, tipo, nombre, precio_modo, precio, disponibilidad, stock, descripcion,
                                   visible, orden, imagen, imagen_tipo, categoria)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT nombre FROM subcategorias WHERE id = ?), 'General'))",
-          [$d['standId'], $d['subcategoriaId'], $d['tipo'], $d['nombre'], $d['precioModo'], $d['precio'], $d['disponibilidad'], $d['descripcion'],
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT nombre FROM subcategorias WHERE id = ?), 'General'))",
+          [$d['standId'], $d['subcategoriaId'], $d['tipo'], $d['nombre'], $d['precioModo'], $d['precio'], $d['disponibilidad'], $d['stock'], $d['descripcion'],
            $d['visible'], $d['orden'], $d['imagen']['bytes'] ?? null, $d['imagen']['tipo'] ?? null, $d['subcategoriaId']]);
         $id = ultimo_id();
+        ajuste_stock($admin, $id, null, null, $d['stock']);
         anotar($admin, 'crear', 'productos', $id, $d['nombre']);
         return json_respuesta(['id' => $id, 'nombre' => $d['nombre']], 201);
     });
@@ -501,8 +522,12 @@ function rutas_admin(): void
         $producto = exigir_producto_admin($idRuta);
         $d = datos_producto(cuerpo());
         $img = $d['imagen'];
+        // Con colores, el stock va en cada color y el del producto no se toca
+        $antes = fila('SELECT p.stock, EXISTS (SELECT 1 FROM producto_colores c WHERE c.producto_id = p.id) AS con_colores FROM productos p WHERE p.id = ?', [$producto['id']]);
+        $stockPropio = $d['tipo'] === 'producto' && !a_bool($antes['con_colores']);
+        if ($stockPropio && $d['stock'] === null) throw dato_invalido(FALTA_STOCK);
         q("UPDATE productos SET stand_id = ?, subcategoria_id = ?, tipo = ?, nombre = ?, precio_modo = ?, precio = ?,
-             disponibilidad = ?, descripcion = ?, visible = ?, orden = ?,
+             disponibilidad = ?, stock = IF(?, ?, IF(? = 'servicio', NULL, stock)), descripcion = ?, visible = ?, orden = ?,
              imagen = CASE WHEN ? THEN ? WHEN ? THEN NULL ELSE imagen END,
              imagen_tipo = CASE WHEN ? THEN ? WHEN ? THEN NULL ELSE imagen_tipo END,
              imagen_ruta = CASE WHEN ? THEN NULL ELSE imagen_ruta END,
@@ -510,12 +535,13 @@ function rutas_admin(): void
              actualizado_en = UTC_TIMESTAMP(6)
            WHERE id = ?",
           [$d['standId'], $d['subcategoriaId'], $d['tipo'], $d['nombre'], $d['precioModo'], $d['precio'],
-           $d['disponibilidad'], $d['descripcion'], $d['visible'], $d['orden'],
+           $d['disponibilidad'], $stockPropio, $d['stock'], $d['tipo'], $d['descripcion'], $d['visible'], $d['orden'],
            (bool) $img, $img['bytes'] ?? null, $d['quitarImagen'],
            (bool) $img, $img['tipo'] ?? null, $d['quitarImagen'],
            $d['quitarImagen'], $d['subcategoriaId'], $producto['id']]);
         // Los servicios no tienen colores
         if ($d['tipo'] === 'servicio') q('DELETE FROM producto_colores WHERE producto_id = ?', [$producto['id']]);
+        if ($stockPropio) ajuste_stock($admin, $producto['id'], null, $antes['stock'], $d['stock']);
         // Si el producto cambió de tienda, sus ofertas de la tienda anterior ya no aplican
         if ($d['standId'] !== $producto['stand_id']) q('DELETE FROM ofertas WHERE producto_id = ? AND stand_id <> ?', [$producto['id'], $d['standId']]);
         anotar($admin, 'editar', 'productos', $producto['id'], $d['nombre']);
@@ -542,12 +568,13 @@ function rutas_admin(): void
         if ((int) $info['colores'] >= MAX_COLORES) throw dato_invalido('Un producto puede tener hasta ' . MAX_COLORES . ' colores.');
         $d = datos_color(cuerpo(), true);
         try {
-            q('INSERT INTO producto_colores (producto_id, nombre, hex, imagen, imagen_tipo, disponible, orden) VALUES (?, ?, ?, ?, ?, ?, ?)',
-              [$producto['id'], $d['nombre'], $d['hex'], $d['imagen']['bytes'], $d['imagen']['tipo'], $d['disponible'], $d['orden']]);
+            q('INSERT INTO producto_colores (producto_id, nombre, hex, imagen, imagen_tipo, disponible, stock, orden) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+              [$producto['id'], $d['nombre'], $d['hex'], $d['imagen']['bytes'], $d['imagen']['tipo'], $d['disponible'], $d['stock'], $d['orden']]);
         } catch (PDOException $e) {
             conflicto($e, $colorRepetido);
         }
         $id = ultimo_id();
+        ajuste_stock($admin, $producto['id'], $id, null, $d['stock']);
         tocar_producto($producto['id']);
         anotar($admin, 'crear', 'producto_colores', $id, "{$producto['nombre']}: {$d['nombre']}");
         return json_respuesta(['id' => $id, 'nombre' => $d['nombre']], 201);
@@ -558,13 +585,14 @@ function rutas_admin(): void
         $color = exigir_color($idRuta);
         $d = datos_color(cuerpo(), false);
         try {
-            q('UPDATE producto_colores SET nombre = ?, hex = ?, disponible = ?, orden = ?,
+            q('UPDATE producto_colores SET nombre = ?, hex = ?, disponible = ?, stock = ?, orden = ?,
                  imagen = COALESCE(?, imagen), imagen_tipo = COALESCE(?, imagen_tipo), actualizado_en = UTC_TIMESTAMP(6)
                WHERE id = ?',
-              [$d['nombre'], $d['hex'], $d['disponible'], $d['orden'], $d['imagen']['bytes'] ?? null, $d['imagen']['tipo'] ?? null, $color['id']]);
+              [$d['nombre'], $d['hex'], $d['disponible'], $d['stock'], $d['orden'], $d['imagen']['bytes'] ?? null, $d['imagen']['tipo'] ?? null, $color['id']]);
         } catch (PDOException $e) {
             conflicto($e, $colorRepetido);
         }
+        ajuste_stock($admin, $color['producto_id'], $color['id'], $color['stock'], $d['stock']);
         tocar_producto($color['producto_id']);
         anotar($admin, 'editar', 'producto_colores', $color['id'], "{$color['producto']}: {$d['nombre']}");
         return ['id' => $color['id'], 'nombre' => $d['nombre']];

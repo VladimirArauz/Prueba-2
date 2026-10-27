@@ -218,7 +218,8 @@ function etiquetasProducto(p) {
   return [
     oferta ? `<span class="tag-oferta${oferta.clase === "remate" ? " is-remate" : ""}">${icon("tag")}${escapeHTML(oferta.titulo)}</span>` : "",
     p.disponibilidad && p.disponibilidad !== "Disponible" ? `<span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : "",
-    p.colores_total > 1 ? `<span class="status-badge">${p.colores_total} colores</span>` : ""
+    p.colores_total > 1 ? `<span class="status-badge">${p.colores_total} colores</span>` : "",
+    p.agotado ? `<span class="status-badge is-off">Agotado</span>` : ""
   ].join("");
 }
 
@@ -235,6 +236,9 @@ function accionProducto(p, opciones = {}) {
   }
   if (p.tipo === "servicio") {
     return `<button type="button" class="btn wa" data-action="pedir-servicio" data-id="${Number(p.id)}">${icon("message-circle")}Pedir información por WhatsApp</button>`;
+  }
+  if (p.agotado) {
+    return `<button type="button" class="btn secondary" disabled>${icon("shopping-cart")}Agotado</button>`;
   }
   // Con colores, el color se elige en la página del producto
   if (p.colores_total > 0 && !opciones.enDetalle) {
@@ -326,9 +330,11 @@ function tarjetaPromocion(promo) {
         ${promo.precio_normal ? `<s class="price-old">${money(promo.precio_normal)}</s>` : ""}
       </div>
       <div class="letrero-dates">${escapeHTML(vigencia)}</div>
-      <button type="button" class="btn" data-action="agregar" data-tipo="paquete" data-id="${Number(promo.id)}" data-nombre="${escapeHTML(promo.titulo)}">
+      ${promo.agotado
+        ? `<button type="button" class="btn secondary" disabled>${icon("shopping-cart")}Paquete agotado</button>`
+        : `<button type="button" class="btn" data-action="agregar" data-tipo="paquete" data-id="${Number(promo.id)}" data-nombre="${escapeHTML(promo.titulo)}">
         ${icon("shopping-cart")}Agregar paquete al carrito
-      </button>
+      </button>`}
     </article>`;
 }
 
@@ -341,6 +347,13 @@ const ACCIONES = {
     el.closest(".list-more").remove();
   }
 };
+
+// En Chrome, la rueda del mouse sobre un campo numérico con el foco cambia su valor (80 → 77 al bajar la
+// página). Se quita el foco para que la rueda solo mueva la página.
+document.addEventListener("wheel", event => {
+  const el = event.target;
+  if (el instanceof HTMLInputElement && el.type === "number" && document.activeElement === el) el.blur();
+}, { passive: true });
 
 document.addEventListener("click", event => {
   const el = event.target.closest("[data-action]");
@@ -556,9 +569,21 @@ Object.assign(ACCIONES, {
   "menu-cerrar": () => abrirCajon(false)
 });
 
+// Cuentas de cliente en pausa (app/config.php): sin enlaces a "Mi cuenta"
+async function revisarCuentas() {
+  try {
+    const config = await api("/config");
+    if (config.cuentas !== false) return;
+    document.querySelectorAll('a[href^="/cuenta.html"]').forEach(a => (a.closest("li") || a).remove());
+  } catch (e) {
+    // Sin conexión: los enlaces se quedan; cuenta.html avisa de la pausa
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   migrarCarritoViejo();
   actualizarContador();
   cargarTiendasPie();
   initBarraLateral();
+  revisarCuentas();
 });

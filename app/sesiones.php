@@ -1,7 +1,7 @@
 <?php
 /**
  * Sesiones en la tabla `sesiones`, con el mismo comportamiento que express-session tenía en Node:
- * - Cookie __Host-necutla.sid en producción (necutla.sid en local), HttpOnly, SameSite=Strict, Secure.
+ * - Cookie __Host-necutla.sid en producción con HTTPS (necutla.sid en local o sin HTTPS), HttpOnly, SameSite=Strict, Secure.
  * - Se renueva con cada uso: 8 horas sin usarla la cierran.
  * - No se guarda una sesión vacía (sin cuenta ni nada pendiente).
  * - regenerar() cambia el id al entrar y al salir (evita la fijación de sesión).
@@ -20,7 +20,7 @@ final class Sesion
 
     public static function nombreCookie(): string
     {
-        return config('produccion') ? '__Host-necutla.sid' : 'necutla.sid';
+        return con_https() ? '__Host-necutla.sid' : 'necutla.sid';
     }
 
     public static function cargar(): void
@@ -115,7 +115,7 @@ final class Sesion
     private static function cookie(string $valor, int $expira): string
     {
         $partes = [self::nombreCookie() . '=' . $valor, 'Path=/', 'Expires=' . gmdate('D, d M Y H:i:s \G\M\T', $expira), 'HttpOnly'];
-        if (config('produccion')) $partes[] = 'Secure';
+        if (con_https()) $partes[] = 'Secure';
         $partes[] = 'SameSite=Strict';
         return implode('; ', $partes);
     }

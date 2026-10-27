@@ -26,9 +26,11 @@ RewriteRule ^ - [R=405,L]
 
 # HTTPS siempre en el servidor de verdad (no en localhost). Solo vale lo que dice Apache (%{HTTPS}):
 # la cabecera X-Forwarded-Proto la puede mandar cualquiera, así que no sirve para saltarse la redirección.
-RewriteCond %{HTTPS} !=on
-RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
-RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+# EN PAUSA (2026-10-26): la dirección temporal de IONOS no tiene certificado SSL. En cuanto haya un dominio
+# con SSL, quitar el "#" de las 3 líneas y poner 'https' => true en app/config.php.
+#RewriteCond %{HTTPS} !=on
+#RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+#RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
 # Archivos y carpetas que empiezan con punto no se sirven (.htaccess, .user.ini, .git…), salvo .well-known
 RewriteRule (^|/)\.(?!well-known/) - [R=404,L]

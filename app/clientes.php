@@ -13,6 +13,7 @@ const DUPLICADO_CLIENTE = 'Ese nombre de usuario o ese correo ya tienen cuenta. 
 // Carga al cliente en cada petición: si desactivan su cuenta, se nota de inmediato
 function cargar_cliente(): ?array
 {
+    if (!cuentas_clientes()) return null;
     $id = Sesion::get('clienteId');
     if (!$id) return null;
     $c = fila('SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, activo, sesion_version FROM clientes WHERE id = ?', [$id]);
@@ -72,7 +73,12 @@ function limitar_cambios_cliente(): void
 
 function rutas_clientes(): void
 {
+    // Cuentas en pausa ('cuentas_clientes' => false): nadie entra, se registra ni cambia datos
+    if (!cuentas_clientes() && preg_match('#^/api/clientes/(?!sesion$)#i', Peticion::$ruta)) {
+        throw new ErrorHttp(403, 'Las cuentas de cliente están en pausa por ahora. Para comprar no necesitas cuenta.');
+    }
     get('/api/clientes/sesion', function () {
+        if (!cuentas_clientes()) return ['autenticado' => false, 'pausa' => true];
         $cliente = cargar_cliente();
         return $cliente ? datos_sesion_cliente($cliente) : ['autenticado' => false];
     });

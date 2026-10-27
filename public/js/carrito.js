@@ -95,7 +95,9 @@ function render() {
   document.getElementById("cart-total-amount").textContent = money(total);
 }
 
-async function cargar() {
+// ajustados: productos a los que ya se les bajó la cantidad (para avisar de todo junto)
+async function cargar(ajustados) {
+  if (typeof ajustados !== "number") ajustados = 0;
   const items = leerCarrito();
   if (!items.length) {
     grupos = [];
@@ -103,12 +105,24 @@ async function cargar() {
   }
   try {
     const respuesta = await api("/carrito/precios", { method: "POST", body: { items } });
+    // Si de algo quedan menos piezas que las pedidas, se baja la cantidad a lo que queda y se vuelve a calcular
+    const bajar = respuesta.faltantes.filter(f => f.quedan);
+    if (bajar.length) {
+      guardarCarrito(items.map(i => {
+        const f = bajar.find(x => claveItem(x) === claveItem(i));
+        return f ? { ...i, cantidad: f.quedan } : i;
+      }));
+      return cargar(ajustados + bajar.length);
+    }
     grupos = respuesta.grupos;
+    const avisos = [];
+    if (ajustados) avisos.push(`${ajustados === 1 ? "De 1 producto quedan" : `De ${ajustados} productos quedan`} menos piezas de las que pediste: ajustamos la cantidad a las que hay.`);
     if (respuesta.faltantes.length) {
       quitarDelCarrito(respuesta.faltantes.map(claveItem));
-      document.getElementById("cart-alert").innerHTML = `
-        <div class="notice">${icon("info")}<span>Quitamos ${respuesta.faltantes.length === 1 ? "1 producto que ya no está disponible" : `${respuesta.faltantes.length} productos que ya no están disponibles`}.</span></div>`;
+      avisos.push(`Quitamos ${respuesta.faltantes.length === 1 ? "1 producto que ya no está disponible o se agotó" : `${respuesta.faltantes.length} productos que ya no están disponibles o se agotaron`}.`);
     }
+    if (avisos.length) document.getElementById("cart-alert").innerHTML = `
+        <div class="notice">${icon("info")}<span>${escapeHTML(avisos.join(" "))}</span></div>`;
     render();
   } catch (error) {
     document.getElementById("cart-groups").innerHTML = `

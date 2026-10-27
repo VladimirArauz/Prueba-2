@@ -3144,8 +3144,8 @@ a.card-img-wrap {
   flex-shrink: 0;
 }
 
-.punto.is-pendiente { background: var(--senal); }
-.punto.is-vendido { background: var(--tinta); }
+.punto.is-en_proceso { background: var(--senal); }
+.punto.is-pagado { background: var(--tinta); }
 .punto.is-cancelado { background: var(--linea); }
 
 /* Listas del resumen */
@@ -3225,8 +3225,14 @@ a.card-img-wrap {
   margin-bottom: 0;
 }
 
-.status-badge.is-pendiente {
+.status-badge.is-en_proceso {
   background: var(--senal);
+  border-color: var(--tinta);
+}
+
+.status-badge.is-pagado {
+  color: var(--senal);
+  background: var(--tinta);
   border-color: var(--tinta);
 }
 
@@ -3258,6 +3264,23 @@ a.card-img-wrap {
   margin-top: 4px;
   font-size: 0.8125rem;
   color: var(--texto-2);
+}
+
+/* Editor de un pedido en proceso */
+.pedido-lineas {
+  margin-bottom: 18px;
+}
+
+.pedido-linea .form-group {
+  margin-bottom: 0;
+}
+
+.pedido-linea .pedido-color {
+  margin-top: 8px;
+}
+
+.pedido-agregar-accion {
+  align-self: end;
 }
 
 .dash-paginas {

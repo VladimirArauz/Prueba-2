@@ -156,6 +156,12 @@ function formularioOpinion(mia) {
 function renderOpinar() {
   const { cliente, mia } = est.opiniones;
   const caja = $("opinar");
+  if (est.opiniones.cuentas === false) {
+    caja.innerHTML = `
+      <h3>Da tu opinión</h3>
+      <p>Las opiniones nuevas están en pausa por ahora. Puedes leer las que ya hay.</p>`;
+    return;
+  }
   if (!cliente) {
     caja.innerHTML = `
       <h3>Da tu opinión</h3>

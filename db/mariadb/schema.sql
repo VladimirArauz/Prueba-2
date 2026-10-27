@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   items           JSON NOT NULL,
   total           DECIMAL(10,2) NOT NULL,
   piezas          SMALLINT NOT NULL,
-  estado          VARCHAR(12) NOT NULL DEFAULT 'pendiente',
+  estado          VARCHAR(12) NOT NULL DEFAULT 'en_proceso',
   nota            VARCHAR(200),
   creado_en       DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   actualizado_en  DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   KEY pedidos_promocion_idx (promocion_id),
   CONSTRAINT pedidos_stand_fk FOREIGN KEY (stand_id) REFERENCES stands (id) ON DELETE SET NULL,
   CONSTRAINT pedidos_promocion_fk FOREIGN KEY (promocion_id) REFERENCES promociones (id) ON DELETE SET NULL,
-  CONSTRAINT pedidos_estado_check CHECK (estado IN ('pendiente', 'vendido', 'cancelado')),
+  CONSTRAINT pedidos_estado_check2 CHECK (estado IN ('en_proceso', 'pagado', 'cancelado')),
   CONSTRAINT pedidos_piezas_check CHECK (piezas > 0),
   CONSTRAINT pedidos_total_check CHECK (total >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -322,3 +322,110 @@ CREATE TABLE IF NOT EXISTS limites (
   PRIMARY KEY (regla, clave),
   KEY limites_reinicia_idx (reinicia)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- 2026-10-26: pedidos con estados, edición y stock (plan 2026-10-26-pedidos-estados-y-stock.md) ----------
+
+-- Stock por producto y por color. NULL = falta capturarlo (se trata como agotado). Los servicios no llevan.
+ALTER TABLE productos ADD COLUMN IF NOT EXISTS stock INT NULL AFTER disponibilidad;
+ALTER TABLE productos ADD CONSTRAINT IF NOT EXISTS productos_stock_check CHECK (stock IS NULL OR stock >= 0);
+ALTER TABLE producto_colores ADD COLUMN IF NOT EXISTS stock INT NULL AFTER disponible;
+ALTER TABLE producto_colores ADD CONSTRAINT IF NOT EXISTS producto_colores_stock_check CHECK (stock IS NULL OR stock >= 0);
+
+-- Estados: pendiente → en_proceso, vendido → pagado
+ALTER TABLE pedidos DROP CONSTRAINT IF EXISTS pedidos_estado_check;
+UPDATE pedidos SET estado = 'en_proceso' WHERE estado = 'pendiente';
+UPDATE pedidos SET estado = 'pagado' WHERE estado = 'vendido';
+ALTER TABLE pedidos ALTER COLUMN estado SET DEFAULT 'en_proceso';
+ALTER TABLE pedidos ADD CONSTRAINT IF NOT EXISTS pedidos_estado_check2 CHECK (estado IN ('en_proceso', 'pagado', 'cancelado'));
+
+-- Artículos de cada pedido (se editan mientras el pedido está en proceso). pedidos.items se sigue llenando.
+CREATE TABLE IF NOT EXISTS pedido_items (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  pedido_id     INT UNSIGNED NOT NULL,
+  tipo          VARCHAR(10) NOT NULL,
+  producto_id   INT UNSIGNED,
+  color_id      INT UNSIGNED,
+  promocion_id  INT UNSIGNED,
+  nombre        VARCHAR(160) NOT NULL,
+  cantidad      SMALLINT NOT NULL,
+  precio        DECIMAL(10,2),
+  subtotal      DECIMAL(10,2),
+  orden         SMALLINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY pedido_items_pedido_idx (pedido_id, orden),
+  KEY pedido_items_producto_idx (producto_id),
+  KEY pedido_items_color_idx (color_id),
+  KEY pedido_items_promocion_idx (promocion_id),
+  CONSTRAINT pedido_items_pedido_fk FOREIGN KEY (pedido_id) REFERENCES pedidos (id) ON DELETE CASCADE,
+  CONSTRAINT pedido_items_producto_fk FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE SET NULL,
+  CONSTRAINT pedido_items_color_fk FOREIGN KEY (color_id) REFERENCES producto_colores (id) ON DELETE SET NULL,
+  CONSTRAINT pedido_items_promocion_fk FOREIGN KEY (promocion_id) REFERENCES promociones (id) ON DELETE SET NULL,
+  CONSTRAINT pedido_items_tipo_check CHECK (tipo IN ('producto', 'paquete')),
+  CONSTRAINT pedido_items_cantidad_check CHECK (cantidad BETWEEN 1 AND 30)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Color elegido para cada producto con colores dentro de un paquete
+CREATE TABLE IF NOT EXISTS pedido_paquete_colores (
+  pedido_item_id  INT UNSIGNED NOT NULL,
+  producto_id     INT UNSIGNED NOT NULL,
+  color_id        INT UNSIGNED NOT NULL,
+  PRIMARY KEY (pedido_item_id, producto_id),
+  KEY pedido_paquete_colores_color_idx (color_id),
+  KEY pedido_paquete_colores_producto_idx (producto_id),
+  CONSTRAINT pedido_paquete_colores_item_fk FOREIGN KEY (pedido_item_id) REFERENCES pedido_items (id) ON DELETE CASCADE,
+  CONSTRAINT pedido_paquete_colores_producto_fk FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE CASCADE,
+  CONSTRAINT pedido_paquete_colores_color_fk FOREIGN KEY (color_id) REFERENCES producto_colores (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Cada cambio de stock: pago de un pedido (−), reversa al regresarlo (+) o ajuste a mano en Necutools.
+-- Al regresar un pedido se devuelve la suma de sus movimientos, aunque el pedido se haya editado.
+CREATE TABLE IF NOT EXISTS movimientos_stock (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  producto_id  INT UNSIGNED NOT NULL,
+  color_id     INT UNSIGNED,
+  pedido_id    INT UNSIGNED,
+  cambio       INT NOT NULL,
+  motivo       VARCHAR(10) NOT NULL,
+  admin_id     INT UNSIGNED,
+  creado_en    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY movimientos_stock_pedido_idx (pedido_id),
+  KEY movimientos_stock_producto_idx (producto_id, creado_en),
+  KEY movimientos_stock_color_idx (color_id),
+  KEY movimientos_stock_admin_idx (admin_id),
+  CONSTRAINT movimientos_stock_producto_fk FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE CASCADE,
+  CONSTRAINT movimientos_stock_color_fk FOREIGN KEY (color_id) REFERENCES producto_colores (id) ON DELETE SET NULL,
+  CONSTRAINT movimientos_stock_pedido_fk FOREIGN KEY (pedido_id) REFERENCES pedidos (id) ON DELETE SET NULL,
+  CONSTRAINT movimientos_stock_admin_fk FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE SET NULL,
+  CONSTRAINT movimientos_stock_motivo_check CHECK (motivo IN ('pago', 'reversa', 'ajuste')),
+  CONSTRAINT movimientos_stock_cambio_check CHECK (cambio <> 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Una sola vez: los artículos del JSON de cada pedido pasan a pedido_items (máximo 15 por pedido).
+-- Sin JSON_TABLE para que sirva también en MariaDB 10.4.
+INSERT INTO pedido_items (pedido_id, tipo, producto_id, color_id, promocion_id, nombre, cantidad, precio, subtotal, orden)
+SELECT pe.id, x.tipo,
+       IF(x.tipo = 'producto', (SELECT p.id FROM productos p WHERE p.id = x.ref), NULL),
+       IF(x.tipo = 'producto', (SELECT c.id FROM producto_colores c WHERE c.id = x.color AND c.producto_id = x.ref), NULL),
+       IF(x.tipo = 'paquete', (SELECT pr.id FROM promociones pr WHERE pr.id = x.ref), NULL),
+       LEFT(x.nombre, 160), LEAST(GREATEST(x.cantidad, 1), 30),
+       IF(x.subtotal IS NULL, NULL, ROUND(x.subtotal / GREATEST(x.cantidad, 1), 2)), x.subtotal, x.i
+FROM pedidos pe
+JOIN (
+  SELECT pe2.id AS pedido, n.i,
+         JSON_UNQUOTE(JSON_EXTRACT(pe2.items, CONCAT('$[', n.i, '].tipo'))) AS tipo,
+         CAST(JSON_EXTRACT(pe2.items, CONCAT('$[', n.i, '].id')) AS UNSIGNED) AS ref,
+         CAST(NULLIF(JSON_EXTRACT(pe2.items, CONCAT('$[', n.i, '].color')), 'null') AS UNSIGNED) AS color,
+         JSON_UNQUOTE(JSON_EXTRACT(pe2.items, CONCAT('$[', n.i, '].nombre'))) AS nombre,
+         CAST(JSON_EXTRACT(pe2.items, CONCAT('$[', n.i, '].cantidad')) AS SIGNED) AS cantidad,
+         CAST(NULLIF(JSON_EXTRACT(pe2.items, CONCAT('$[', n.i, '].subtotal')), 'null') AS DECIMAL(10,2)) AS subtotal
+  FROM pedidos pe2
+  JOIN (SELECT 0 AS i UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5
+        UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10
+        UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14) n
+    ON n.i < JSON_LENGTH(pe2.items)
+) x ON x.pedido = pe.id
+WHERE x.tipo IN ('producto', 'paquete')
+  AND NOT EXISTS (SELECT 1 FROM migraciones WHERE nombre = 'pedido-items-2026-10-26')
+  AND NOT EXISTS (SELECT 1 FROM pedido_items pi WHERE pi.pedido_id = pe.id);
+INSERT IGNORE INTO migraciones (nombre) VALUES ('pedido-items-2026-10-26');

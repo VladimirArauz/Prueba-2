@@ -202,11 +202,11 @@
         <section class="admin-panel" id="panel-pedidos" hidden>
           <div class="admin-card">
             <h3>Pedidos enviados por WhatsApp</h3>
-            <p>Cada vez que un cliente toca "Enviar pedido por WhatsApp" se guarda aquí, sin sus datos. Márcalo como vendido cuando lo entregues y te lo pague, o cancélalo si no se concretó.</p>
+            <p>Cada vez que un cliente toca "Enviar pedido por WhatsApp" se guarda aquí en proceso, sin sus datos. Mientras está en proceso puedes cambiar las piezas o los artículos. Al marcarlo como pagado, el stock baja solo; si lo regresas a en proceso o lo cancelas, el stock vuelve.</p>
             <div class="tabs dash-estados" id="pedidos-estados" role="group" aria-label="Filtrar pedidos por estado">
               <button type="button" class="btn btn-sm" data-action="pedidos-estado" data-estado="" aria-pressed="true">Todos</button>
-              <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="pendiente" aria-pressed="false">Pendientes</button>
-              <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="vendido" aria-pressed="false">Vendidos</button>
+              <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="en_proceso" aria-pressed="false">En proceso</button>
+              <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="pagado" aria-pressed="false">Pagados</button>
               <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="cancelado" aria-pressed="false">Cancelados</button>
             </div>
             <div class="admin-table-wrap">
@@ -217,7 +217,25 @@
             </div>
             <div class="dash-paginas" id="pedidos-paginas"></div>
             <div class="form-actions" data-solo-dueno hidden>
-              <button type="button" class="btn secondary btn-sm" data-action="pedidos-cancelar-viejos">Cancelar pendientes de más de 7 días</button>
+              <button type="button" class="btn secondary btn-sm" data-action="pedidos-cancelar-viejos">Cancelar los en proceso de más de 7 días</button>
+            </div>
+          </div>
+
+          <div class="admin-card" id="pedido-editor" hidden>
+            <h3 id="pedido-editor-title" tabindex="-1">Editar pedido</h3>
+            <p id="pedido-editor-desc">Cambia las piezas, quita artículos o agrega otros de la misma tienda. El total y los precios los calcula el servidor al guardar.</p>
+            <ul class="sub-list pedido-lineas" id="pedido-lineas"></ul>
+            <div class="admin-form-grid pedido-agregar" id="pedido-agregar">
+              <div class="form-group"><label for="pedido-articulo">Agregar artículo</label><select id="pedido-articulo"></select></div>
+              <div class="form-group" id="pedido-articulo-color-group" hidden><label for="pedido-articulo-color">Color</label><select id="pedido-articulo-color"></select></div>
+              <div class="form-group"><label for="pedido-articulo-cantidad">Piezas</label><input id="pedido-articulo-cantidad" type="number" min="1" max="30" step="1" value="1" inputmode="numeric"></div>
+              <div class="form-group pedido-agregar-accion">
+                <button type="button" class="btn secondary" data-action="pedido-agregar"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Agregar al pedido</button>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn" data-action="pedido-guardar"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Guardar cambios</button>
+              <button type="button" class="btn secondary" data-action="pedido-editor-cerrar">Cancelar</button>
             </div>
           </div>
         </section>
@@ -311,6 +329,7 @@
                   </select>
                 </div>
                 <div class="form-group" id="prod-precio-group"><label for="prod-precio">Precio (MXN)</label><input id="prod-precio" name="precio" type="number" min="1" step="0.50" placeholder="Ej. 350.00"></div>
+                <div class="form-group" id="prod-stock-group"><label for="prod-stock">Stock (piezas)</label><input id="prod-stock" name="stock" type="number" min="0" max="99999" step="1" inputmode="numeric" placeholder="Ej. 12"><span class="form-hint" id="prod-stock-hint">Piezas que tienes hoy. Con 0 sale como agotado. Baja sola cuando marcas un pedido como pagado y sube si lo regresas o lo cancelas.</span></div>
                 <div class="form-group">
                   <label for="prod-disp">Disponibilidad</label>
                   <select id="prod-disp" name="disponibilidad">
@@ -345,6 +364,7 @@
                 <div class="form-group"><label for="color-nombre">Nombre del color</label><input id="color-nombre" name="nombre" maxlength="30" placeholder="Ej. Rojo" required></div>
                 <div class="form-group"><label for="color-hex">Color</label><input id="color-hex" name="hex" type="color" value="#17295c" class="color-input"></div>
                 <div class="form-group"><label for="color-imagen">Foto en ese color (hasta 1 MB)</label><input id="color-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span class="form-hint" id="color-imagen-hint">Obligatoria para un color nuevo.</span></div>
+                <div class="form-group"><label for="color-stock">Stock de este color (piezas)</label><input id="color-stock" name="stock" type="number" min="0" max="99999" step="1" inputmode="numeric" placeholder="Ej. 5" required><span class="form-hint">Con 0 este color sale como agotado.</span></div>
                 <div class="form-group"><label for="color-orden">Orden</label><input id="color-orden" name="orden" type="number" min="0" max="9999" value="0"><span class="form-hint">Los números más bajos salen primero.</span></div>
                 <div class="form-group full-width">
                   <div class="check-group">
@@ -363,6 +383,14 @@
             <h3>Catálogo</h3>
             <div class="admin-filter">
               <div class="form-group"><label for="prod-filtro">Ver tienda</label><select id="prod-filtro"></select></div>
+              <div class="form-group">
+                <label for="prod-stock-filtro">Stock</label>
+                <select id="prod-stock-filtro">
+                  <option value="">Todos</option>
+                  <option value="falta">Falta capturar el stock</option>
+                  <option value="agotado">Agotados</option>
+                </select>
+              </div>
             </div>
             <div class="admin-table-wrap">
               <table class="admin-table">

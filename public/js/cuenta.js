@@ -26,6 +26,12 @@ function modoAuth(registro, enfocar = false) {
 }
 
 function render(sesion) {
+  if (sesion && sesion.pausa) {
+    $("cuenta-fuera").hidden = true;
+    $("cuenta-dentro").hidden = true;
+    $("cuenta-pausa").hidden = false;
+    return;
+  }
   const dentro = Boolean(sesion && sesion.autenticado);
   $("cuenta-fuera").hidden = dentro;
   $("cuenta-dentro").hidden = !dentro;

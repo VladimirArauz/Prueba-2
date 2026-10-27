@@ -25,6 +25,13 @@ return [
     // Números de respaldo para tiendas sin WhatsApp propio: 52 + 10 dígitos, separados por coma
     'whatsapp_respaldo' => '',
 
+    // false mientras el dominio no tenga certificado SSL (la cookie de sesión va sin Secure). Quitar
+    // también la redirección a HTTPS de public/.htaccess. Vuelve a true en cuanto haya HTTPS.
+    'https' => true,
+
+    // false pone en pausa las cuentas de cliente (entrar, registrarse y opinar). Necutools no cambia.
+    'cuentas_clientes' => true,
+
     // Solo si IONOS pusiera un proxy delante y REMOTE_ADDR no fuera la IP del visitante. En hosting
     // compartido de IONOS se deja en false: si fuera true, cualquiera podría inventarse una IP.
     'confiar_x_forwarded_for' => false,
