@@ -1,7 +1,7 @@
 <?php
 /**
  * NECUTLA — Servidor de la API en PHP (hosting compartido de IONOS).
- * Lo carga public/api/index.php en cada petición a /api/* y /healthz.
+ * Lo carga public/api/index.php en cada petición a /api/*, /healthz y las páginas públicas (app/paginas.php).
  * Plan: plans/planes/2026-10-25-migracion-ionos-php-mariadb.md
  */
 
@@ -66,6 +66,7 @@ require __DIR__ . '/api.php';
 require __DIR__ . '/resenas.php';
 require __DIR__ . '/pedidos.php';
 require __DIR__ . '/admin.php';
+require __DIR__ . '/paginas.php';
 
 // Respuestas con datos privados: que no se guarden en caché
 // Sin importar mayúsculas, igual que el router: /API/ADMIN/… también es privado
@@ -92,6 +93,20 @@ function atender(): void
     $ruta = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     Peticion::$metodo = $metodo;
     Peticion::$ruta = $ruta;
+
+    // Páginas públicas con su vista previa del enlace (app/paginas.php); no usan sesión ni el límite de la API
+    if ($metodo === 'GET' || $metodo === 'HEAD') {
+        try {
+            $pagina = pagina_publica($ruta);
+        } catch (Throwable $e) {
+            enviar(respuesta_de_error($e));
+            return;
+        }
+        if ($pagina) {
+            enviar($pagina);
+            return;
+        }
+    }
 
     // Salud (para revisar que el sitio y la base responden)
     if (preg_match('#^/healthz/?$#i', $ruta)) {

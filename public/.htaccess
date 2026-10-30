@@ -39,10 +39,11 @@ RewriteRule (^|/)\.(?!well-known/) - [R=404,L]
 RewriteRule ^api(/.*)?$ api/index.php [END,QSA]
 RewriteRule ^healthz/?$ api/index.php [END,QSA]
 
-# Una sola página para todas las tiendas: /t/ropa, /t/tecnologia?sub=cables…
-RewriteRule ^t/[a-z0-9-]{1,60}/?$ tienda.html [END]
-# Página de un producto o servicio con sus opiniones: /p/12
-RewriteRule ^p/[1-9][0-9]{0,9}/?$ producto.html [END]
+# Páginas públicas: PHP pone la vista previa del enlace (Open Graph) de cada una (app/paginas.php).
+# Una sola página para todas las tiendas (/t/ropa, /t/tecnologia?sub=cables…) y una para cada producto (/p/12)
+RewriteRule ^t/[a-z0-9-]{1,60}/?$ api/index.php [END,QSA]
+RewriteRule ^p/[1-9][0-9]{0,9}/?$ api/index.php [END,QSA]
+RewriteRule ^(index\.html|carrito\.html|promociones\.html|cuenta\.html)?$ api/index.php [END,QSA]
 
 # Las direcciones de las páginas fijas que había antes siguen funcionando
 RewriteRule ^(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)/carrito\.html$ /carrito.html [R=301,L]

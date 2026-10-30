@@ -4,6 +4,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const grid = document.getElementById("promos-grid");
   const vacio = document.getElementById("promos-empty");
+  pintarEsqueletos(grid, 3, "letrero");
   try {
     const promos = await api("/promociones");
     grid.innerHTML = promos.map(tarjetaPromocion).join("");
@@ -12,6 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="form-actions"><a class="btn" href="/">Ver tiendas</a></div>`;
     }
   } catch (error) {
+    grid.innerHTML = "";
     vacio.innerHTML = `<p>${escapeHTML(error.message)}</p>`;
   }
 });

@@ -28,6 +28,7 @@ Cómo se usa:
 | `2026-10-25-php85-y-puntos-debiles.md` | Aplicado (PHP 8.5 y puntos débiles de la revisión) | 2026-10-25 |
 | `2026-10-26-ionos-sin-https-y-cuentas-en-pausa.md` | Aplicado (temporal: falta el prompt 2 cuando haya dominio con SSL) | 2026-10-26 |
 | `2026-10-26-pedidos-estados-y-stock.md` | Aplicado, probado en local y subido a IONOS (tablas creadas allá). Falta capturar el stock (pendiente 26) | 2026-10-26 |
+| `2026-10-29-reels-esqueletos-botones-open-graph.md` | Aplicado y probado en local (prompts 1 a 5). Falta subir a IONOS y poner `url_publica` allá (pendiente 27) | 2026-10-29 |
 
 ---
 
@@ -68,6 +69,8 @@ Cómo se usa:
 25. **IONOS sin dominio (2026-10-26):** el sitio ya está subido y conectado a la base, pero `https://s1115824141.onlinehome.mx/` (dirección temporal de IONOS, ya apunta a `/public`) no tiene certificado SSL, y el `.htaccess` manda todo a HTTPS, así que no se ve. Falta: (a) (PHP 8.5 ya cambiado el 2026-10-26) conectar un dominio o subdominio a `/public` con SSL y aplicar el prompt 2 del plan `2026-10-26-ionos-sin-https-y-cuentas-en-pausa.md` (mientras tanto el sitio va por HTTP y el login de Necutools viaja sin cifrar); (b) revisar en vivo `/healthz`, la portada, Necutools, una imagen y un pedido (no se pudo probar por web si PHP lee `app/config.php` con permisos 600; por terminal sí); (c) **cambiar la contraseña de la base en IONOS** (se mostró por error en el chat el 2026-10-26) y después actualizar `app/config.php` en el servidor; (d) cambiar enlaces y QR de `necutla.onrender.com` y apagar Render unos días después; (e) los datos son del respaldo del 2026-10-25: si se editó algo en Render después, sacar otro respaldo y volver a importar; (f) poner `chmod 600` a `~/secrets.md`.
 
 26. **Pedidos y stock (plan `2026-10-26-pedidos-estados-y-stock.md`):** (a) **urgente: hoy todos los productos de IONOS salen "Agotado"** porque el stock es obligatorio y ninguno lo tiene; capturarlo en Necutools → Productos (filtro "Falta capturar el stock"). Los productos con colores llevan el stock en cada color. (b) `scripts/seguridad/ataques.js` se actualizó (estados nuevos, stock y 2 pruebas), pero no se pudo correr: en esta máquina no hay Node. Lo mismo se probó con `curl` (60 pruebas) y Chrome sin ventana (35). (c) Si se borra un color con piezas descontadas por un pedido pagado, al regresar ese pedido esas piezas no vuelven (ya no tienen a dónde). (d) El número exacto de stock no se publica, salvo en el carrito cuando se piden más piezas de las que hay (se ajusta la cantidad).
+
+27. **Plan `2026-10-29-reels-esqueletos-botones-open-graph.md` (esqueletos, botones y vista previa en WhatsApp):** (a) **subir a IONOS** solo con el permiso del usuario: rsync de `app/` y `public/` (sin `app/config.php`; incluye `app/paginas.php`, `public/.htaccess` y `public/imagenes/og-necutla.png`) y agregar `'url_publica' => 'http://s1115824141.onlinehome.mx'` (o el dominio con SSL cuando exista) al `app/config.php` del servidor; sin esa clave la vista previa sale sin imagen. (b) Después, mandar por WhatsApp un enlace de la portada, de una tienda y de un producto. WhatsApp guarda la vista previa en caché, y algunas versiones no muestran la imagen sin HTTPS (pendiente 25). (c) **Excepción de diseño:** el pulso de opacidad de los esqueletos lo autorizó el usuario solo para este plan; si quiere que sea regla permanente, tiene que pedir que se actualice `plans/CLAUDE.md`. (d) Las tiendas con imagen SVG de ejemplo usan la imagen general en la vista previa (WhatsApp no muestra SVG); con una portada real (PNG/JPG/WEBP) sale la suya. (e) `/t/<slug>` y `/p/<id>` consultan la base en cada visita sin el límite de la API (una consulta por índice; vigilar si crece el tráfico). (f) La auditoría de botones no encontró grupos con dos botones amarillos ni rojos fuera de borrar o quitar; "Cancelar" se quedó en `.secondary` porque `.ghost` no tiene borde visible (regla del borde de 2px).
 
 ### Pasos pendientes en Render (guardados el 2026-10-16 a pedido del usuario)
 
@@ -114,6 +117,34 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-29: esqueletos de carga, estados de botón y vista previa en WhatsApp (plan `2026-10-29-reels-esqueletos-botones-open-graph.md`, prompts 1 a 5)
+- **Esqueletos** (reel "Deja de usar spinners"):
+  - `public/js/comun.js`: `pintarEsqueletos(contenedor, n, tipo)` con las piezas tarjeta, fila, letrero, grupo, kpi y tabla. Pone `aria-busy` y lo quita solo cuando llega otro contenido.
+  - Se llama en `portada.js` (tablero, tiendas, búsqueda), `tienda.js` (12), `promociones.js`, `carrito.js` (solo en la primera carga) y `necutools.js` (`pintarEsqueletosDash`: indicadores y tabla de pedidos al entrar y al cambiar tienda o periodo; si falla, se vuelve a pintar lo de antes).
+  - `tienda.html` y `producto.html`: el h1 "Cargando…" es un esqueleto con el texto en `.visually-hidden`.
+  - `public/style.css`, sección "ESQUELETOS DE CARGA": bloques `--linea` (`--linea-tinta` sobre el tablero), pulso de opacidad de 1.2 s, sin degradados; no entran animados ni suben con el hover; quietos con movimiento reducido.
+- **Botones** (reel "Variantes de un botón"):
+  - `style.css`: `.btn:disabled` / `[aria-disabled="true"]` en gris (`--gis`, texto y borde `--texto-2`, contraste 6.41:1) en cualquier variante; `.btn[aria-busy="true"]` con `cursor: progress`.
+  - `comun.js`: `botonOcupado()` / `botonListo()` ("Guardar producto" → "Guardando producto", sin spinner; si otra función cambió el texto mientras esperaba, se respeta). Se usan en `cuenta.js`, `producto.js` y `necutools.js` (`enviar`, código de 2 pasos, editor de pedidos).
+  - `README.md`: tabla "Qué botón usar".
+- **Vista previa del enlace** (reel de Open Graph):
+  - `public/imagenes/og-necutla.png` (1200×630, 56 KB), hecha con Chrome sin ventana desde `recursos/og/og-necutla.svg`.
+  - `public/.htaccess`: `/`, `index`, `carrito`, `promociones`, `cuenta`, `/t/<slug>` y `/p/<id>` pasan a `api/index.php`.
+  - `app/paginas.php` (nuevo, cargado en `app/arranque.php` antes de la API, sin sesión ni límite): cambia el bloque `<!--og:inicio-->…<!--og:fin-->` de cada HTML. La tienda lleva su nombre, descripción y portada (si no es SVG). El producto lleva nombre, precio con la oferta de hoy, tienda, descripción y foto. Todo con `htmlspecialchars`. Si la tienda o el producto no existe, o la base falla, se usa la vista previa general.
+  - Opción nueva `url_publica` (`app/config.ejemplo.php`, `README.md`). En el `app/config.php` local quedó `http://localhost:8081`.
+- **Verificación local** (`php8.5` + XAMPP, nunca IONOS):
+  - `curl`: las 9 rutas dan 200 con sus etiquetas, CSP y `no-cache`; `/necutools.html` sin vista previa; `/api/*` 404 y JSON igual; `/app/config.php` 404; redirección vieja 301; escape de `"<>&` probado.
+  - Error que se corrigió en las pruebas: un precio como "$250.00" se leía como referencia `$25` de `preg_replace`. Ahora se usa `preg_replace_callback`.
+  - Chrome sin ventana con un cliente CDP propio (deteniendo `/api/` para ver los esqueletos): 32 de 32 a 1280 y 360 px. Esqueletos y su reemplazo en portada, tienda, tienda inexistente, promociones, producto, carrito y búsqueda; pulso sin degradado y quieto con movimiento reducido; botón ocupado, listo, deshabilitado y con `<span>`; login fallido de Necutools deja el botón listo; sin scroll horizontal; cero errores de consola o CSP.
+  - Resumen de Necutools con un dueño temporal (`prueba_esqueletos`, borrado después): 4 indicadores y 5 filas de esqueleto mientras carga, y luego los datos.
+  - Para el carrito se le puso stock 5 al producto 5 durante la prueba y se regresó a NULL: en la base local ningún producto tiene stock.
+- Sin hex sueltos, degradados, `style="`, `onclick`, `uppercase` ni emojis en lo nuevo. No se subió a IONOS (pendiente 27).
+
+### 2026-10-29: plan de 3 reels (esqueletos de carga, variantes de botón y vista previa en WhatsApp)
+- Nuevo plan `plans/planes/2026-10-29-reels-esqueletos-botones-open-graph.md` y sus 5 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Reels: @jiron.design "Deja de usar spinners" (DfBJ5MGtFj_), @jiron.design "Variantes de un botón" (DfDuWCKsfqm) y @go.expoose "Open Graph para WhatsApp" (DfEWnhqMNcp). Solo se leyó el texto del post, con WebFetch a `instagram.com/reel/<id>/embed/captioned/` (la dirección normal del reel devuelve solo "Instagram"). Esta sesión no tiene las herramientas de Claude in Chrome: Claude Code corre como `root` y el navegador abierto es Brave.
+- Decisiones del usuario: esqueletos con pulso suave de opacidad (excepción a la regla de movimiento, solo para este plan) y vista previa propia para cada tienda y producto (PHP en `app/paginas.php`, opción nueva `url_publica`).
 
 ### 2026-10-26: el stock guardado no era el que se escribía (rueda del mouse)
 - El usuario escribió 80 de stock y Necutools mostraba 77. En IONOS el servidor sí recibió 77 (`movimientos_stock`, ajuste +77): en Chrome, la rueda del mouse sobre un campo numérico con el foco cambia el valor (3 vueltas: 80 → 77). Se reprodujo en Chrome sin ventana.

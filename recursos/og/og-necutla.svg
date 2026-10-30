@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Vista previa del enlace (Open Graph), plan 2026-10-29. Colores de los tokens de public/style.css:
+       --tinta #17295C, --senal #F5B800, --tinta-2 #2B4590. Letra Archivo (Google Fonts).
+       Se convierte a public/imagenes/og-necutla.png con Chrome sin ventana (ver el plan). -->
+  <style>
+    text { font-family: 'Archivo', sans-serif; }
+    .marca { font-size: 104px; font-weight: 800; font-variation-settings: 'wdth' 125; fill: #FFFFFF; }
+    .lema { font-size: 40px; font-weight: 700; font-variation-settings: 'wdth' 112; fill: #F5B800; }
+    .frase { font-size: 30px; font-weight: 500; fill: #FFFFFF; }
+    .fila { font-size: 34px; font-weight: 700; font-variation-settings: 'wdth' 112; fill: #F5B800; }
+    .emblema { font-size: 64px; font-weight: 800; font-variation-settings: 'wdth' 125; fill: #17295C; }
+  </style>
+  <rect width="1200" height="630" fill="#17295C"/>
+
+  <rect x="72" y="88" width="96" height="96" rx="6" fill="#F5B800"/>
+  <text class="emblema" x="120" y="159" text-anchor="middle">N</text>
+  <text class="marca" x="72" y="300">Necutla</text>
+  <text class="lema" x="72" y="362">La ciudad del estudiante</text>
+  <text class="frase" x="72" y="470">Tiendas de la comunidad estudiantil.</text>
+  <text class="frase" x="72" y="514">Arma tu pedido y mándalo por WhatsApp.</text>
+
+  <!-- Tablero directorio, como el del hero -->
+  <rect x="736" y="88" width="392" height="454" rx="4" fill="#2B4590"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="2">
+    <line x1="736" y1="179" x2="1128" y2="179"/>
+    <line x1="736" y1="270" x2="1128" y2="270"/>
+    <line x1="736" y1="361" x2="1128" y2="361"/>
+    <line x1="736" y1="452" x2="1128" y2="452"/>
+  </g>
+  <text class="fila" x="776" y="146">Ropa</text>
+  <text class="fila" x="776" y="237">Tecnología</text>
+  <text class="fila" x="776" y="328">Dulces</text>
+  <text class="fila" x="776" y="419">Papelería</text>
+  <text class="fila" x="776" y="510">Regalos</text>
+  <g fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1080 120 l14 14 l-14 14"/>
+    <path d="M1080 211 l14 14 l-14 14"/>
+    <path d="M1080 302 l14 14 l-14 14"/>
+    <path d="M1080 393 l14 14 l-14 14"/>
+    <path d="M1080 484 l14 14 l-14 14"/>
+  </g>
+</svg>

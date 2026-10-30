@@ -68,7 +68,7 @@ async function enviarForm(event, { ruta, metodo = "POST", campos, listo }) {
   if (!(await validarFormulario(form))) return;
   const boton = form.querySelector('[type="submit"]');
   const body = Object.fromEntries(campos.map(c => [c, form.elements[c].value]));
-  boton.disabled = true;
+  botonOcupado(boton);
   try {
     const respuesta = await api(ruta, { method: metodo, body });
     form.reset();
@@ -77,7 +77,7 @@ async function enviarForm(event, { ruta, metodo = "POST", campos, listo }) {
   } catch (error) {
     showToast(error.message, "info");
   } finally {
-    boton.disabled = false;
+    botonListo(boton);
   }
 }
 

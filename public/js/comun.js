@@ -314,6 +314,74 @@ async function cargarVitrina(slugTienda = "") {
   } catch (e) { /* sin vitrina, la página sigue igual */ }
 }
 
+// ================= Botón ocupado (plan 2026-10-29) =================
+// Mientras espera al servidor, el botón dice la acción en curso ("Guardar producto" → "Guardando producto"),
+// queda deshabilitado y con aria-busy; sin spinner. botonListo() lo regresa como estaba.
+const VERBOS_OCUPADO = {
+  Activar: "Activando", Agregar: "Agregando", Buscar: "Buscando", Cambiar: "Cambiando", Confirmar: "Confirmando",
+  Crear: "Creando", Desactivar: "Desactivando", Entrar: "Entrando", Enviar: "Enviando", Guardar: "Guardando",
+  Iniciar: "Iniciando", Publicar: "Publicando", Verificar: "Verificando"
+};
+
+const TEXTOS_LISTOS = new WeakMap();
+
+function botonOcupado(boton, texto) {
+  if (!boton || boton.getAttribute("aria-busy") === "true") return;
+  // El texto puede ir suelto o dentro de un <span> (ej. "Agregar color")
+  const recorrido = document.createTreeWalker(boton, NodeFilter.SHOW_TEXT, { acceptNode: n => n.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP });
+  const nodo = recorrido.nextNode();
+  if (nodo) {
+    const actual = nodo.textContent.trim();
+    const verbo = actual.split(" ")[0];
+    const ocupado = texto || (VERBOS_OCUPADO[verbo] ? actual.replace(verbo, VERBOS_OCUPADO[verbo]) : "Un momento");
+    TEXTOS_LISTOS.set(boton, { nodo, antes: nodo.textContent, ocupado });
+    nodo.textContent = ocupado;
+  }
+  boton.disabled = true;
+  boton.setAttribute("aria-busy", "true");
+}
+
+function botonListo(boton) {
+  if (!boton) return;
+  const guardado = TEXTOS_LISTOS.get(boton);
+  // Si mientras esperaba otra función ya cambió el texto (ej. el formulario volvió a "Agregar"), se respeta
+  if (guardado && guardado.nodo.textContent === guardado.ocupado) guardado.nodo.textContent = guardado.antes;
+  TEXTOS_LISTOS.delete(boton);
+  boton.disabled = false;
+  boton.removeAttribute("aria-busy");
+}
+
+// ================= Esqueletos de carga (plan 2026-10-29) =================
+// Mientras llega la API, el contenedor muestra bloques planos con la forma de lo que va a llegar.
+// aria-busy se quita solo cuando se pinta otra cosa en el contenedor (datos, vacío o error).
+const PIEZAS_ESQUELETO = {
+  tarjeta: () => `<div class="card esqueleto-card"><span class="esqueleto esqueleto-img"></span>
+    <span class="esqueleto esqueleto-linea is-larga"></span><span class="esqueleto esqueleto-linea"></span>
+    <span class="esqueleto esqueleto-linea is-corta"></span><span class="esqueleto esqueleto-boton"></span></div>`,
+  fila: () => `<li class="board-row esqueleto-fila"><span class="esqueleto esqueleto-linea is-larga"></span></li>`,
+  letrero: () => `<div class="letrero-item esqueleto-letrero"><span class="esqueleto esqueleto-img"></span>
+    <span class="esqueleto esqueleto-linea is-larga"></span><span class="esqueleto esqueleto-linea"></span></div>`,
+  kpi: () => `<div class="kpi esqueleto-kpi"><span class="esqueleto esqueleto-linea is-corta"></span>
+    <span class="esqueleto esqueleto-cifra"></span><span class="esqueleto esqueleto-linea"></span></div>`,
+  grupo: () => `<div class="cart-group esqueleto-grupo"><span class="esqueleto esqueleto-linea is-larga"></span>
+    <span class="esqueleto esqueleto-linea"></span><span class="esqueleto esqueleto-linea is-corta"></span>
+    <span class="esqueleto esqueleto-boton"></span></div>`,
+  tabla: columnas => `<tr class="esqueleto-tr">${`<td><span class="esqueleto esqueleto-linea"></span></td>`.repeat(columnas)}</tr>`
+};
+
+function pintarEsqueletos(contenedor, n, tipo = "tarjeta", columnas = 1) {
+  if (!contenedor) return;
+  contenedor.innerHTML = Array.from({ length: n }, () => PIEZAS_ESQUELETO[tipo](columnas)).join("");
+  [...contenedor.children].forEach(pieza => pieza.setAttribute("aria-hidden", "true"));
+  contenedor.setAttribute("aria-busy", "true");
+  const observador = new MutationObserver(() => {
+    if (contenedor.querySelector(".esqueleto")) return;
+    contenedor.removeAttribute("aria-busy");
+    observador.disconnect();
+  });
+  observador.observe(contenedor, { childList: true });
+}
+
 // ================= Promociones de temporada (paquetes) =================
 function tarjetaPromocion(promo) {
   const vigencia = promo.inicio === promo.fin ? `Solo el ${fechaCorta(promo.fin)}` : `Hasta el ${fechaCorta(promo.fin)}`;

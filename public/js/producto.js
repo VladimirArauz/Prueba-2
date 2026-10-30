@@ -221,7 +221,7 @@ async function guardarOpinion(event) {
     return;
   }
   const nueva = !est.opiniones.mia;
-  boton.disabled = true;
+  botonOcupado(boton);
   try {
     await api(`/productos/${est.id}/resena`, {
       method: "PUT",
@@ -235,7 +235,7 @@ async function guardarOpinion(event) {
     if (error.status === 401) await cargarOpiniones();
     showToast(error.message, "info");
   } finally {
-    boton.disabled = false;
+    botonListo(boton);
   }
 }
 

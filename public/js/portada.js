@@ -25,6 +25,8 @@ function tarjetaTienda(t) {
 
 async function cargarTiendas() {
   const grid = document.getElementById("stores-grid");
+  pintarEsqueletos(document.getElementById("board-list"), 7, "fila");
+  pintarEsqueletos(grid, 6);
   try {
     const tiendas = await obtenerTiendas();
     document.getElementById("board-list").innerHTML = tiendas.map(filaTablero).join("");
@@ -57,6 +59,9 @@ async function buscar(event) {
   }
   bloque.hidden = false;
   document.getElementById("search-title").textContent = `Resultados para “${q}”`;
+  document.getElementById("search-desc").textContent = "Buscando en todas las tiendas.";
+  vacio.innerHTML = "";
+  pintarEsqueletos(grid, 3);
   try {
     const resultados = await api(`/buscar?q=${encodeURIComponent(q)}`);
     document.getElementById("search-desc").textContent = resultados.length === 20

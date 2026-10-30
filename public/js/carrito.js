@@ -196,4 +196,7 @@ Object.assign(ACCIONES, {
   enviar: el => enviar(el.dataset.clave)
 });
 
-document.addEventListener("DOMContentLoaded", cargar);
+document.addEventListener("DOMContentLoaded", () => {
+  if (leerCarrito().length) pintarEsqueletos(document.getElementById("cart-groups"), 2, "grupo");
+  cargar();
+});

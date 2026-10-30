@@ -120,6 +120,27 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
 - **Dashboard de Necutools**: indicadores del periodo (7, 30 o 90 días) contra el anterior, gráficas con
   **Chart.js** (servido desde `public/vendor/`, sin CDN), productos más pedidos, pedidos recientes y
   pendientes. "Ventas" cuenta solo los pedidos marcados como vendidos.
+- **Mientras carga**: las listas muestran esqueletos (bloques planos con la forma de las tarjetas,
+  `pintarEsqueletos()` en `public/js/comun.js`) en lugar de un spinner. Con movimiento reducido no pulsan.
+- **Vista previa del enlace** (Open Graph): al mandar un enlace por WhatsApp sale una tarjeta con
+  imagen, título y descripción. `/t/<tienda>` y `/p/<id>` llevan los datos de esa tienda o producto
+  (`app/paginas.php`); las demás páginas, la imagen general `public/imagenes/og-necutla.png` (1200×630,
+  fuente en `recursos/og/og-necutla.svg`). Necesita `url_publica` en `app/config.php`.
+
+### Qué botón usar
+
+| Clase | Para qué | Ejemplo |
+|---|---|---|
+| `.btn` (amarillo) | La acción principal del grupo. Solo uno por grupo | "Guardar producto", "Ver tienda" |
+| `.btn.secondary` | Acciones de apoyo o para salir de una edición | "Cancelar edición", "Mostrar más" |
+| `.btn.ghost` | Acciones discretas de navegación, sin borde visible | "Volver", "Cerrar menú" |
+| `.btn.danger` | Solo borrar, quitar o vaciar | "Vaciar carrito", icono de borrar |
+| `.btn.wa` | Solo el envío por WhatsApp | "Enviar pedido por WhatsApp" |
+| `.btn-sm`, `.btn-icon`, `.btn-block` | Tamaño (36px), solo icono (con `aria-label`) y ancho completo | |
+
+Estados: hover y presionado los da `style.css`. `disabled` lo pone gris en cualquier variante
+(agotado, sin datos). Mientras espera al servidor se usa `botonOcupado(boton)` / `botonListo(boton)` de
+`comun.js`: el texto cambia a la acción en curso ("Guardando producto"), sin spinner.
 
 ## Configuración (`app/config.php`)
 
@@ -131,6 +152,7 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
 | `whatsapp_respaldo` | Números para las tiendas sin números propios, separados por coma (`5255XXXXXXXX`) |
 | `confiar_x_forwarded_for` | `false` en IONOS (la IP real viene en `REMOTE_ADDR`). `true` solo en local, para `ataques.js` |
 | `correo_dns_prueba` | Solo en local: no consulta el DNS al revisar correos (todo dominio vale salvo `*.invalid` y `sin-correo.*`) |
+| `url_publica` | Dirección del sitio sin `/` al final (ej. `http://s1115824141.onlinehome.mx`). Arma las direcciones completas de la vista previa del enlace (`og:url`, `og:image`). Vacía: la vista previa sale sin imagen |
 | `hoy_prueba` | Solo en local: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones |
 
 `app/config.php` **nunca** se sube a git (está en `.gitignore`).

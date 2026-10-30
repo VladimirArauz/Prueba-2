@@ -230,6 +230,20 @@ small, .text-sm {
   background: transparent;
 }
 
+/* Deshabilitado: gris plano en cualquier variante; ocupado (esperando al servidor): se ve igual
+   que su variante, sin spinner, con el texto de la acción en curso (plan 2026-10-29) */
+.btn:disabled:not([aria-busy="true"]),
+.btn[aria-disabled="true"] {
+  background: var(--gis);
+  color: var(--texto-2);
+  border-color: var(--texto-2);
+  cursor: not-allowed;
+}
+
+.btn[aria-busy="true"] {
+  cursor: progress;
+}
+
 .btn.btn-sm {
   min-height: 36px;
   padding: 0 12px;
@@ -2611,7 +2625,8 @@ a.card-img-wrap {
     box-shadow: 0 3px 0 var(--tinta);
   }
   .btn.ghost:hover,
-  .btn:disabled:hover {
+  .btn:disabled:hover,
+  .btn[aria-disabled="true"]:hover {
     transform: none;
     box-shadow: none;
   }
@@ -3642,5 +3657,96 @@ a.card-img-wrap {
 @media (prefers-reduced-motion: reduce) {
   .color-opcion {
     transition: none;
+  }
+}
+
+/* ================= ESQUELETOS DE CARGA (plan 2026-10-29) =================
+   Bloques planos con la forma del contenido mientras llega la API (en lugar de un spinner).
+   El pulso de opacidad es una excepción autorizada solo para este plan; con movimiento
+   reducido los bloques se quedan quietos. Sin degradados ni colores nuevos. */
+.esqueleto {
+  display: block;
+  background: var(--linea);
+  border-radius: var(--r-btn);
+  animation: esqueleto-pulso 1.2s ease-in-out infinite alternate;
+}
+
+/* Sobre --tinta (tablero y letrero) el bloque usa la línea del tablero */
+.esqueleto-fila .esqueleto,
+.esqueleto-letrero .esqueleto {
+  background: var(--linea-tinta);
+}
+
+@keyframes esqueleto-pulso {
+  from { opacity: 1; }
+  to { opacity: 0.55; }
+}
+
+.esqueleto-img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  margin-bottom: 6px;
+}
+
+.esqueleto-linea {
+  width: 70%;
+  height: 0.9em;
+}
+
+.esqueleto-linea.is-larga {
+  width: 90%;
+  height: 1.25rem;
+}
+
+.esqueleto-linea.is-corta {
+  width: 40%;
+}
+
+.esqueleto-boton {
+  width: 132px;
+  height: 44px;
+  margin-top: 4px;
+}
+
+.esqueleto-cifra {
+  width: 55%;
+  height: 2rem;
+}
+
+.esqueleto-titulo {
+  width: min(420px, 80%);
+  height: 2.5rem;
+  border-radius: var(--r-panel);
+}
+
+.esqueleto-fila {
+  min-height: 54px;
+}
+
+.esqueleto-fila .esqueleto-linea.is-larga {
+  width: 60%;
+}
+
+.esqueleto-card:hover {
+  border-color: var(--linea);
+}
+
+/* Los esqueletos no entran animados ni suben con el hover: solo pulsan */
+.anim .revelar-grid > [aria-hidden="true"]:is(.esqueleto-card, .esqueleto-fila, .esqueleto-letrero) {
+  opacity: 1;
+  animation: none;
+}
+
+@media (hover: hover) {
+  .esqueleto-card:hover,
+  .esqueleto-letrero:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto {
+    animation: none;
   }
 }

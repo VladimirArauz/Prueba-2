@@ -116,16 +116,16 @@ function manejarError(error) {
   alert(error.message);
 }
 
-// Envía un formulario con su botón deshabilitado mientras espera
+// Envía un formulario con su botón ocupado ("Guardando…") mientras espera
 async function enviar(form, accion) {
   const boton = form.querySelector('[type="submit"]');
-  boton.disabled = true;
+  botonOcupado(boton);
   try {
     await accion();
   } catch (error) {
     manejarError(error);
   } finally {
-    boton.disabled = false;
+    botonListo(boton);
   }
 }
 
@@ -174,7 +174,7 @@ async function enviarCodigo(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const boton = form.querySelector('[type="submit"]');
-  boton.disabled = true;
+  botonOcupado(boton);
   try {
     await api("/auth/login/codigo", { method: "POST", body: { codigo: $("admin-codigo").value } });
     form.reset();
@@ -187,7 +187,7 @@ async function enviarCodigo(event) {
     const sesion = await api("/auth/sesion").catch(() => ({}));
     if (!sesion.segundoPaso) mostrarCodigo(false);
   } finally {
-    boton.disabled = false;
+    botonListo(boton);
   }
 }
 
@@ -232,6 +232,7 @@ async function cargarTodo() {
   }
   renderAcceso();
   render2fa();
+  pintarEsqueletosDash();
   try {
     const [iconos, tiendas, productos, ofertas, resenas, resumen, pedidos] = await Promise.all([
       api("/admin/iconos"), api("/admin/tiendas"), api("/admin/productos"), api("/admin/ofertas"), api("/admin/resenas"),
@@ -242,6 +243,8 @@ async function cargarTodo() {
       [st.promos, st.usuarios] = await Promise.all([api("/admin/promociones"), api("/admin/usuarios")]);
     }
   } catch (error) {
+    $("resumen-kpis").innerHTML = "";
+    $("pedidos-tbody").innerHTML = "";
     manejarError(error);
     return;
   }
@@ -429,11 +432,21 @@ function renderGraficas({ animar = false } = {}) {
   }
 }
 
+// Indicadores y tabla de pedidos con esqueletos mientras llega el resumen (plan 2026-10-29)
+function pintarEsqueletosDash() {
+  pintarEsqueletos($("resumen-kpis"), 4, "kpi");
+  pintarEsqueletos($("pedidos-tbody"), 5, "tabla", 5);
+}
+
 async function cambiarFiltrosDash() {
   st.pedidosPagina = 1;
+  pintarEsqueletosDash();
   try {
     [st.resumen, st.pedidos] = await Promise.all([api(rutaResumen()), api(rutaPedidos())]);
   } catch (error) {
+    // Se vuelve a pintar lo que ya había para quitar los esqueletos
+    renderResumen();
+    renderPedidos();
     return manejarError(error);
   }
   renderResumen({ animar: true });
@@ -643,7 +656,7 @@ async function guardarEditorPedido(boton) {
   const items = ed.lineas.map(l => l.tipo === "paquete"
     ? { tipo: "paquete", id: l.id, cantidad: l.cantidad, colores: l.colores }
     : { tipo: "producto", id: l.id, cantidad: l.cantidad, ...(l.color ? { color: l.color } : {}) });
-  boton.disabled = true;
+  botonOcupado(boton);
   try {
     await api(`/admin/pedidos/${ed.id}/items`, { method: "PUT", body: { items } });
     const id = ed.id;
@@ -653,7 +666,7 @@ async function guardarEditorPedido(boton) {
   } catch (error) {
     manejarError(error);
   } finally {
-    boton.disabled = false;
+    botonListo(boton);
   }
 }
 

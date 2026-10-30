@@ -32,6 +32,10 @@ return [
     // false pone en pausa las cuentas de cliente (entrar, registrarse y opinar). Necutools no cambia.
     'cuentas_clientes' => true,
 
+    // Dirección pública del sitio, sin "/" al final (ej. 'https://necutla.mx'). Arma og:url y og:image para
+    // la vista previa del enlace en WhatsApp. Vacía: la vista previa sale sin imagen ni dirección.
+    'url_publica' => '',
+
     // Solo si IONOS pusiera un proxy delante y REMOTE_ADDR no fuera la IP del visitante. En hosting
     // compartido de IONOS se deja en false: si fuera true, cualquiera podría inventarse una IP.
     'confiar_x_forwarded_for' => false,

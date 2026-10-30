@@ -203,12 +203,14 @@ Object.assign(ACCIONES, {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const slug = slugDeLaUrl();
+  pintarEsqueletos(document.getElementById("store-grid"), POR_PAGINA);
   try {
     estado.datos = await api(`/stands/${encodeURIComponent(slug)}`);
   } catch (error) {
     document.title = "Tienda no encontrada | Necutla";
     document.getElementById("store-title").textContent = error.status === 404 ? "Tienda no encontrada" : "No se pudo cargar la tienda";
     document.getElementById("store-desc").textContent = error.message;
+    document.getElementById("store-grid").innerHTML = "";
     document.getElementById("store-empty").innerHTML = `<a class="btn" href="/">Ver tiendas</a>`;
     return;
   }
