@@ -26,7 +26,7 @@ Cómo se usa:
 | `2026-10-21-colores-por-producto.md` | Aplicado, probado en local y subido a GitHub (`762ff7f`). Render todavía no lo despliega (ver pendiente 23e) | 2026-10-21 |
 | `2026-10-25-migracion-ionos-php-mariadb.md` | En curso: prompts 1 a 6 aplicados; prompt 7 a medias (código y base ya en IONOS el 2026-10-26). Falta un dominio con SSL (pendiente 25) | 2026-10-25 |
 | `2026-10-25-php85-y-puntos-debiles.md` | Aplicado (PHP 8.5 y puntos débiles de la revisión) | 2026-10-25 |
-| `2026-10-26-ionos-sin-https-y-cuentas-en-pausa.md` | Aplicado (temporal: falta el prompt 2 cuando haya dominio con SSL) | 2026-10-26 |
+| `2026-10-26-ionos-sin-https-y-cuentas-en-pausa.md` | Aplicado (temporal). Cuentas de cliente reactivadas el 2026-10-29; sigue sin HTTPS (falta el prompt 2 cuando haya dominio con SSL) | 2026-10-26 |
 | `2026-10-26-pedidos-estados-y-stock.md` | Aplicado, probado en local y subido a IONOS (tablas creadas allá). Falta capturar el stock (pendiente 26) | 2026-10-26 |
 | `2026-10-29-reels-esqueletos-botones-open-graph.md` | Aplicado, commit `d4a3289` en GitHub y subido a IONOS (2026-10-29). Falta probar el enlace en WhatsApp (pendiente 27) | 2026-10-29 |
 
@@ -119,6 +119,18 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-29: cuentas de cliente reactivadas en IONOS
+- Pedido del usuario: volver a activar el login y el registro de clientes y que todo el sitio funcione con sesión.
+- Solo cambió el `app/config.php` del servidor: `cuentas_clientes` en true (copia en `app/config.php.antes-cuentas`, permisos 600). `https` sigue en false porque no hay certificado: con `Secure` la cookie no se guardaría por HTTP. No cambió el código.
+- **Probado en vivo** con Chrome sin ventana (17 pruebas) y una cuenta de prueba `prueba_<hex>` con correo de gmail.com, que se borró después (quedan los 2 clientes reales):
+  - `/api/config` da `cuentas: true` y "Mi cuenta" aparece en el menú, sin el aviso de pausa.
+  - Registro completo con validación en vivo (el DNS MX funciona en IONOS) y sesión iniciada.
+  - Opinión publicada y borrada en `/p/1`.
+  - Cerrar sesión; entrar con el usuario y con el correo en mayúsculas; contraseña equivocada da 401.
+  - Necutools sigue con su propio login.
+- La consola solo muestra 2 avisos de Chrome por servir en HTTP (`Cross-Origin-Opener-Policy` y `Origin-Agent-Cluster` ignorados), que se quitan con SSL.
+- **Ojo:** mientras no haya HTTPS, las contraseñas de clientes y de Necutools viajan sin cifrar (pendiente 25a).
 
 ### 2026-10-29: esqueletos de carga, estados de botón y vista previa en WhatsApp (plan `2026-10-29-reels-esqueletos-botones-open-graph.md`, prompts 1 a 5)
 - **Esqueletos** (reel "Deja de usar spinners"):
