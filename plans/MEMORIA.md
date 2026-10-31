@@ -125,6 +125,9 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 
 ## Cambios hechos
 
+### 2026-10-30: título de la portada con nombre y eslogan
+- El usuario partió el h1 de la portada en dos (`Necutla` / `La ciudad del estudiante`). Pidió dejarlo separado, con el nombre primero y la frase como eslogan. Para no tener dos h1: `<h1>Necutla <span class="hero-lema">La ciudad del estudiante</span></h1>` en `public/index.html` y `.hero-lema` en `public/style.css` (en bloque, `wdth` 112 / 700, más chico que el nombre). Revisado a 1280 y 360 px y subido a IONOS.
+
 ### 2026-10-30: código por correo, sesión de cliente sin vencimiento (plan `2026-10-30-codigo-por-correo-y-sesion-permanente.md`, prompts 1 a 5)
 - **Correo** (`app/correo.php`, nuevo): SMTP propio sin Composer (`ssl://smtp.ionos.mx:465`, certificado verificado, `AUTH LOGIN`), mensaje texto + HTML en UTF-8, sin saltos de línea en encabezados. Plantilla del código con el diseño de Necutla (estilos en línea con los hex de los tokens: excepción técnica, los clientes de correo no leen `style.css`). Opción `correo` en `app/config.ejemplo.php` y `README.md`; en local `modo: archivo` → `/tmp/necutla-correos/`. En IONOS se agregó `correo` al `config.php` (permisos 600, copia `app/config.php.antes-correo`) y salió bien un correo de prueba de `tienda@necutla.com` a sí mismo. Ojo: el `php` de la terminal de IONOS es 8.3; usar `php8.5`.
 - **Códigos** (`app/codigos.php`, nuevo; tabla `codigos_correo` en `db/mariadb/schema.sql`, corrida 2 veces en local y en IONOS): 6 dígitos con `random_int`, HMAC con el secreto, 10 min, un uso, 5 intentos, ligados a la sesión que los pidió, reenviar cada 60 s y 5 por hora por correo, 20 envíos por hora por IP. Restablecer manda el correo después de responder (`fastcgi_finish_request`) y responde igual exista o no la cuenta.
@@ -134,7 +137,7 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 - **Verificación local**: `curl` 28 + 23 + 14 (sesión y Necutools) + vencido/reenviar; Chrome sin ventana con cliente CDP propio 36 de 36 a 1280, 360 y con movimiento reducido (registro, error con temblor, pegar, brillo, entrar, restablecer, recargar a medio paso, sin scroll horizontal, sin errores de consola ni CSP). Clientes de prueba borrados.
 - **En vivo** (necutla.com, buzón `tienda@necutla.com` leído por IMAP): 12 de 12; el correo llegó en 1.8 s a la bandeja de entrada; cookie `__Host-necutla.sid` con `Secure` a 400 días. La cuenta de prueba se borró (quedan los 2 clientes reales).
 - Reels DfBJ5MGtFj_ y DfDuWCKsfqm: ya aplicados, sin cambios.
-- Commit "HTTPS en necutla.com, vista previa por tienda y código por correo" en `main` (todo lo del 2026-10-30, menos `public/index.html`: el usuario partió el h1 en dos y no se subió). **Falta el push**: el token de `gh` de Mor4l3sAx3l04 venció (`gh auth login -h github.com`, `gh auth setup-git` y `git push origin main` con el usuario aumf-ubuntu-080704).
+- Commit "HTTPS en necutla.com, vista previa por tienda y código por correo" en `main` (todo lo del 2026-10-30) y otro con el título de la portada. **Falta el push**: el token de `gh` de Mor4l3sAx3l04 venció (`gh auth login -h github.com`, `gh auth setup-git` y `git push origin main` con el usuario aumf-ubuntu-080704).
 
 ### 2026-10-30: plan del código por correo y la sesión de cliente sin vencimiento
 - Nuevo plan `plans/planes/2026-10-30-codigo-por-correo-y-sesion-permanente.md` y sus prompts (0 a 5) en `plans/prompts/` (mismo nombre). No se cambió código.

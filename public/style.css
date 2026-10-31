@@ -821,6 +821,17 @@ body {
   margin-bottom: 20px;
 }
 
+/* Eslogan bajo el nombre, dentro del mismo h1 (una página, un h1) */
+.hero-lema {
+  display: block;
+  margin-top: 12px;
+  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
+  font-weight: 700;
+  font-variation-settings: 'wdth' 112;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
 .hero-copy p {
   font-size: 1.125rem;
   max-width: 44ch;
