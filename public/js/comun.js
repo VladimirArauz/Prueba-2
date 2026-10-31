@@ -320,7 +320,7 @@ async function cargarVitrina(slugTienda = "") {
 const VERBOS_OCUPADO = {
   Activar: "Activando", Agregar: "Agregando", Buscar: "Buscando", Cambiar: "Cambiando", Confirmar: "Confirmando",
   Crear: "Creando", Desactivar: "Desactivando", Entrar: "Entrando", Enviar: "Enviando", Guardar: "Guardando",
-  Iniciar: "Iniciando", Publicar: "Publicando", Verificar: "Verificando"
+  Iniciar: "Iniciando", Publicar: "Publicando", Reenviar: "Reenviando", Verificar: "Verificando"
 };
 
 const TEXTOS_LISTOS = new WeakMap();

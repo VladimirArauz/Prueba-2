@@ -1,7 +1,7 @@
 # Plan: IONOS por HTTP y cuentas de cliente en pausa
 
 - **Fecha:** 2026-10-26
-- **Estado:** aplicado
+- **Estado:** aplicado (prompt 1 el 2026-10-26; prompt 2, vuelta a HTTPS con `necutla.com`, el 2026-10-30)
 - **Prompts:** `plans/prompts/2026-10-26-ionos-sin-https-y-cuentas-en-pausa.md`
 - **Alcance:** `public/.htaccess`, `app/` (interruptores en `config.php`), `cuenta.html`, `js/comun.js`,
   `js/cuenta.js`, `js/producto.js`. Medida temporal mientras no haya dominio con SSL.

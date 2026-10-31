@@ -1,7 +1,7 @@
 # Plan: cambio de hoster a IONOS (hosting compartido, PHP + MariaDB)
 
 - **Fecha:** 2026-10-25
-- **Estado:** en curso (prompts 1 a 6 aplicados el 2026-10-25; falta el 7, el cambio en IONOS. La versión de PHP pasó a 8.5: ver `2026-10-25-php85-y-puntos-debiles.md`)
+- **Estado:** aplicado (prompts 1 a 7; el 7 terminó el 2026-10-30 con el dominio `https://necutla.com` y su SSL. Falta apagar Render. La versión de PHP pasó a 8.5: ver `2026-10-25-php85-y-puntos-debiles.md`)
 - **Prompts:** `plans/prompts/2026-10-25-migracion-ionos-php-mariadb.md`
 - **Alcance:** todo el servidor (`server/` → `app/` en PHP), la base (PostgreSQL → MariaDB), configuración,
   despliegue y documentación. El frontend (`public/`) **no cambia**, salvo `.htaccess`, `api/index.php` y

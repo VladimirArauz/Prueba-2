@@ -115,6 +115,13 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
 - **Cuentas de cliente** (`/cuenta.html`, solo para opinar): nombre, usuario único, correo con un dominio
   que reciba correos (revisión DNS MX), teléfono con la lada de su país (privado: no sale en ninguna
   respuesta) y contraseña escrita dos veces.
+- **Código por correo** (`app/codigos.php`, `app/correo.php`, `public/js/codigo.js`): entrar, crear la cuenta y
+  "¿Olvidaste tu contraseña?" piden un código de 6 dígitos que llega desde `tienda@necutla.com`. Vence a los
+  10 minutos, sirve una vez, aguanta 5 intentos y solo vale en el navegador que lo pidió; se reenvía cada 60 s
+  (5 por hora). La cuenta se crea hasta poner el código, y entonces la sesión se inicia sola. Restablecer no dice
+  si una cuenta existe. En local los correos se guardan en `/tmp/necutla-correos/` (`correo.modo = 'archivo'`).
+- **Sesión de cliente sin vencimiento**: cookie de 400 días (el máximo de Chrome) que se renueva en cada visita;
+  solo se cierra con "Cerrar sesión" o al cambiar o restablecer la contraseña. Necutools sigue con 8 h / 24 h.
 - **Contraseñas nuevas**: minúscula, mayúscula, número y carácter especial; 10 caracteres o más para
   clientes y 12 para Necutools; hasta 72 bytes; siempre se escriben dos veces.
 - **Dashboard de Necutools**: indicadores del periodo (7, 30 o 90 días) contra el anterior, gráficas con
@@ -126,6 +133,12 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   imagen, título y descripción. `/t/<tienda>` y `/p/<id>` llevan los datos de esa tienda o producto
   (`app/paginas.php`); las demás páginas, la imagen general `public/imagenes/og-necutla.png` (1200×630,
   fuente en `recursos/og/og-necutla.svg`). Necesita `url_publica` en `app/config.php`.
+  Las tiendas sin portada PNG/JPG/WEBP usan una imagen hecha con GD (`app/og-imagen.php`,
+  `/api/stands/<id>/vista`) con su nombre, descripción y subcategorías. Necesita la extensión GD con FreeType
+  (IONOS la trae; en local, `sudo apt install php8.5-gd`) y las fuentes de `app/fuentes/`: Archivo fija en
+  125/800, 112/700 y 100/500, sacada de la variable de Google Fonts con
+  `fonttools varLib.instancer "Archivo[wdth,wght].ttf" wdth=125 wght=800 -o Archivo-125-800.ttf`. Sin GD,
+  la tienda usa la imagen general.
 
 ### Qué botón usar
 
@@ -152,7 +165,8 @@ Estados: hover y presionado los da `style.css`. `disabled` lo pone gris en cualq
 | `whatsapp_respaldo` | Números para las tiendas sin números propios, separados por coma (`5255XXXXXXXX`) |
 | `confiar_x_forwarded_for` | `false` en IONOS (la IP real viene en `REMOTE_ADDR`). `true` solo en local, para `ataques.js` |
 | `correo_dns_prueba` | Solo en local: no consulta el DNS al revisar correos (todo dominio vale salvo `*.invalid` y `sin-correo.*`) |
-| `url_publica` | Dirección del sitio sin `/` al final (ej. `http://s1115824141.onlinehome.mx`). Arma las direcciones completas de la vista previa del enlace (`og:url`, `og:image`). Vacía: la vista previa sale sin imagen |
+| `url_publica` | Dirección del sitio sin `/` al final (ej. `https://necutla.com`). Arma las direcciones completas de la vista previa del enlace (`og:url`, `og:image`). Vacía: la vista previa sale sin imagen |
+| `correo` | Buzón que manda los códigos de las cuentas de cliente: `modo` (`smtp`, o `archivo` solo en local: guarda los correos en `/tmp/necutla-correos/`), `host` (`smtp.ionos.mx`), `puerto` (465), `usuario` y `password` del buzón, `remitente` y `nombre` |
 | `hoy_prueba` | Solo en local: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones |
 
 `app/config.php` **nunca** se sube a git (está en `.gitignore`).
@@ -207,7 +221,7 @@ versión en PHP pasa las mismas pruebas).
 | Archivos | Solo se publica `public/`; `app/` (con `config.php`), `plans/`, `db/` y `.git` quedan fuera. Dentro de `public/`, los archivos que empiezan con punto y cualquier `.php` que no sea `api/index.php` dan 404 |
 | Cabeceras | En `public/.htaccess`: CSP estricta (sin scripts ni estilos en línea), HSTS con HTTPS, `nosniff`, `Permissions-Policy` sin cámara, micrófono ni ubicación; Necutools y `/api` con `noindex`; respuestas privadas con `no-store`; sin `X-Powered-By` |
 | Peticiones | Solo las rutas de Necutools que suben imágenes aceptan 2 MB; el resto, 20 KB. Lo que modifica datos debe venir de este sitio (`Origin` obligatorio y `Sec-Fetch-Site`). TRACE no se acepta. La redirección a HTTPS solo cree lo que dice Apache, no la cabecera `X-Forwarded-Proto` |
-| Sesión | En la tabla `sesiones` (solo el SHA-256 de la cookie); cookie `__Host-necutla.sid` (`HttpOnly`, `Secure`, `SameSite=Strict`); id nuevo al entrar y al salir; 8 h sin uso o 24 h en total |
+| Sesión | En la tabla `sesiones` (solo el SHA-256 de la cookie); cookie `__Host-necutla.sid` (`HttpOnly`, `Secure`, `SameSite=Strict`); id nuevo al entrar y al salir; Necutools: 8 h sin uso o 24 h en total; clientes: 400 días renovados en cada visita, hasta cerrar sesión |
 | Cuentas | Correo y usuario se guardan en minúsculas y se comparan exactos (`josé` y `jose` son cuentas distintas); bcrypt (costo 12; las contraseñas de antes siguen sirviendo); 10 fallos seguidos frenan la cuenta 15 minutos, venga de la IP que venga; además, 10 por IP |
 | Dos pasos | Opcional en Necutools ("Mi cuenta"); 8 códigos de respaldo de un solo uso |
 | Permisos | Revisados en el servidor en cada petición: un encargado no toca tiendas ajenas ni paquetes |

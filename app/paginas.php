@@ -11,6 +11,9 @@ const PAGINAS_FIJAS = [
     '/promociones.html' => 'promociones.html', '/cuenta.html' => 'cuenta.html',
 ];
 
+// Se sube cuando cambian las cabeceras de las imágenes: la caché de IONOS guarda cada dirección con las de antes
+const OG_VERSION = '2';
+
 const OG_GENERAL = [
     'titulo' => 'Necutla — tiendas de estudiantes con pedido por WhatsApp',
     'descripcion' => 'Ropa, tecnología, dulces, papelería y más de la comunidad estudiantil. Arma tu pedido y mándalo por WhatsApp a cada tienda.',
@@ -39,11 +42,16 @@ function og_de_tienda(string $slug): ?array
     $s = fila('SELECT id, nombre, descripcion, imagen_ruta, actualizado_en, (portada IS NOT NULL) AS tiene_portada
                FROM stands WHERE slug = ? AND visible', [mb_substr($slug, 0, 60)]);
     if (!$s) return null;
-    $imagen = imagen_para_vista(imagen_tienda($s));
-    return [
+    $og = [
         'titulo' => "{$s['nombre']} en Necutla",
         'descripcion' => recortar($s['descripcion'] ?: "Catálogo de {$s['nombre']}. Arma tu pedido y mándalo por WhatsApp a la tienda.", 150),
-    ] + ($imagen ? ['imagen' => $imagen, 'alt' => "Tienda {$s['nombre']}", 'ancho' => null, 'alto' => null] : []);
+    ];
+    // Con portada real se usa la portada; si es SVG o no hay, la imagen generada de la tienda (app/og-imagen.php)
+    $imagen = imagen_para_vista(imagen_tienda($s));
+    if ($imagen) return $og + ['imagen' => $imagen, 'alt' => "Tienda {$s['nombre']}", 'ancho' => null, 'alto' => null];
+    if (!vista_tienda_disponible()) return $og;
+    $v = datos_vista_tienda((int) $s['id'])['version'] ?? '';
+    return $og + ['imagen' => "/api/stands/{$s['id']}/vista?v=$v", 'alt' => "Tienda {$s['nombre']} en Necutla"];
 }
 
 function og_de_producto(int $id): ?array
@@ -83,7 +91,8 @@ function etiquetas_og(array $og, string $ruta): string
     // Las direcciones de og:url y og:image tienen que ser completas: sin url_publica no se ponen
     if ($base !== '') {
         $lineas[] = '<meta property="og:url" content="' . $e($base . $ruta) . '">';
-        $lineas[] = '<meta property="og:image" content="' . $e($base . $og['imagen']) . '">';
+        $imagen = $og['imagen'] . (str_contains($og['imagen'], '?') ? '&' : '?') . 'og=' . OG_VERSION;
+        $lineas[] = '<meta property="og:image" content="' . $e($base . $imagen) . '">';
         if ($og['ancho']) {
             $lineas[] = '<meta property="og:image:width" content="' . $og['ancho'] . '">';
             $lineas[] = '<meta property="og:image:height" content="' . $og['alto'] . '">';

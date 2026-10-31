@@ -32,9 +32,22 @@ return [
     // false pone en pausa las cuentas de cliente (entrar, registrarse y opinar). Necutools no cambia.
     'cuentas_clientes' => true,
 
-    // Dirección pública del sitio, sin "/" al final (ej. 'https://necutla.mx'). Arma og:url y og:image para
+    // Dirección pública del sitio, sin "/" al final (ej. 'https://necutla.com'). Arma og:url y og:image para
     // la vista previa del enlace en WhatsApp. Vacía: la vista previa sale sin imagen ni dirección.
     'url_publica' => '',
+
+    // Correo que manda los códigos de verificación de las cuentas de cliente (entrar, registrarse y cambiar la
+    // contraseña). En IONOS: smtp.ionos.mx, puerto 465 (SSL), usuario = el correo completo y su contraseña.
+    // 'modo' => 'archivo' (solo en local, con 'produccion' en false) guarda los correos en /tmp/necutla-correos/.
+    'correo' => [
+        'modo' => 'smtp',
+        'host' => 'smtp.ionos.mx',
+        'puerto' => 465,
+        'usuario' => 'tienda@necutla.com',
+        'password' => 'CAMBIA-ESTO',
+        'remitente' => 'tienda@necutla.com',
+        'nombre' => 'Necutla',
+    ],
 
     // Solo si IONOS pusiera un proxy delante y REMOTE_ADDR no fuera la IP del visitante. En hosting
     // compartido de IONOS se deja en false: si fuera true, cualquiera podría inventarse una IP.

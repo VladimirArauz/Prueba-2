@@ -8,6 +8,9 @@
  * encargados al terminar. Cada prueba dice qué espera y a qué hallazgo de
  * plans/auditorias/2026-10-20-seguridad.md corresponde. Sale con código 1 si alguna falla.
  *
+ * Entrar, registrarse y restablecer piden el código del correo: en local, app/config.php lleva
+ * 'correo' => ['modo' => 'archivo'] y el código se lee de /tmp/necutla-correos/ (codigoDe).
+ *
  * Cada petición lleva su propia IP en X-Forwarded-For para que el límite general de la API no
  * mezcle las pruebas (en local, app/config.php la acepta con confiar_x_forwarded_for; en IONOS se usa REMOTE_ADDR).
  */
@@ -21,6 +24,7 @@ const DUENO = process.env.NECUTLA_DUENO_USUARIO || "dueno";
 const DUENO_PASS = process.env.NECUTLA_DUENO_PASSWORD || "prueba-dueno-123";
 const SUFIJO = Date.now().toString(36);
 const totp = require("./totp");
+const fs = require("fs");
 
 // ================= Utilidades =================
 let ipSeq = 0;
@@ -78,13 +82,55 @@ function datosCliente(nombre, extra = {}) {
   };
 }
 
+// ================= Código por correo (plan 2026-10-30-codigo-por-correo-y-sesion-permanente) =================
+const CARPETA_CORREOS = "/tmp/necutla-correos";
+const CORREO_DE_USUARIO = new Map();
+
+// Código del correo más reciente que se mandó a `correo` (modo 'archivo' de app/correo.php)
+async function codigoDe(correo) {
+  const para = `To: <${correo.toLowerCase()}>`;
+  for (let i = 0; i < 40; i++) {
+    const archivos = fs.existsSync(CARPETA_CORREOS) ? fs.readdirSync(CARPETA_CORREOS).map(f => `${CARPETA_CORREOS}/${f}`) : [];
+    archivos.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    for (const f of archivos) {
+      const txt = fs.readFileSync(f, "utf8");
+      if (!txt.includes(para)) continue;
+      const parte = txt.split(/Content-Type: text\/plain; charset=UTF-8\r?\nContent-Transfer-Encoding: base64\r?\n\r?\n/)[1] || "";
+      const plano = Buffer.from(parte.split("--necutla-")[0].replace(/\s+/g, ""), "base64").toString("utf8");
+      const m = plano.match(/^(\d{6})$/m);
+      if (m) return m[1];
+    }
+    await new Promise(listo => setTimeout(listo, 100));
+  }
+  throw new Error(`no llegó el código de ${correo}`);
+}
+
+// Si la respuesta pide el código, lo lee del correo y lo manda con la misma sesión
+async function conCodigo(r, proposito, correo, sesion) {
+  if (r.status !== 200 || !r.json || !r.json.codigo) return r;
+  return pedir("POST", `/api/clientes/${proposito}/codigo`, { body: { codigo: await codigoDe(correo) }, sesion });
+}
+
+async function registrarConDatos(body, sesion = {}) {
+  CORREO_DE_USUARIO.set(String(body.usuario).toLowerCase(), String(body.correo).toLowerCase());
+  const r = await pedir("POST", "/api/clientes/registro", { body, sesion });
+  return conCodigo(r, "registro", body.correo, sesion);
+}
+
 async function registrarCliente(nombre) {
   const sesion = {};
   const body = datosCliente(nombre);
   const correo = body.correo;
-  const r = await pedir("POST", "/api/clientes/registro", { body, sesion });
+  const r = await registrarConDatos(body, sesion);
   if (r.status !== 200) throw new Error(`registro ${nombre}: ${r.status} ${r.texto}`);
   return { sesion, correo };
+}
+
+// Entrar como cliente completo: contraseña y después el código del correo
+async function entrarCliente(identificador, password, sesion = {}) {
+  const r = await pedir("POST", "/api/clientes/login", { body: { identificador, password }, sesion });
+  const id = String(identificador).toLowerCase();
+  return conCodigo(r, "login", id.includes("@") ? id : CORREO_DE_USUARIO.get(id) || id, sesion);
 }
 
 const PNG_1x1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
@@ -340,7 +386,7 @@ async function main() {
   });
   await prueba("H9", "cerrar Necutools con un cliente en el mismo navegador cambia el id de sesión", async () => {
     const s = {};
-    await pedir("POST", "/api/clientes/login", { body: { correo: cli1.correo, password: PASS_CLIENTE }, sesion: s });
+    await entrarCliente(cli1.correo, PASS_CLIENTE, s);
     await pedir("POST", "/api/auth/login", { body: { usuario: DUENO, password: DUENO_PASS }, sesion: s });
     const antes = s.cookie;
     await pedir("POST", "/api/auth/logout", { sesion: s });
@@ -619,7 +665,7 @@ async function main() {
     return error400(r, /especial/);
   });
   await prueba("R", "registro: teléfono de España con 9 dígitos se acepta y se guarda privado", async () => {
-    const r = await registro(datosCliente("espana", { pais: "ES", telefono: "612 345 678" }));
+    const r = await registrarConDatos(datosCliente("espana", { pais: "ES", telefono: "612 345 678" }));
     return espera(r.status === 200 && !/612345678|telefono/.test(r.texto) && r.json.usuario === `espana-${SUFIJO}`, `${r.status} ${r.texto}`);
   });
   await prueba("R", "registro: usuario o correo repetido → 409 con el mismo mensaje (no dice cuál)", async () => {
@@ -639,8 +685,7 @@ async function main() {
     const r = await pedir("POST", "/api/clientes/revisar-correo", { origin: null, body: { correo: cli1.correo } });
     return espera(r.status === 403, r.status);
   });
-  const loginCliente = (identificador, password = PASS_CLIENTE, sesion = {}) =>
-    pedir("POST", "/api/clientes/login", { body: { identificador, password }, sesion });
+  const loginCliente = (identificador, password = PASS_CLIENTE, sesion = {}) => entrarCliente(identificador, password, sesion);
   await prueba("R", "cliente: entra con el usuario (sin importar mayúsculas)", async () => {
     const r = await loginCliente(`CLIENTE1-${SUFIJO}`.toUpperCase());
     return espera(r.status === 200 && r.json.usuario === `cliente1-${SUFIJO}`, `${r.status} ${r.texto}`);
@@ -649,9 +694,9 @@ async function main() {
     const r = await loginCliente(cli1.correo.toUpperCase());
     return espera(r.status === 200, `${r.status} ${r.texto}`);
   });
-  await prueba("R", "cliente: el campo viejo `correo` sigue funcionando", async () => {
+  await prueba("R", "cliente: el campo viejo `correo` sigue funcionando (pide el código)", async () => {
     const r = await pedir("POST", "/api/clientes/login", { body: { correo: cli1.correo, password: PASS_CLIENTE } });
-    return espera(r.status === 200, r.status);
+    return espera(r.status === 200 && r.json.codigo === true && r.json.autenticado === false, `${r.status} ${r.texto}`);
   });
   await prueba("R", "cliente: el freno por cuenta se comparte entre usuario y correo", async () => {
     const { correo } = await registrarCliente("freno");
@@ -748,7 +793,7 @@ async function main() {
   // ---------- Correo y usuario: sin importar mayúsculas, pero sí los acentos ----------
   {
     const body = datosCliente("acento");
-    await pedir("POST", "/api/clientes/registro", { body });
+    await registrarConDatos(body);
     const entrar = identificador => pedir("POST", "/api/clientes/login", { body: { identificador, password: PASS_CLIENTE } });
     await prueba("C", "login cliente: el correo en mayúsculas entra", async () => {
       const r = await entrar(body.correo.toUpperCase());
@@ -771,6 +816,83 @@ async function main() {
     const r = await pedir("GET", "/api/Admin/yo");
     return espera(/no-store/.test(r.headers.get("cache-control") || ""), r.headers.get("cache-control"));
   });
+
+  // ---------- Código por correo y sesión de cliente sin vencimiento (plan 2026-10-30) ----------
+  {
+    const body = datosCliente("codigo");
+    const s = {};
+    const pide = await pedir("POST", "/api/clientes/registro", { body, sesion: s });
+    await prueba("OTP", "registro: responde que falta el código, sin el código ni la cuenta", async () => {
+      const codigo = await codigoDe(body.correo);
+      const entra = await pedir("POST", "/api/clientes/login", { body: { identificador: body.usuario, password: PASS_CLIENTE } });
+      return espera(pide.status === 200 && pide.json.codigo === true && !pide.texto.includes(codigo) && entra.status === 401,
+        `${pide.status} ${pide.texto} / login ${entra.status}`);
+    });
+    await prueba("OTP", "el código no sirve en otro navegador → 410", async () => {
+      const r = await pedir("POST", "/api/clientes/registro/codigo", { body: { codigo: await codigoDe(body.correo) } });
+      return espera(r.status === 410, `${r.status} ${r.texto}`);
+    });
+    await prueba("OTP", "código equivocado → 401; 5 intentos lo anulan (410 aun con el correcto)", async () => {
+      const bueno = await codigoDe(body.correo);
+      const malo = String((Number(bueno) + 1) % 1e6).padStart(6, "0");
+      const fallos = [];
+      for (let i = 0; i < 5; i++) fallos.push((await pedir("POST", "/api/clientes/registro/codigo", { body: { codigo: malo }, sesion: s })).status);
+      const r = await pedir("POST", "/api/clientes/registro/codigo", { body: { codigo: bueno }, sesion: s });
+      return espera(fallos.every(x => x === 401) && r.status === 410, `${fallos.join(",")} ${r.status}`);
+    });
+    await prueba("OTP", "código con letras o incompleto → 400", async () => {
+      const r = await pedir("POST", "/api/clientes/registro/codigo", { body: { codigo: "12a45" }, sesion: s });
+      return espera(r.status === 400, `${r.status} ${r.texto}`);
+    });
+    const otro = datosCliente("codigo2");
+    const s2 = {};
+    await prueba("OTP", "registro con el código correcto crea la cuenta y entra sola; la cookie dura 400 días", async () => {
+      const r = await registrarConDatos(otro, s2);
+      const ses = await pedir("GET", "/api/clientes/sesion", { sesion: s2 });
+      const vence = (r.galletas.find(c => /necutla\.sid=/.test(c)) || "").match(/Expires=([^;]+)/);
+      const dias = vence ? (Date.parse(vence[1]) - Date.now()) / 864e5 : 0;
+      return espera(r.status === 200 && r.json.autenticado === true && ses.json.autenticado === true && dias > 399,
+        `${r.status} ${r.texto} ${ses.texto} ${dias}`);
+    });
+    await prueba("OTP", "el mismo código no sirve dos veces", async () => {
+      const r = await pedir("POST", "/api/clientes/registro/codigo", { body: { codigo: await codigoDe(otro.correo) }, sesion: s2 });
+      return espera(r.status === 410, `${r.status} ${r.texto}`);
+    });
+    await prueba("OTP", "entrar: la contraseña sola no inicia sesión", async () => {
+      const s3 = {};
+      const r = await pedir("POST", "/api/clientes/login", { body: { identificador: otro.usuario, password: PASS_CLIENTE }, sesion: s3 });
+      const ses = await pedir("GET", "/api/clientes/sesion", { sesion: s3 });
+      return espera(r.status === 200 && r.json.autenticado === false && ses.json.autenticado === false, `${r.texto} ${ses.texto}`);
+    });
+    await prueba("OTP", "restablecer: misma respuesta con un usuario que existe y uno que no", async () => {
+      const a = await pedir("POST", "/api/clientes/restablecer", { body: { identificador: otro.usuario } });
+      const b = await pedir("POST", "/api/clientes/restablecer", { body: { identificador: `nadie-${SUFIJO}` } });
+      return espera(a.status === 200 && a.texto === b.texto, `${a.texto} / ${b.texto}`);
+    });
+    await prueba("OTP", "restablecer: con el código pone otra contraseña, entra y saca a los otros navegadores", async () => {
+      const s4 = {};
+      await new Promise(listo => setTimeout(listo, 300)); // el correo de restablecer sale después de responder
+      const nueva = "Otra-clave-cliente-3";
+      const pide2 = await pedir("POST", "/api/clientes/restablecer", { body: { identificador: otro.correo }, sesion: s4 });
+      await new Promise(listo => setTimeout(listo, 300));
+      const cod = await pedir("POST", "/api/clientes/restablecer/codigo", { body: { codigo: await codigoDe(otro.correo) }, sesion: s4 });
+      const pw = await pedir("POST", "/api/clientes/restablecer/password", { body: { nueva, confirmar: nueva }, sesion: s4 });
+      const fuera = await pedir("GET", "/api/clientes/sesion", { sesion: s2 });
+      const vieja = await pedir("POST", "/api/clientes/login", { body: { identificador: otro.usuario, password: PASS_CLIENTE } });
+      return espera(pide2.status === 200 && cod.status === 200 && pw.status === 200 && pw.json.autenticado === true &&
+        fuera.json.autenticado === false && vieja.status === 401, [pide2.status, cod.status, pw.status, fuera.texto, vieja.status].join(" "));
+    });
+    await prueba("OTP", "restablecer: la contraseña nueva sin el código → 410", async () => {
+      const r = await pedir("POST", "/api/clientes/restablecer/password", { body: { nueva: "Otra-clave-cliente-4", confirmar: "Otra-clave-cliente-4" } });
+      return espera(r.status === 410, `${r.status} ${r.texto}`);
+    });
+    await prueba("OTP", "Necutools sigue con su cookie de 8 horas", async () => {
+      const r = await pedir("POST", "/api/auth/login", { body: { usuario: DUENO, password: DUENO_PASS } });
+      const vence = (r.galletas.find(c => /necutla\.sid=/.test(c)) || "").match(/Expires=([^;]+)/);
+      const horas = vence ? (Date.parse(vence[1]) - Date.now()) / 36e5 : 99;
+      return espera(r.status === 200 && horas <= 8.1, `${r.status} ${horas}`);
+    });
+  }
 
   // ---------- Errores sin detalles ----------
   await prueba("—", "404 de la API sin detalles internos", async () => {

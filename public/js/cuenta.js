@@ -1,12 +1,113 @@
 /**
  * NECUTLA — Cuenta de cliente: iniciar sesión (usuario o correo), crear cuenta, completar una cuenta
- * vieja, cambiar contraseña y cerrar sesión. La validación en vivo está en validacion.js.
+ * vieja, cambiar contraseña, restablecerla y cerrar sesión. La validación en vivo está en validacion.js.
+ * Entrar, crear la cuenta y restablecer piden el código que llega al correo (codigo.js).
  * ?volver=/p/12 regresa al producto después de entrar.
  */
 
 const MIN_PASSWORD_CLIENTE = 10; // igual que server/clientes.js
 
 const $ = id => document.getElementById(id);
+
+// Tarjeta visible fuera de la cuenta: "fuera" (entrar / crear), "codigo", "restablecer" o "nueva"
+const VISTAS = { fuera: "cuenta-fuera", codigo: "cuenta-codigo", restablecer: "cuenta-restablecer", nueva: "cuenta-nueva" };
+
+function vista(nombre) {
+  for (const [clave, id] of Object.entries(VISTAS)) $(id).hidden = clave !== nombre;
+}
+
+// Paso del código: a qué ruta se manda y qué pasa al acertar
+const PASOS_CODIGO = {
+  login: { ruta: "/clientes/login/codigo", titulo: "Revisa tu correo para entrar" },
+  registro: { ruta: "/clientes/registro/codigo", titulo: "Revisa tu correo para crear tu cuenta" },
+  restablecer: { ruta: "/clientes/restablecer/codigo", titulo: "Revisa tu correo para cambiar tu contraseña" }
+};
+
+let campoCodigo = null;
+let pasoCodigo = null;
+let cuentaAtras = null;
+
+function estadoCodigo(texto, tipo = "") {
+  const estado = $("codigo-estado");
+  estado.className = `codigo-estado${tipo ? ` is-${tipo}` : ""}`;
+  estado.innerHTML = tipo === "ok" ? `${icon("circle-check")}<span>${escapeHTML(texto)}</span>` : escapeHTML(texto);
+}
+
+// "Reenviar código en 45 s" hasta que pase la espera
+function esperarReenvio(segundos) {
+  const boton = $("codigo-reenviar");
+  clearInterval(cuentaAtras);
+  let quedan = Math.max(0, Math.round(segundos));
+  const pintar = () => {
+    boton.disabled = quedan > 0;
+    boton.textContent = quedan > 0 ? `Reenviar código en ${quedan} s` : "Reenviar código";
+  };
+  pintar();
+  if (!quedan) return;
+  cuentaAtras = setInterval(() => {
+    quedan -= 1;
+    pintar();
+    if (quedan <= 0) clearInterval(cuentaAtras);
+  }, 1000);
+}
+
+function mostrarCodigo(respuesta) {
+  pasoCodigo = respuesta.proposito;
+  $("codigo-title").textContent = PASOS_CODIGO[pasoCodigo].titulo;
+  $("codigo-desc").textContent = respuesta.correo
+    ? `Te mandamos un código de 6 dígitos a ${respuesta.correo}. Vence en 10 minutos.`
+    : "Si tienes cuenta, te mandamos un código de 6 dígitos a tu correo. Vence en 10 minutos.";
+  campoCodigo.limpiar();
+  estadoCodigo("");
+  esperarReenvio(respuesta.espera ?? 0);
+  vista("codigo");
+  campoCodigo.enfocar();
+}
+
+// Después de acertar se ve el verde un momento antes de seguir (sin espera con movimiento reducido)
+const pausaExito = () => new Promise(listo => setTimeout(listo, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900));
+
+async function verificarCodigo(codigo) {
+  if (!pasoCodigo || codigo.length !== DIGITOS_CODIGO) {
+    estadoCodigo("Escribe los 6 dígitos del código.", "error");
+    return;
+  }
+  const boton = $("form-codigo").querySelector('[type="submit"]');
+  if (boton.getAttribute("aria-busy") === "true") return;
+  botonOcupado(boton);
+  campoCodigo.habilitar(false);
+  try {
+    const respuesta = await api(PASOS_CODIGO[pasoCodigo].ruta, { method: "POST", body: { codigo } });
+    campoCodigo.exito();
+    estadoCodigo("Verificado", "ok");
+    clearInterval(cuentaAtras);
+    await pausaExito();
+    const paso = pasoCodigo;
+    pasoCodigo = null;
+    if (paso === "restablecer") {
+      vista("nueva");
+      $("nueva-password").focus();
+    } else {
+      entrar(respuesta, paso === "registro" ? `Cuenta creada. Te damos la bienvenida, ${respuesta.nombre}.` : `Sesión iniciada: ${respuesta.nombre}`);
+    }
+  } catch (error) {
+    campoCodigo.habilitar(true);
+    campoCodigo.error();
+    estadoCodigo(error.message, "error");
+    if (error.status === 410) esperarReenvio(0); // venció o sin intentos: ya se puede pedir otro
+  } finally {
+    botonListo(boton);
+  }
+}
+
+function volverDelCodigo() {
+  clearInterval(cuentaAtras);
+  const paso = pasoCodigo;
+  pasoCodigo = null;
+  if (location.hash === "#restablecer") history.replaceState(null, "", location.pathname + location.search);
+  vista("fuera");
+  modoAuth(paso === "registro", true);
+}
 
 // Solo rutas de este sitio ("/p/12"), nunca otra página ("//otro.com")
 function destinoDeVuelta() {
@@ -33,12 +134,16 @@ function render(sesion) {
     return;
   }
   const dentro = Boolean(sesion && sesion.autenticado);
-  $("cuenta-fuera").hidden = dentro;
   $("cuenta-dentro").hidden = !dentro;
   if (!dentro) {
+    vista("fuera");
     modoAuth(location.hash === "#crear-cuenta");
+    // Al recargar a medio paso se retoma (el código ya va en el correo)
+    if (sesion && sesion.codigoPendiente) mostrarCodigo({ ...sesion.codigoPendiente, espera: 0 });
+    else if (location.hash === "#restablecer") abrirRestablecer(false);
     return;
   }
+  vista(null);
   $("dentro-title").textContent = `Hola, ${sesion.nombre}`;
   $("dentro-correo").textContent = sesion.usuario
     ? `Tu usuario es ${sesion.usuario} y tu correo ${sesion.correo}.`
@@ -48,6 +153,19 @@ function render(sesion) {
   const volver = destinoDeVuelta();
   $("dentro-seguir").href = volver || "/";
   $("dentro-seguir").textContent = volver ? "Volver al producto" : "Ver tiendas";
+}
+
+function abrirRestablecer(enfocar = true) {
+  vista("restablecer");
+  const campo = $("restablecer-identificador");
+  if (!campo.value) campo.value = $("entrar-identificador").value;
+  if (enfocar) campo.focus();
+}
+
+// Respuesta de entrar o crear cuenta: falta el código del correo, o ya hay sesión
+function siguientePaso(respuesta, mensaje) {
+  if (respuesta && respuesta.codigo) mostrarCodigo(respuesta);
+  else entrar(respuesta, mensaje);
 }
 
 // Después de entrar o crear la cuenta: de regreso al producto, o se muestra la cuenta
@@ -103,11 +221,34 @@ function prepararValidacion() {
   prepararCampo($("completar-usuario"), valor => revisarUsuario(valor));
   prepararTelefono($("completar-pais"), $("completar-telefono"));
 
+  prepararCampo($("restablecer-identificador"), valor => (valor.trim() ? { ok: true, mensaje: "" } : { ok: false, mensaje: "Escribe tu usuario o correo." }));
+  prepararPassword($("nueva-password"), { minimo: MIN_PASSWORD_CLIENTE, confirmar: $("nueva-confirmar") });
+
   prepararCampo($("password-actual"), valor => (valor ? { ok: true, mensaje: "" } : { ok: false, mensaje: "Escribe tu contraseña actual." }));
   prepararPassword($("password-nueva"), { minimo: MIN_PASSWORD_CLIENTE, confirmar: $("password-confirmar") });
 }
 
 Object.assign(ACCIONES, {
+  "codigo-volver": () => volverDelCodigo(),
+  "codigo-reenviar": async el => {
+    botonOcupado(el);
+    try {
+      const respuesta = await api("/clientes/codigo/reenviar", { method: "POST" });
+      botonListo(el);
+      campoCodigo.limpiar();
+      esperarReenvio(respuesta.espera ?? 60);
+      estadoCodigo("Te mandamos otro código. Usa el del último correo.");
+      campoCodigo.enfocar();
+    } catch (error) {
+      botonListo(el);
+      if (error.status === 410) {
+        volverDelCodigo();
+        showToast(error.message, "info");
+      } else {
+        estadoCodigo(error.message, "error");
+      }
+    }
+  },
   "auth-cambiar": () => modoAuth(!$("cuenta-fuera").classList.contains("is-registro"), true),
   "ver-password": el => {
     const campo = $(el.getAttribute("aria-controls"));
@@ -127,18 +268,33 @@ Object.assign(ACCIONES, {
 
 // Un enlace a #crear-cuenta desde esta misma página también abre el registro
 window.addEventListener("hashchange", () => {
-  if (!$("cuenta-fuera").hidden) modoAuth(location.hash === "#crear-cuenta", true);
+  if (!$("cuenta-dentro").hidden) return;
+  if (location.hash === "#restablecer") abrirRestablecer();
+  else if (!$("cuenta-fuera").hidden) modoAuth(location.hash === "#crear-cuenta", true);
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
   prepararValidacion();
+  campoCodigo = crearCampoCodigo($("codigo-campo"), { alCompletar: verificarCodigo });
+  $("form-codigo").addEventListener("submit", event => {
+    event.preventDefault();
+    verificarCodigo(campoCodigo.valor());
+  });
   $("form-entrar").addEventListener("submit", event => enviarForm(event, {
     ruta: "/clientes/login", campos: ["identificador", "password"],
-    listo: s => entrar(s, `Sesión iniciada: ${s.nombre}`)
+    listo: s => siguientePaso(s, `Sesión iniciada: ${s.nombre}`)
   }));
   $("form-registro").addEventListener("submit", event => enviarForm(event, {
     ruta: "/clientes/registro", campos: ["nombre", "usuario", "correo", "pais", "telefono", "password", "confirmar"],
-    listo: s => entrar(s, `Cuenta creada. Te damos la bienvenida, ${s.nombre}.`)
+    listo: s => siguientePaso(s, `Cuenta creada. Te damos la bienvenida, ${s.nombre}.`)
+  }));
+  $("form-restablecer").addEventListener("submit", event => enviarForm(event, {
+    ruta: "/clientes/restablecer", campos: ["identificador"],
+    listo: s => mostrarCodigo(s)
+  }));
+  $("form-nueva").addEventListener("submit", event => enviarForm(event, {
+    ruta: "/clientes/restablecer/password", campos: ["nueva", "confirmar"],
+    listo: s => entrar(s, "Contraseña cambiada. Ya entraste a tu cuenta.")
   }));
   $("form-completar").addEventListener("submit", event => enviarForm(event, {
     ruta: "/clientes/completar", metodo: "PUT", campos: ["usuario", "pais", "telefono"],

@@ -429,3 +429,25 @@ WHERE x.tipo IN ('producto', 'paquete')
   AND NOT EXISTS (SELECT 1 FROM migraciones WHERE nombre = 'pedido-items-2026-10-26')
   AND NOT EXISTS (SELECT 1 FROM pedido_items pi WHERE pi.pedido_id = pe.id);
 INSERT IGNORE INTO migraciones (nombre) VALUES ('pedido-items-2026-10-26');
+
+-- Códigos de verificación por correo de las cuentas de cliente (plan 2026-10-30-codigo-por-correo-y-sesion-permanente).
+-- Uno vivo por correo y propósito; el código se guarda como HMAC. En un registro pendiente, `datos` lleva el nombre,
+-- usuario, país, teléfono y el hash bcrypt de la contraseña (nunca la contraseña en claro).
+CREATE TABLE IF NOT EXISTS codigos_correo (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  proposito    VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  correo       VARCHAR(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_nopad_bin NOT NULL,
+  cliente_id   INT UNSIGNED,
+  codigo_hash  CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  datos        MEDIUMTEXT,
+  intentos     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  enviados     TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  enviado_en   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  expira       DATETIME(6) NOT NULL,
+  usado_en     DATETIME(6),
+  creado_en    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY codigos_correo_proposito_idx (correo, proposito),
+  KEY codigos_correo_creado_idx (creado_en),
+  CONSTRAINT codigos_correo_proposito_check CHECK (proposito IN ('login', 'registro', 'restablecer'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

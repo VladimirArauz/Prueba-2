@@ -43,6 +43,9 @@
   --sombra-1: 0 6px 18px rgba(23, 41, 92, .10);  /* hover de tarjetas */
   --sombra-2: 0 24px 60px rgba(23, 41, 92, .16); /* barra abierta, submenú, tarjeta de login */
   --velo: rgba(23, 41, 92, .4);                  /* fondo detrás del cajón del menú */
+  /* Plan 2026-10-30 (excepción autorizada por el usuario solo para este plan): brillo de --wa (#157F44)
+     con transparencia al acertar el código del correo. No es un color nuevo. */
+  --brillo-wa: 0 0 0 4px rgba(21, 127, 68, .16), 0 0 20px rgba(21, 127, 68, .32);
 }
 
 /* ================= Reset ================= */
@@ -3749,4 +3752,133 @@ a.card-img-wrap {
   .esqueleto {
     animation: none;
   }
+}
+
+/* ================= CÓDIGO POR CORREO (plan 2026-10-30-codigo-por-correo-y-sesion-permanente) =================
+   6 cajas que avanzan solas (codigo.js). Pop al escribir, temblor rojo al fallar y verde con brillo al
+   acertar: todo responde a lo que hace la persona. El brillo (--brillo-wa) es una excepción solo de este plan.
+   Con movimiento reducido no hay pop, temblor ni brillo animado. */
+.auth-olvide {
+  align-self: flex-start;
+  margin-top: -6px;
+  font-size: 0.9375rem;
+}
+
+.codigo-campo {
+  border: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.codigo-cajas {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(36px, 52px));
+  gap: 8px;
+}
+
+.codigo-digito {
+  width: 100%;
+  height: 58px;
+  padding: 0;
+  border: 2px solid var(--linea);
+  border-radius: 6px;
+  background: var(--hoja);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  caret-color: var(--tinta);
+  transition: border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-media);
+}
+
+.codigo-digito:focus {
+  outline: 3px solid var(--senal);
+  outline-offset: 2px;
+  border-color: var(--tinta);
+}
+
+.codigo-digito.is-lleno {
+  border-color: var(--tinta);
+}
+
+.codigo-campo.is-error .codigo-digito {
+  border-color: var(--aviso);
+  color: var(--aviso);
+}
+
+.codigo-campo.is-ok .codigo-digito {
+  border-color: var(--wa);
+  color: var(--wa);
+  background: var(--hoja);
+  box-shadow: var(--brillo-wa);
+}
+
+.codigo-estado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 1.6em;
+  margin: 12px 0 20px;
+  font-size: 0.9375rem;
+  color: var(--texto-2);
+}
+
+.codigo-estado.is-error {
+  color: var(--aviso);
+}
+
+.codigo-estado.is-ok {
+  color: var(--wa);
+  font-weight: 700;
+}
+
+.codigo-estado .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.codigo-ayuda {
+  margin: 16px 0 0;
+  font-size: 0.875rem;
+  color: var(--texto-2);
+}
+
+.codigo-volver {
+  margin-top: 16px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .codigo-digito.is-pop {
+    animation: codigo-pop 0.18s ease-out;
+  }
+
+  .codigo-campo.is-temblor .codigo-cajas {
+    animation: codigo-temblor 0.4s ease-in-out;
+  }
+
+  .codigo-campo.is-ok .codigo-digito {
+    animation: codigo-brillo 0.6s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codigo-digito {
+    transition: none;
+  }
+}
+
+@keyframes codigo-pop {
+  50% { transform: scale(1.12); }
+}
+
+@keyframes codigo-temblor {
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+@keyframes codigo-brillo {
+  from { box-shadow: none; }
 }

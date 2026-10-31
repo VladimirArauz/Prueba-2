@@ -2,7 +2,9 @@
 /**
  * Sesiones en la tabla `sesiones`, con el mismo comportamiento que express-session tenía en Node:
  * - Cookie __Host-necutla.sid en producción con HTTPS (necutla.sid en local o sin HTTPS), HttpOnly, SameSite=Strict, Secure.
- * - Se renueva con cada uso: 8 horas sin usarla la cierran.
+ * - Se renueva con cada uso. Con cuenta de cliente dura 400 días (el máximo que acepta Chrome) y en la práctica no vence:
+ *   solo se cierra al tocar "Cerrar sesión" o al cambiar la contraseña. Sin cliente, 8 horas sin usarla la cierran.
+ * - Necutools (adminId) sigue cerrándose a las 8 horas sin uso o a las 24 horas, aunque el cliente siga dentro (vida_maxima).
  * - No se guarda una sesión vacía (sin cuenta ni nada pendiente).
  * - regenerar() cambia el id al entrar y al salir (evita la fijación de sesión).
  * La cookie es un valor al azar de 256 bits; en la base solo se guarda su SHA-256.
@@ -11,6 +13,7 @@
 final class Sesion
 {
     public const DURACION = 8 * 60 * 60;
+    public const DURACION_CLIENTE = 400 * 24 * 60 * 60;
 
     private static array $datos = [];
     private static ?string $token = null;  // valor de la cookie
@@ -79,9 +82,15 @@ final class Sesion
     }
 
     // Al terminar la petición: guarda los cambios (o solo renueva la expiración) y manda la cookie
+    public static function duracion(): int
+    {
+        return empty(self::$datos['clienteId']) ? self::DURACION : self::DURACION_CLIENTE;
+    }
+
     public static function guardar(Respuesta $r): void
     {
-        $expira = gmdate('Y-m-d H:i:s', time() + self::DURACION);
+        $vence = time() + self::duracion();
+        $expira = gmdate('Y-m-d H:i:s', $vence);
         if (self::$token !== null && self::$guardada) {
             $json = self::json();
             if ($json !== self::$original) {
@@ -91,11 +100,11 @@ final class Sesion
             } else {
                 q('UPDATE sesiones SET expira = ? WHERE id = ?', [$expira, self::id()]);
             }
-            $r->cabeceras['Set-Cookie'][] = self::cookie(self::$token, time() + self::DURACION);
+            $r->cabeceras['Set-Cookie'][] = self::cookie(self::$token, $vence);
         } elseif (self::$token !== null && self::$datos) {
             q('INSERT INTO sesiones (id, datos, expira, admin_id, pendiente_admin_id, cliente_id) VALUES (?, ?, ?, ?, ?, ?)',
               [self::id(), self::json(), $expira, ...self::columnas()]);
-            $r->cabeceras['Set-Cookie'][] = self::cookie(self::$token, time() + self::DURACION);
+            $r->cabeceras['Set-Cookie'][] = self::cookie(self::$token, $vence);
         } elseif (self::$borrarCookie) {
             $r->cabeceras['Set-Cookie'][] = self::cookie('', 0);
         }
@@ -137,16 +146,23 @@ function ahora_ms(): int
     return (int) floor(microtime(true) * 1000);
 }
 
-// Duración máxima de una sesión con cuenta (admin o cliente), aunque se siga usando: 24 horas
+// Necutools se cierra a las 24 horas de entrar o a las 8 horas sin uso, aunque se siga usando el sitio.
+// La sesión de cliente no tiene límite: sigue dentro hasta que la persona cierre sesión.
 const VIDA_MAXIMA_MS = 24 * 60 * 60 * 1000;
+const ADMIN_SIN_USO_MS = Sesion::DURACION * 1000;
 
 function vida_maxima(): void
 {
-    if (!Sesion::get('adminId') && !Sesion::get('clienteId')) return;
-    $creada = Sesion::get('creada');
-    if (!$creada) {
-        Sesion::set('creada', ahora_ms());
+    if (!Sesion::get('adminId')) return;
+    $ahora = ahora_ms();
+    $creada = Sesion::get('creada') ?? $ahora;
+    $uso = Sesion::get('adminUso') ?? $ahora;
+    if ($ahora - $creada > VIDA_MAXIMA_MS || $ahora - $uso > ADMIN_SIN_USO_MS) {
+        // Sale solo de Necutools (con otro id de sesión); si hay un cliente en este navegador, sigue dentro
+        Sesion::regenerar(['clienteId', 'clienteVersion']);
         return;
     }
-    if (ahora_ms() - $creada > VIDA_MAXIMA_MS) Sesion::regenerar();
+    if (!Sesion::get('creada')) Sesion::set('creada', $ahora);
+    // Se anota a lo más una vez por minuto, para no reescribir la sesión en cada petición
+    if (!Sesion::get('adminUso') || $ahora - $uso > 60 * 1000) Sesion::set('adminUso', $ahora);
 }

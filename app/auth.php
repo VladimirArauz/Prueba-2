@@ -64,6 +64,7 @@ function entrar(array $admin): array
     Sesion::set('adminId', $admin['id']);
     Sesion::set('usuario', $admin['usuario']);
     Sesion::set('creada', ahora_ms());
+    Sesion::set('adminUso', ahora_ms());
     return ['autenticado' => true, 'usuario' => $admin['usuario'], 'rol' => $admin['rol']];
 }
 
@@ -172,7 +173,7 @@ function rutas_auth(): void
     // Si en este navegador también hay una cuenta de cliente, solo se cierra la de Necutools (con otro id de sesión)
     post('/api/auth/logout', function () {
         if (Sesion::get('clienteId')) {
-            Sesion::regenerar(['clienteId', 'clienteVersion', 'creada']);
+            Sesion::regenerar(['clienteId', 'clienteVersion']);
         } else {
             Sesion::destruir();
         }

@@ -2,7 +2,8 @@
 /**
  * Cuentas de cliente (/api/clientes): registro, inicio y cierre de sesión.
  * Solo sirven para opinar sobre productos; el pedido sigue sin cuenta, por WhatsApp.
- * Se entra con el nombre de usuario o con el correo, en un solo campo. El teléfono es privado:
+ * Se entra con el nombre de usuario o con el correo, en un solo campo, y después con el código que llega al correo
+ * (app/codigos.php): también para crear la cuenta y para restablecer la contraseña. El teléfono es privado:
  * no sale en ninguna respuesta pública (opiniones, tiendas, pedidos).
  * La sesión es la misma cookie que la de Necutools, con clienteId en vez de adminId.
  */
@@ -56,13 +57,13 @@ function cerrar_otras_sesiones_cliente(int $clienteId, ?string $exceptoId): void
     }
 }
 
-// Nueva sesión al entrar (evita fijación de sesión). Si ya había un admin en este navegador, se conserva.
+// Nueva sesión al entrar (evita fijación de sesión). Si ya había un admin en este navegador, se conserva
+// con sus tiempos (creada, adminUso). La de cliente no vence (app/sesiones.php).
 function iniciar_sesion_cliente(array $cliente): array
 {
-    Sesion::regenerar(['adminId', 'usuario']);
+    Sesion::regenerar(['adminId', 'usuario', 'creada', 'adminUso']);
     Sesion::set('clienteId', $cliente['id']);
     Sesion::set('clienteVersion', (int) ($cliente['sesion_version'] ?? 0));
-    Sesion::set('creada', ahora_ms());
     return datos_sesion_cliente($cliente);
 }
 
@@ -80,7 +81,9 @@ function rutas_clientes(): void
     get('/api/clientes/sesion', function () {
         if (!cuentas_clientes()) return ['autenticado' => false, 'pausa' => true];
         $cliente = cargar_cliente();
-        return $cliente ? datos_sesion_cliente($cliente) : ['autenticado' => false];
+        if ($cliente) return datos_sesion_cliente($cliente);
+        $pendiente = codigo_pendiente();
+        return ['autenticado' => false] + ($pendiente ? ['codigoPendiente' => $pendiente] : []);
     });
 
     // Nunca dice si el correo ya tiene cuenta: solo si está bien escrito y si su dominio recibe correos.
@@ -105,15 +108,25 @@ function rutas_clientes(): void
         $password = password_cliente(campo('password'), campo('confirmar'), [$nombre, $usuario, explode('@', $correo)[0]]);
         // Antes del bcrypt: un usuario o correo repetido no debe gastar CPU. No se dice cuál de los dos.
         if (valor('SELECT 1 FROM clientes WHERE correo = ? OR usuario = ?', [$correo, $usuario])) throw new ErrorHttp(409, DUPLICADO_CLIENTE);
-        $hash = cifrar_contrasena($password);
+        // La cuenta se crea hasta que llega el código del correo; mientras, el registro espera en el código
+        $datos = ['nombre' => $nombre, 'usuario' => $usuario, 'pais' => $tel['pais'], 'telefono' => $tel['telefono'],
+                  'hash' => cifrar_contrasena($password)];
+        return crear_codigo('registro', $correo, null, $datos, $nombre);
+    });
+
+    // Con el código correcto se crea la cuenta y la sesión se inicia sola
+    post('/api/clientes/registro/codigo', function () {
+        $f = verificar_codigo('registro', campo('codigo'));
+        $d = $f['datos'];
         try {
             q('INSERT INTO clientes (nombre, usuario, correo, pais, telefono, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
-              [$nombre, $usuario, $correo, $tel['pais'], $tel['telefono'], $hash]);
+              [$d['nombre'], $d['usuario'], $f['correo'], $d['pais'], $d['telefono'], $d['hash']]);
         } catch (PDOException $e) {
             if (error_bd($e) === 1062) throw new ErrorHttp(409, DUPLICADO_CLIENTE);
             throw $e;
         }
-        $cliente = ['id' => ultimo_id(), 'nombre' => $nombre, 'usuario' => $usuario, 'correo' => $correo, 'con_telefono' => 1, 'sesion_version' => 0];
+        $cliente = ['id' => ultimo_id(), 'nombre' => $d['nombre'], 'usuario' => $d['usuario'], 'correo' => $f['correo'],
+                    'con_telefono' => 1, 'sesion_version' => 0];
         return iniciar_sesion_cliente($cliente);
     });
 
@@ -141,7 +154,71 @@ function rutas_clientes(): void
         }
         limpiar_fallos('cliente', $freno);
         if (!a_bool($cliente['activo'])) throw new ErrorHttp(403, 'Esta cuenta está desactivada.');
+        // La contraseña está bien: falta el código que llega al correo
+        return crear_codigo('login', $cliente['correo'], (int) $cliente['id'], null, $cliente['nombre']);
+    });
+
+    post('/api/clientes/login/codigo', function () {
+        $f = verificar_codigo('login', campo('codigo'));
+        $cliente = fila('SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, activo, sesion_version FROM clientes WHERE id = ?',
+                        [(int) $f['cliente_id']]);
+        if (!$cliente || !a_bool($cliente['activo'])) throw new ErrorHttp(403, 'Esta cuenta está desactivada.');
         return iniciar_sesion_cliente($cliente);
+    });
+
+    post('/api/clientes/codigo/reenviar', function () {
+        return reenviar_codigo();
+    });
+
+    // Olvidé mi contraseña. Siempre responde lo mismo, exista o no la cuenta: no revela qué correos tienen cuenta.
+    post('/api/clientes/restablecer', function () {
+        limitar('restablecer', 10, MIN_15, 'Demasiados intentos. Espera 15 minutos y vuelve a intentar.');
+        $crudo = campo('identificador');
+        $identificador = is_string($crudo) ? mb_strtolower(js_trim($crudo)) : '';
+        if ($identificador === '' || mb_strlen($identificador) > 120) throw dato_invalido('Escribe tu usuario o correo.');
+        $esCorreo = str_contains($identificador, '@');
+        $cliente = fila('SELECT id, nombre, correo, activo FROM clientes WHERE ' . ($esCorreo ? 'correo' : 'usuario') . ' = ?', [$identificador]);
+        $mostrar = $esCorreo ? $identificador : null;
+        if ($cliente && a_bool($cliente['activo'])) {
+            try {
+                crear_codigo('restablecer', $cliente['correo'], (int) $cliente['id'], null, $cliente['nombre'], true);
+                Sesion::set('codigo', Sesion::get('codigo') + ['visible' => $esCorreo]);
+            } catch (ErrorHttp $e) {
+                if ($e->status !== 429) throw $e;
+                codigo_falso('restablecer', $mostrar); // demasiados envíos a esa cuenta: no se dice
+            }
+        } else {
+            codigo_falso('restablecer', $mostrar);
+        }
+        return respuesta_codigo('restablecer', $mostrar);
+    });
+
+    // Con el código correcto, la sesión puede poner una contraseña nueva durante 10 minutos
+    post('/api/clientes/restablecer/codigo', function () {
+        $f = verificar_codigo('restablecer', campo('codigo'));
+        Sesion::set('restablecer', ['clienteId' => (int) $f['cliente_id'], 'hasta' => ahora_ms() + CODIGO_VIDA * 1000]);
+        return ['ok' => true];
+    });
+
+    post('/api/clientes/restablecer/password', function () {
+        $r = Sesion::get('restablecer');
+        if (!$r || $r['hasta'] < ahora_ms()) {
+            Sesion::quitar('restablecer');
+            throw new ErrorHttp(410, 'Pasaron más de 10 minutos. Pide otro código para cambiar tu contraseña.');
+        }
+        $cliente = fila('SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, activo, sesion_version FROM clientes WHERE id = ?',
+                        [$r['clienteId']]);
+        if (!$cliente || !a_bool($cliente['activo'])) throw new ErrorHttp(403, 'Esta cuenta está desactivada.');
+        $contiene = [$cliente['nombre'], $cliente['usuario'], explode('@', $cliente['correo'])[0]];
+        $nueva = password_cliente(campo('nueva'), campo('confirmar'), $contiene, 'La contraseña nueva');
+        q('UPDATE clientes SET password_hash = ?, sesion_version = sesion_version + 1 WHERE id = ?', [cifrar_contrasena($nueva), $cliente['id']]);
+        $cliente['sesion_version'] = (int) valor('SELECT sesion_version FROM clientes WHERE id = ?', [$cliente['id']]);
+        Sesion::quitar('restablecer');
+        limpiar_fallos('cliente', "id:{$cliente['id']}");
+        // Fuera de los demás navegadores y con sesión nueva aquí
+        $datos = iniciar_sesion_cliente($cliente);
+        cerrar_otras_sesiones_cliente($cliente['id'], Sesion::id());
+        return $datos;
     });
 
     // Cambiar la contraseña: pide la actual (con freno por cuenta) y la nueva dos veces
@@ -163,7 +240,7 @@ function rutas_clientes(): void
         q('UPDATE clientes SET password_hash = ?, sesion_version = sesion_version + 1 WHERE id = ?', [cifrar_contrasena($nueva), $cliente['id']]);
         $version = (int) valor('SELECT sesion_version FROM clientes WHERE id = ?', [$cliente['id']]);
         // Id de sesión nuevo aquí y fuera de los demás navegadores
-        Sesion::regenerar(['adminId', 'usuario', 'clienteId', 'clienteVersion', 'creada']);
+        Sesion::regenerar(['adminId', 'usuario', 'clienteId', 'clienteVersion', 'creada', 'adminUso']);
         Sesion::set('clienteVersion', $version);
         cerrar_otras_sesiones_cliente($cliente['id'], Sesion::id());
         return ['ok' => true];
@@ -187,7 +264,7 @@ function rutas_clientes(): void
     // Si en este navegador también hay una sesión de Necutools, solo se cierra la del cliente (con otro id de sesión)
     post('/api/clientes/logout', function () {
         if (Sesion::get('adminId')) {
-            Sesion::regenerar(['adminId', 'usuario', 'creada']);
+            Sesion::regenerar(['adminId', 'usuario', 'creada', 'adminUso']);
         } else {
             Sesion::destruir();
         }

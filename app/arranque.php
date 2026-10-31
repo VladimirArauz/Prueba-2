@@ -58,6 +58,8 @@ require __DIR__ . '/contrasenas.php';
 require __DIR__ . '/intentos.php';
 require __DIR__ . '/totp.php';
 require __DIR__ . '/bitacora.php';
+require __DIR__ . '/correo.php';
+require __DIR__ . '/codigos.php';
 require __DIR__ . '/imagenes.php';
 require __DIR__ . '/ofertas.php';
 require __DIR__ . '/auth.php';
@@ -66,6 +68,7 @@ require __DIR__ . '/api.php';
 require __DIR__ . '/resenas.php';
 require __DIR__ . '/pedidos.php';
 require __DIR__ . '/admin.php';
+require __DIR__ . '/og-imagen.php';
 require __DIR__ . '/paginas.php';
 
 // Respuestas con datos privados: que no se guarden en caché
@@ -136,6 +139,7 @@ function atender(): void
         rutas_resenas();
         rutas_pedidos();
         rutas_api();
+        rutas_og_imagen();
         rutas_admin();
 
         $buscar = $metodo === 'HEAD' ? 'GET' : $metodo;

@@ -26,11 +26,12 @@ RewriteRule ^ - [R=405,L]
 
 # HTTPS siempre en el servidor de verdad (no en localhost). Solo vale lo que dice Apache (%{HTTPS}):
 # la cabecera X-Forwarded-Proto la puede mandar cualquiera, así que no sirve para saltarse la redirección.
-# EN PAUSA (2026-10-26): la dirección temporal de IONOS no tiene certificado SSL. En cuanto haya un dominio
-# con SSL, quitar el "#" de las 3 líneas y poner 'https' => true en app/config.php.
-#RewriteCond %{HTTPS} !=on
-#RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
-#RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+# Además, www.necutla.com y la dirección temporal de IONOS van a https://necutla.com, para que la sesión
+# (cookie __Host-, una por dirección) y la vista previa de WhatsApp usen siempre la misma.
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+RewriteCond %{HTTPS} !=on [OR]
+RewriteCond %{HTTP_HOST} !^necutla\.com$ [NC]
+RewriteRule ^ https://necutla.com%{REQUEST_URI} [R=301,L]
 
 # Archivos y carpetas que empiezan con punto no se sirven (.htaccess, .user.ini, .git…), salvo .well-known
 RewriteRule (^|/)\.(?!well-known/) - [R=404,L]
@@ -64,6 +65,9 @@ RewriteRule \.(php[0-9]?|phtml|phar)$ - [R=404,L]
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Cross-Origin-Opener-Policy "same-origin"
     Header always set Cross-Origin-Resource-Policy "same-origin"
+    # Las fotos (públicas; las ocultas dan 404) sí se pueden cargar desde otro sitio: WhatsApp Web arma la vista
+    # previa del enlace desde web.whatsapp.com y con "same-origin" el navegador le bloquea la imagen.
+    Header always set Cross-Origin-Resource-Policy "cross-origin" "expr=%{CONTENT_TYPE} =~ m#^image/(png|jpeg|webp|gif)#"
     Header always set Origin-Agent-Cluster "?1"
     Header always set X-DNS-Prefetch-Control "off"
     Header always set X-Download-Options "noopen"
