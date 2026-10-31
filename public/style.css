@@ -2712,8 +2712,12 @@ a.card-img-wrap {
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   max-width: 880px;
-  min-height: 560px;
+  margin-inline: auto;
+  /* Mide lo del formulario visible (cuenta.js, ajustarAlto) y cambia con el panel al pasar a crear cuenta */
+  height: var(--alto-auth, auto);
+  transition: height var(--t-panel);
   padding: 8px;
   background: var(--hoja);
   border: 1px solid var(--linea);
@@ -2734,8 +2738,6 @@ a.card-img-wrap {
 
 .auth-entrar {
   grid-column: 1;
-  /* El registro es más largo: "Iniciar sesión" va arriba en vez de quedar centrado con un hueco encima */
-  justify-content: flex-start;
 }
 
 .auth-registro {
@@ -2844,7 +2846,7 @@ a.card-img-wrap {
   left: -6%;
   bottom: 0;
   width: 112%;
-  height: 46%;
+  height: 40%;
   transition: transform var(--t-panel);
 }
 
@@ -2858,6 +2860,36 @@ a.card-img-wrap {
 
 .auth-ciudad .ve {
   fill: var(--senal);
+  transition: fill 0.2s ease;
+}
+
+/* Contraseña equivocada: las ventanas se ponen rojas (error) mientras dura .is-alarma */
+.auth.is-alarma .auth-ciudad .ve {
+  fill: var(--aviso);
+}
+
+/* Plan 2026-10-31 (excepción autorizada por el usuario solo para este panel): algunas ventanas se apagan
+   un instante de vez en cuando, cada una a su ritmo. Con movimiento reducido no parpadean. */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-ciudad .ve:nth-child(4n+2) { animation: ventana-luz 7s ease-in-out 1.2s infinite; }
+  .auth-ciudad .ve:nth-child(5n+3) { animation: ventana-luz 9.5s ease-in-out 3.4s infinite; }
+  .auth-ciudad .ve:nth-child(7n+1) { animation: ventana-luz 12s ease-in-out 5.8s infinite; }
+  .auth-ciudad .ve:nth-child(9n+4) { animation: ventana-luz 15s ease-in-out 0.4s infinite; }
+
+  .auth.is-alarma .auth-ciudad .ve {
+    animation: ventana-alarma 0.4s steps(1, end) 4;
+  }
+}
+
+@keyframes ventana-luz {
+  0%, 84%, 100% { opacity: 1; }
+  88% { opacity: 0.2; }
+  91% { opacity: 1; }
+  94% { opacity: 0.35; }
+}
+
+@keyframes ventana-alarma {
+  50% { opacity: 0.2; }
 }
 
 /* Los dos textos ocupan el mismo lugar y cambian a la mitad del recorrido */
@@ -2867,9 +2899,13 @@ a.card-img-wrap {
   z-index: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
+  align-self: start;
   gap: 12px;
-  padding: 72px 40px 0;
+  /* Centrado en el espacio que deja libre la ciudad (40 % de abajo) */
+  height: 60%;
+  padding: 32px 40px 8px;
   text-align: center;
   transition: opacity 0.3s ease 0.3s, transform 0.3s ease 0.3s;
 }
@@ -2903,8 +2939,8 @@ a.card-img-wrap {
 @media (max-width: 760px) {
   .auth {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-    min-height: 0;
+    /* Con el alto fijo de la tarjeta, una fila "auto" se encogería: el panel mide siempre lo que su contenido */
+    grid-template-rows: max-content max-content;
   }
   .auth-panel {
     position: relative;
@@ -2919,14 +2955,15 @@ a.card-img-wrap {
     transform: none;
   }
   .auth-panel-texto {
-    padding: 24px 20px 64px;
+    height: auto;
+    padding: 24px 20px 96px;
     gap: 8px;
   }
   .auth-panel-titulo {
     font-size: 1.375rem;
   }
   .auth-ciudad {
-    height: 34%;
+    height: 80px;
   }
   .auth-form,
   .auth-entrar,

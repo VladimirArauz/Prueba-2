@@ -115,11 +115,32 @@ function destinoDeVuelta() {
   return /^\/[a-z0-9/?=&_-]*$/i.test(volver) && !volver.startsWith("//") ? volver : "";
 }
 
+// La tarjeta mide lo del formulario visible (en celular, más el panel de arriba); CSS anima el cambio
+function ajustarAlto() {
+  const auth = $("cuenta-fuera");
+  if (auth.hidden) return;
+  const form = auth.classList.contains("is-registro") ? $("auth-registro") : $("auth-entrar");
+  const panel = matchMedia("(max-width: 760px)").matches ? auth.querySelector(".auth-panel").offsetHeight : 0;
+  auth.style.setProperty("--alto-auth", `${form.offsetHeight + panel + 16}px`);
+}
+
+// Contraseña equivocada: las ventanas de los edificios se ponen rojas y parpadean un momento
+let alarmaAuth = null;
+function alarmaVentanas() {
+  const auth = $("cuenta-fuera");
+  clearTimeout(alarmaAuth);
+  auth.classList.remove("is-alarma");
+  void auth.offsetWidth; // reinicia el parpadeo si vuelve a fallar
+  auth.classList.add("is-alarma");
+  alarmaAuth = setTimeout(() => auth.classList.remove("is-alarma"), 1800);
+}
+
 // Panel deslizante: muestra "Iniciar sesión" o "Crear cuenta"; el otro formulario queda inerte
 function modoAuth(registro, enfocar = false) {
   $("cuenta-fuera").classList.toggle("is-registro", registro);
   $("auth-entrar").inert = registro;
   $("auth-registro").inert = !registro;
+  ajustarAlto();
   if (enfocar) {
     const campo = registro ? $("registro-nombre") : $("entrar-identificador");
     campo.focus({ preventScroll: true });
@@ -180,7 +201,7 @@ function entrar(sesion, mensaje) {
 }
 
 // Revisa los campos (si hay errores, enfoca el primero), manda el formulario y llama a listo(respuesta)
-async function enviarForm(event, { ruta, metodo = "POST", campos, listo }) {
+async function enviarForm(event, { ruta, metodo = "POST", campos, listo, alFallar }) {
   event.preventDefault();
   const form = event.currentTarget;
   if (!(await validarFormulario(form))) return;
@@ -194,6 +215,7 @@ async function enviarForm(event, { ruta, metodo = "POST", campos, listo }) {
     listo(respuesta);
   } catch (error) {
     showToast(error.message, "info");
+    if (alFallar) alFallar(error);
   } finally {
     botonListo(boton);
   }
@@ -276,13 +298,19 @@ window.addEventListener("hashchange", () => {
 document.addEventListener("DOMContentLoaded", async () => {
   prepararValidacion();
   campoCodigo = crearCampoCodigo($("codigo-campo"), { alCompletar: verificarCodigo });
+  // Los mensajes de validación cambian el alto del formulario: la tarjeta lo sigue
+  const observador = new ResizeObserver(() => ajustarAlto());
+  observador.observe($("auth-entrar"));
+  observador.observe($("auth-registro"));
+  window.addEventListener("resize", ajustarAlto);
   $("form-codigo").addEventListener("submit", event => {
     event.preventDefault();
     verificarCodigo(campoCodigo.valor());
   });
   $("form-entrar").addEventListener("submit", event => enviarForm(event, {
     ruta: "/clientes/login", campos: ["identificador", "password"],
-    listo: s => siguientePaso(s, `Sesión iniciada: ${s.nombre}`)
+    listo: s => siguientePaso(s, `Sesión iniciada: ${s.nombre}`),
+    alFallar: error => { if (error.status === 401) alarmaVentanas(); }
   }));
   $("form-registro").addEventListener("submit", event => enviarForm(event, {
     ruta: "/clientes/registro", campos: ["nombre", "usuario", "correo", "pais", "telefono", "password", "confirmar"],

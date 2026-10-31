@@ -28,6 +28,7 @@ Cómo se usa:
 | `2026-10-25-php85-y-puntos-debiles.md` | Aplicado (PHP 8.5 y puntos débiles de la revisión) | 2026-10-25 |
 | `2026-10-26-ionos-sin-https-y-cuentas-en-pausa.md` | Aplicado (prompts 1 y 2). Cuentas reactivadas el 2026-10-29 y HTTPS con `necutla.com` el 2026-10-30 | 2026-10-26 |
 | `2026-10-26-pedidos-estados-y-stock.md` | Aplicado, probado en local y subido a IONOS (tablas creadas allá). Falta capturar el stock (pendiente 26) | 2026-10-26 |
+| `2026-10-31-mi-cuenta-alto-y-luces.md` | Aplicado y subido a IONOS (2026-10-31) | 2026-10-31 |
 | `2026-10-30-codigo-por-correo-y-sesion-permanente.md` | Aplicado (prompts 0 a 5), probado en local y en vivo, subido a IONOS. Commit del 2026-10-30 en `main`; falta el push (token de `gh` vencido) | 2026-10-30 |
 | `2026-10-30-vista-previa-por-tienda.md` | Aplicado y subido a IONOS (2026-10-30). Falta probar en WhatsApp (pendiente 27b) | 2026-10-30 |
 | `2026-10-29-reels-esqueletos-botones-open-graph.md` | Aplicado, commit `d4a3289` en GitHub y subido a IONOS (2026-10-29). Falta probar el enlace en WhatsApp (pendiente 27) | 2026-10-29 |
@@ -35,6 +36,8 @@ Cómo se usa:
 ---
 
 ## Pendientes
+
+**Mi cuenta (2026-10-31):** excepción de diseño autorizada por el usuario solo para el panel de los edificios de Mi cuenta: algunas ventanas parpadean solas a ratos (no es respuesta a una acción). Si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`.
 
 **Del código por correo (2026-10-30):** (a) excepción de diseño: el brillo verde del código correcto (`--brillo-wa`) lo autorizó el usuario solo para el plan `2026-10-30-codigo-por-correo-y-sesion-permanente.md`; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (b) Los 2 clientes reales necesitan su correo para entrar; si no lo tienen, "¿Olvidaste tu contraseña?" tampoco les sirve. (c) Si el SMTP falla, nadie entra ni se registra (503 con mensaje claro); se puede volver a la pausa con `cuentas_clientes` en false. (d) `scripts/seguridad/ataques.js` se adaptó (11 pruebas nuevas "OTP" y entrar/registrar con código), sin correrlo: no hay Node; la sintaxis se revisó con Chrome. (e) Probar desde un correo de Gmail o Hotmail que el código no caiga en spam (SPF, DKIM s1/s2 y DMARC `p=none` ya están en el DNS).
 
@@ -124,6 +127,12 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-31: Mi cuenta se ajusta al formulario y luces de los edificios (plan `2026-10-31-mi-cuenta-alto-y-luces.md`)
+- Pedido del usuario: en "Iniciar sesión" el panel de los edificios se veía muy alto porque la tarjeta `.auth` siempre medía lo del registro. Ahora mide lo del formulario visible y cambia con la animación del panel; está centrada.
+- `public/js/cuenta.js`: `ajustarAlto()` pone `--alto-auth` (CSSOM) al cambiar de modo, con un `ResizeObserver` en los dos formularios y al cambiar el tamaño de la ventana; `alarmaVentanas()` pone `.is-alarma` 1.8 s cuando entrar da 401.
+- `public/style.css`: `.auth` con `height: var(--alto-auth, auto)`, `margin-inline: auto` y formularios sin estirarse; el texto del panel se centra arriba de la ciudad (40 % de abajo). En celular las filas van en `max-content` (con alto fijo, la fila del panel se encogía y el formulario tapaba el título) y la ciudad mide 80 px. Ventanas: parpadeo a ratos (`ventana-luz`, excepción) y rojas `--aviso` con 4 parpadeos (`ventana-alarma`) si la contraseña está mal; con movimiento reducido no parpadean (el rojo sí).
+- Probado en Chrome sin ventana: 11 + 10 + 11 a 1280, 360 y con movimiento reducido (alto de entrar 458 px y de crear cuenta 982 px, centrada, sin scroll horizontal, alarma y su fin, sin errores), y las 36 + 36 del código por correo siguen bien. Subido a IONOS.
 
 ### 2026-10-31: caída de la API en producción por la contraseña de la base
 - El usuario vio errores 500 en `/api/stands`, `/api/config`, `/api/promociones` y `/api/vitrina`; `/healthz` daba 503. Causa: cambió la contraseña de la base `dbs16275017` en IONOS (pendiente 28) y el `config.php` del servidor seguía con la vieja (MySQL 1045).
