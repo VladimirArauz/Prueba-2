@@ -34,10 +34,13 @@ Cómo se usa:
 | `2026-10-29-reels-esqueletos-botones-open-graph.md` | Aplicado, commit `d4a3289` en GitHub y subido a IONOS (2026-10-29). Falta probar el enlace en WhatsApp (pendiente 27) | 2026-10-29 |
 | `2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Falta que el usuario pruebe el captcha en su navegador (pendiente de abajo) | 2026-10-31 |
 | `2026-10-31-seo-iconos-contenido-y-legal.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Faltan los `[COMPLETAR]` del aviso y los términos, y Search Console (pendiente de abajo) | 2026-10-31 |
+| `2026-10-31-fotos-tiendas-portada.md` | Aplicado (prompts 1 a 4) y subido a IONOS. Falta que el usuario revise las 7 fotos | 2026-10-31 |
 
 ---
 
 ## Pendientes
+
+**Fotos de Unsplash en la portada (2026-10-31, aplicado):** el usuario revisa las 7 fotos en necutla.com y dice cuál cambiar; hay una de respaldo por tienda en `recursos/fotos-unsplash/creditos.md` (ahí está cómo cambiarla). Una tienda nueva no tiene foto (se ve su imagen de relleno) hasta agregarla a `FOTOS_TIENDAS` en `public/js/portada.js`, o hasta que suba su portada en Necutools.
 
 **SEO, iconos, contenido y legal (2026-10-31, aplicado):** (a) **Llenar los `[COMPLETAR]`** de `public/privacidad.html` (responsable, domicilio, fecha, si se permiten cuentas de menores) y `public/terminos.html` (fecha, ciudad o estado) y volver a subirlos; si se puede, que lo lea alguien que sepa de derecho. (b) Revisar el texto nuevo de la portada ("Qué es Necutla", "Cómo funciona", "Preguntas frecuentes": dice que el pago puede ser en efectivo o por transferencia y que para abrir una tienda se escribe a tienda@necutla.com). (c) Google Search Console: propiedad `https://necutla.com` (prefijo de URL), verificación por archivo HTML (pasarle a Claude solo el nombre del archivo para subirlo a `public/`) y enviar `sitemap.xml`. Opcional: Bing Webmaster Tools. (d) Probar "Agregar a inicio" en un celular. (e) Volver a pasar el revisor de IONOS: la CDN seguirá marcada a propósito (no se activa: solo funciona en `www`). (f) **Excepción técnica por confirmar:** `theme-color` y `site.webmanifest` llevan el hex de `--tinta` y `--gis` (no leen variables CSS). (g) Si cambian las tiendas o los productos, el sitemap se actualiza solo (caché de 1 hora).
 
@@ -133,6 +136,17 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-31: fotos de Unsplash en las tarjetas de tiendas de la portada (plan `2026-10-31-fotos-tiendas-portada.md`, prompts 1 a 4)
+- 20 candidatas buscadas con WebFetch en `unsplash.com/es/s/fotos/…`, todas con "Unsplash License" (las Unsplash+ se descartaron); elegidas 7 con una hoja de contacto (Pillow). Origen, fotógrafo, `alt` y respaldo de cada una en `recursos/fotos-unsplash/creditos.md`.
+- `public/imagenes/tiendas/<tienda>-640.webp` y `-1280.webp` (16:10, sin metadatos, 12 a 109 KB).
+- `public/js/portada.js`: `FOTOS_TIENDAS`, `fotoDe`, `imagenTarjeta` (con `srcset`, `sizes`, `width`/`height`, `lazy`) y `pintarCreditos`; solo reemplaza el SVG de relleno (la portada propia de Necutools tiene prioridad). `public/index.html`: `#creditos-fotos` debajo de las tarjetas. `public/style.css`: `.card-img-wrap.is-foto` (`cover`) y `.creditos-fotos`.
+- Pruebas a 1280, 360 y movimiento reducido, en local y en vivo, sin errores; Lighthouse de la portada en vivo 92 / 100 / 100 / 100.
+
+### 2026-10-31: plan de fotos de Unsplash para las tarjetas de tiendas de la portada
+- Nuevo plan `plans/planes/2026-10-31-fotos-tiendas-portada.md` y sus 4 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Hoy las 7 tarjetas de "Tiendas" usan un SVG gris con el nombre. Licencia de Unsplash revisada: gratis y comercial, sin crédito obligatorio; las Unsplash+ no se usan. `unsplash.com/photos/<id>/download` bloquea a `curl`, pero `images.unsplash.com` (sacado de la página de la foto con WebFetch) sí descarga.
+- Decisiones del usuario: Claude elige una foto por tienda y el usuario las revisa después; línea de créditos con los fotógrafos debajo de las tarjetas; solo en la portada (la portada propia de Necutools tiene prioridad).
 
 ### 2026-10-31: recomendaciones de IONOS aplicadas (plan `2026-10-31-seo-iconos-contenido-y-legal.md`, prompts 1 a 7)
 - **Títulos, descripciones y JSON-LD** (`app/paginas.php`): `<title>` y descripción por tienda y producto (antes fijos), canonical, `noindex` en carrito, cuenta y Necutools (`necutools.html` con meta), 404 real para tienda o producto que no existe, `WebSite`/`Organization`/`Product`/`Service`/`BreadcrumbList`. Portada: título de 56 y descripción de 157; `OG_GENERAL` igual. `tienda.js` y `producto.js` ya no cambian `document.title`.

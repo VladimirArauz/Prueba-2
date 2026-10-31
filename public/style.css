@@ -4088,3 +4088,21 @@ a.card-img-wrap {
   color: var(--texto-2);
   font-size: 0.9375rem;
 }
+
+/* =========================================================
+   FOTOS DE LAS TARJETAS DE TIENDAS EN LA PORTADA (plan 2026-10-31-fotos-tiendas-portada)
+   La foto llena la tarjeta (las de relleno se ven completas con contain).
+   ========================================================= */
+.card-img-wrap.is-foto img {
+  object-fit: cover;
+}
+
+.creditos-fotos {
+  margin-top: 16px;
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.creditos-fotos a {
+  color: var(--texto-2);
+}
