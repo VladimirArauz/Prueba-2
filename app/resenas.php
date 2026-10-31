@@ -94,6 +94,7 @@ function rutas_resenas(): void
         $calificacion = v_entero(campo('calificacion'), 'La calificación', 1, 5, null);
         if (!$calificacion) throw dato_invalido('Elige de 1 a 5 estrellas.');
         $comentario = comentario_valido(campo('comentario'));
+        exigir_captcha('opinion');
         $previa = valor('SELECT id FROM resenas WHERE producto_id = ? AND cliente_id = ?', [$productoId, $cliente['id']]);
         q('INSERT INTO resenas (producto_id, cliente_id, calificacion, comentario) VALUES (?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE calificacion = VALUES(calificacion), comentario = VALUES(comentario), actualizado_en = UTC_TIMESTAMP(6)',

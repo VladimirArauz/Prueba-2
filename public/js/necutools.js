@@ -215,6 +215,25 @@ function mostrarPanel(panel) {
   // Las gráficas se dibujan con el panel visible para que tomen su tamaño real
   if (panel === "resumen" && st.resumen) renderGraficas();
   if (panel === "bitacora") cargarBitacora();
+  if (panel === "cuenta" && esDueno()) cargarSistema();
+}
+
+// Versiones del servidor (solo dueños): PHP y MariaDB que atienden la página, no las de la terminal
+async function cargarSistema() {
+  try {
+    const s = await api("/admin/sistema");
+    const filas = [
+      `PHP ${s.php}: ${s.phpAlDia ? "al día" : `falta actualizar a ${s.phpMinimo} o más nuevo`}`,
+      `MariaDB ${s.mariadb}`,
+      `Contraseñas: ${s.argon2 ? "Argon2id" : "bcrypt"}`,
+      `Captcha: ${s.captcha ? "activo" : "apagado"}`,
+      `Progreso de subidas de PHP: ${s.subidaProgreso ? "encendido (debería estar apagado)" : "apagado"}`,
+      `Errores en pantalla: ${s.errores ? "encendidos (deberían estar apagados)" : "apagados"}`
+    ];
+    $("sistema-lista").innerHTML = filas.map(texto => `<li>${escapeHTML(texto)}</li>`).join("");
+  } catch (error) {
+    manejarError(error);
+  }
 }
 
 // ================= Carga de datos =================

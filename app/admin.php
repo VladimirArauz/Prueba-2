@@ -340,6 +340,26 @@ function rutas_admin(): void
         return ['id' => $a['id'], 'usuario' => $a['usuario'], 'rol' => $a['rol'], 'tiendas' => $a['tiendas'], 'totp_activo' => $a['totp_activo'], 'correo' => $a['correo']];
     });
 
+    // Versiones del servidor que atiende la página (no las de la terminal), para revisar los parches. Solo dueños.
+    get('/api/admin/sistema', function () {
+        requiere_admin();
+        requiere_dueno();
+        $ini = fn(string $clave) => in_array(strtolower((string) ini_get($clave)), ['1', 'on', 'true'], true);
+        return [
+            'php' => PHP_VERSION,
+            // En local, Ubuntu parcha sin cambiar el número: no se marca como viejo
+            'phpAlDia' => php_al_dia() || !config('produccion'),
+            'phpMinimo' => PHP_MINIMO_PRODUCCION,
+            'mariadb' => (string) valor('SELECT VERSION()'),
+            'argon2' => con_argon2(),
+            'sodium' => extension_loaded('sodium'),
+            'curl' => extension_loaded('curl'),
+            'subidaProgreso' => $ini('session.upload_progress.enabled'),
+            'errores' => $ini('display_errors'),
+            'captcha' => captcha_activo(),
+        ];
+    });
+
     get('/api/admin/iconos', function () {
         requiere_admin();
         return ICONOS_TIENDA;
@@ -919,7 +939,7 @@ function rutas_admin(): void
         limpiar_fallos('totp', $admin['id']);
         $respaldo = totp_generar_respaldo();
         q('UPDATE admins SET totp_secreto = ?, totp_activo = TRUE, totp_ultimo = ?, totp_respaldo = ? WHERE id = ?',
-          [$nuevo['secreto'], $paso, json_encode(array_map('totp_hash_respaldo', $respaldo)), $admin['id']]);
+          [totp_cifrar($nuevo['secreto']), $paso, json_encode(array_map('totp_hash_respaldo', $respaldo)), $admin['id']]);
         Sesion::quitar('totpNuevo');
         cerrar_sesiones_de($admin['id'], Sesion::id());
         anotar($admin, '2 pasos', 'usuarios', $admin['id'], 'Activó la verificación en dos pasos');

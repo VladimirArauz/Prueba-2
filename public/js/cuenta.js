@@ -201,7 +201,8 @@ function entrar(sesion, mensaje) {
 }
 
 // Revisa los campos (si hay errores, enfoca el primero), manda el formulario y llama a listo(respuesta)
-async function enviarForm(event, { ruta, metodo = "POST", campos, listo, alFallar }) {
+// captcha: la acción de Turnstile si el formulario lo pide (su <div class="captcha">, ver js/captcha.js)
+async function enviarForm(event, { ruta, metodo = "POST", campos, captcha: accion, listo, alFallar }) {
   event.preventDefault();
   const form = event.currentTarget;
   if (!(await validarFormulario(form))) return;
@@ -209,6 +210,7 @@ async function enviarForm(event, { ruta, metodo = "POST", campos, listo, alFalla
   const body = Object.fromEntries(campos.map(c => [c, form.elements[c].value]));
   botonOcupado(boton);
   try {
+    if (accion) body.captcha = await tokenCaptcha(form.querySelector(".captcha"), accion);
     const respuesta = await api(ruta, { method: metodo, body });
     form.reset();
     reiniciarCampos(form);
@@ -255,7 +257,8 @@ Object.assign(ACCIONES, {
   "codigo-reenviar": async el => {
     botonOcupado(el);
     try {
-      const respuesta = await api("/clientes/codigo/reenviar", { method: "POST" });
+      const captcha = await tokenCaptcha($("form-codigo").querySelector(".captcha"), "reenviar");
+      const respuesta = await api("/clientes/codigo/reenviar", { method: "POST", body: { captcha } });
       botonListo(el);
       campoCodigo.limpiar();
       esperarReenvio(respuesta.espera ?? 60);
@@ -308,16 +311,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     verificarCodigo(campoCodigo.valor());
   });
   $("form-entrar").addEventListener("submit", event => enviarForm(event, {
-    ruta: "/clientes/login", campos: ["identificador", "password"],
+    ruta: "/clientes/login", campos: ["identificador", "password"], captcha: "login",
     listo: s => siguientePaso(s, `Sesión iniciada: ${s.nombre}`),
     alFallar: error => { if (error.status === 401) alarmaVentanas(); }
   }));
   $("form-registro").addEventListener("submit", event => enviarForm(event, {
-    ruta: "/clientes/registro", campos: ["nombre", "usuario", "correo", "pais", "telefono", "password", "confirmar"],
+    ruta: "/clientes/registro", campos: ["nombre", "usuario", "correo", "pais", "telefono", "password", "confirmar"], captcha: "registro",
     listo: s => siguientePaso(s, `Cuenta creada. Te damos la bienvenida, ${s.nombre}.`)
   }));
   $("form-restablecer").addEventListener("submit", event => enviarForm(event, {
-    ruta: "/clientes/restablecer", campos: ["identificador"],
+    ruta: "/clientes/restablecer", campos: ["identificador"], captcha: "restablecer",
     listo: s => mostrarCodigo(s)
   }));
   $("form-nueva").addEventListener("submit", event => enviarForm(event, {

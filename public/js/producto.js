@@ -146,6 +146,7 @@ function formularioOpinion(mia) {
         <textarea id="opinion-comentario" name="comentario" rows="4" minlength="3" maxlength="500" required placeholder="¿Qué te pareció? ¿Lo recomiendas?">${escapeHTML(comentario)}</textarea>
         <span class="form-hint" id="opinion-cuenta">${comentario.length} de 500 caracteres</span>
       </div>
+      <div class="captcha"></div>
       <div class="form-actions">
         <button type="submit" class="btn">Publicar opinión</button>
         ${mia ? `<button type="button" class="btn secondary" data-action="cancelar-opinion">Cancelar</button>` : ""}
@@ -223,9 +224,10 @@ async function guardarOpinion(event) {
   const nueva = !est.opiniones.mia;
   botonOcupado(boton);
   try {
+    const captcha = await tokenCaptcha(form.querySelector(".captcha"), "opinion");
     await api(`/productos/${est.id}/resena`, {
       method: "PUT",
-      body: { calificacion: Number(elegida.value), comentario: form.elements.comentario.value }
+      body: { calificacion: Number(elegida.value), comentario: form.elements.comentario.value, captcha }
     });
     est.editando = false;
     est.pagina = 1;

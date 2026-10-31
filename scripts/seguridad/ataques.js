@@ -30,7 +30,16 @@ const fs = require("fs");
 let ipSeq = 0;
 const nuevaIp = () => { ipSeq += 1; return `10.${(ipSeq >> 16) & 255}.${(ipSeq >> 8) & 255}.${ipSeq & 255}`; };
 
-async function pedir(metodo, ruta, { body, sesion, origin = BASE, ip = nuevaIp(), headers = {}, crudo } = {}) {
+// Rutas con captcha (app/captcha.php). En local, app/config.php usa las llaves de prueba de Cloudflare
+// (site_key 1x00000000000000000000AA, secret 1x0000000000000000000000000000000AA), que aceptan este token.
+const TOKEN_PRUEBA = "XXXX.DUMMY.TOKEN.XXXX";
+const CON_CAPTCHA = /^\/api\/(clientes\/(login|registro|restablecer|codigo\/reenviar)|pedidos|productos\/\d+\/resena)$/;
+
+async function pedir(metodo, ruta, { body, sesion, origin = BASE, ip = nuevaIp(), headers = {}, crudo, sinCaptcha = false } = {}) {
+  // Las pruebas de siempre mandan el token de prueba; las del captcha lo quitan con sinCaptcha
+  if (!sinCaptcha && (metodo === "POST" || metodo === "PUT") && CON_CAPTCHA.test(ruta)) {
+    body = body && typeof body === "object" && !Array.isArray(body) ? { captcha: TOKEN_PRUEBA, ...body } : body === undefined ? { captcha: TOKEN_PRUEBA } : body;
+  }
   const h = { "X-Forwarded-For": ip, ...headers };
   if (origin) h.Origin = origin;
   if (sesion && sesion.cookie) h.Cookie = sesion.cookie;
@@ -450,7 +459,7 @@ async function main() {
     const usuario = `tfa-${SUFIJO}`;
     await pedir("POST", "/api/admin/usuarios", { sesion: dueno, body: { usuario, password: ctx.pass, confirmar: ctx.pass, rol: "encargado", tiendas: [A.id] } });
     const s = await loginAdmin(usuario, ctx.pass);
-    let secreto, respaldo;
+    let secreto, respaldo, pasoActivacion;
     await prueba("H14", "2 pasos: iniciar pide la contraseña", async () => {
       const r = await pedir("POST", "/api/admin/2fa/iniciar", { sesion: s, body: { password: "otra-mala-123" } });
       return espera(r.status === 400, r.status);
@@ -462,7 +471,8 @@ async function main() {
       return espera(secreto && /^otpauth:\/\/totp\//.test(ini.json.enlace) && r.status === 400, `${ini.status} ${r.status}`);
     });
     await prueba("H14", "2 pasos: se activa con el código correcto y entrega 8 códigos de respaldo", async () => {
-      const r = await pedir("POST", "/api/admin/2fa/activar", { sesion: s, body: { codigo: totp.codigoDe(secreto, totp.pasoActual()) } });
+      pasoActivacion = totp.pasoActual();
+      const r = await pedir("POST", "/api/admin/2fa/activar", { sesion: s, body: { codigo: totp.codigoDe(secreto, pasoActivacion) } });
       respaldo = r.json && r.json.respaldo;
       return espera(r.status === 200 && Array.isArray(respaldo) && respaldo.length === 8, `${r.status} ${r.texto.slice(0, 80)}`);
     });
@@ -485,7 +495,8 @@ async function main() {
     await prueba("H14", "2 pasos: el mismo código de la app no sirve dos veces", async () => {
       const p = {};
       await pedir("POST", "/api/auth/login", { sesion: p, body: { usuario, password: ctx.pass } });
-      const r = await pedir("POST", "/api/auth/login/codigo", { sesion: p, body: { codigo: totp.codigoDe(secreto, totp.pasoActual()) } });
+      // El código exacto de la activación (si ya pasaron 30 s, el del paso actual es otro y sí vale)
+      const r = await pedir("POST", "/api/auth/login/codigo", { sesion: p, body: { codigo: totp.codigoDe(secreto, pasoActivacion) } });
       return espera(r.status === 401, `${r.status}: el código de la activación se aceptó otra vez`);
     });
     await prueba("H14", "2 pasos: un código de respaldo sirve una sola vez", async () => {
@@ -892,6 +903,35 @@ async function main() {
       const horas = vence ? (Date.parse(vence[1]) - Date.now()) / 36e5 : 99;
       return espera(r.status === 200 && horas <= 8.1, `${r.status} ${horas}`);
     });
+  }
+
+  // ---------- Captcha (plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte) ----------
+  const captchaActivo = Boolean(((await pedir("GET", "/api/config")).json || {}).captcha);
+  await prueba("N11", "/api/config manda la llave pública del captcha", async () => espera(captchaActivo, "captcha vacío en app/config.php"));
+  if (captchaActivo) {
+    const rutasCaptcha = [
+      ["POST", "/api/clientes/login", { identificador: "nadie", password: "x" }],
+      ["POST", "/api/clientes/registro", datosCliente("captcha")],
+      ["POST", "/api/clientes/restablecer", { identificador: "nadie" }],
+      ["POST", "/api/clientes/codigo/reenviar", {}],
+      ["POST", "/api/pedidos", { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] }],
+    ];
+    for (const [metodo, ruta, body] of rutasCaptcha) {
+      await prueba("N11", `${ruta} sin token del captcha → 400`, async () => {
+        const r = await pedir(metodo, ruta, { body, sinCaptcha: true });
+        return espera(r.status === 400 && /robot/.test(r.texto), `${r.status} ${r.texto}`);
+      });
+    }
+    await prueba("N11", "opinión sin token del captcha → 400", async () => {
+      const r = await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: cli1.sesion, sinCaptcha: true, body: { calificacion: 5, comentario: "Muy bueno, sin captcha" } });
+      return espera(r.status === 400 && /robot/.test(r.texto), `${r.status} ${r.texto}`);
+    });
+    await prueba("N11", "un token de más de 2048 caracteres → 400 sin llamar a Cloudflare", async () => {
+      const r = await pedir("POST", "/api/clientes/login", { sinCaptcha: true, body: { identificador: "nadie", password: "x", captcha: "a".repeat(3000) } });
+      return espera(r.status === 400, `${r.status} ${r.texto}`);
+    });
+    // La llave secreta de prueba 1x… acepta cualquier token. El token inventado o reusado se prueba poniendo en
+    // app/config.php el secret 2x0000000000000000000000000000000AA (siempre falla) o 3x… (token repetido): 400.
   }
 
   // ---------- Errores sin detalles ----------

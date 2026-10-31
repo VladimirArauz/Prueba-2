@@ -5,7 +5,26 @@
    fuentes, sombras ni estilos de botón fuera de este archivo)
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap');
+/* Archivo (fuente variable con ejes de ancho y peso, licencia OFL en /fuentes/OFL.txt), alojada en el sitio:
+   la misma que daba Google Fonts, sin mandarle a Google la IP de cada visitante. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 800;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('/fuentes/archivo-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 800;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('/fuentes/archivo-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
   /* Color */
@@ -3438,6 +3457,16 @@ a.card-img-wrap {
   gap: 0.5rem;
 }
 
+.lista-sistema {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--texto-2);
+}
+
+.lista-sistema li + li {
+  margin-top: 0.25rem;
+}
+
 .lista-respaldo li {
   border: 1px solid var(--linea);
   border-radius: 6px;
@@ -3929,4 +3958,15 @@ a.card-img-wrap {
 
 @keyframes codigo-brillo {
   from { box-shadow: none; }
+}
+
+/* =========================================================
+   CAPTCHA (Cloudflare Turnstile, plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte)
+   El recuadro es de Cloudflare (iframe) y casi nunca se ve: solo si Cloudflare duda. Aquí solo
+   se le da su lugar en el formulario (ancho completo); sin reto no ocupa espacio.
+   ========================================================= */
+.captcha {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }

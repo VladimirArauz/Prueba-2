@@ -113,6 +113,18 @@ function og_sin_fallar(callable $fn): array
     }
 }
 
+// Cloudflare Web Analytics (plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte): cuenta visitas sin cookies.
+// Solo en las páginas públicas (Necutools no pasa por aquí) y solo si hay token en app/config.php. No es JS en
+// línea: es un <script src> que la CSP permite (static.cloudflareinsights.com y cloudflareinsights.com).
+function con_web_analytics(string $html): string
+{
+    $token = config('cloudflare_analytics');
+    if (!is_string($token) || !preg_match('/^[a-f0-9]{32}$/', $token)) return $html;
+    $script = '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "' . $token . '"}\'></script>';
+    $fin = strrpos($html, '</body>');
+    return $fin === false ? $html : substr($html, 0, $fin) . "  $script\n" . substr($html, $fin);
+}
+
 // Devuelve la respuesta de la página, o null si la ruta no es una página (la atiende la API)
 function pagina_publica(string $ruta): ?Respuesta
 {
@@ -132,6 +144,7 @@ function pagina_publica(string $ruta): ?Respuesta
     $etiquetas = etiquetas_og($og, rtrim($ruta, '/') ?: '/');
     // Con callback: un precio como "$150.00" no debe leerse como referencia ($15) del reemplazo
     $html = preg_replace_callback('#<!--og:inicio-->.*?<!--og:fin-->#s', fn() => "<!--og:inicio-->\n  $etiquetas\n  <!--og:fin-->", $html, 1);
+    $html = con_web_analytics($html);
     // Igual que el HTML estático (public/.htaccess): se revalida siempre
     return binaria($html, 'text/html; charset=utf-8', ['Cache-Control' => 'no-cache']);
 }

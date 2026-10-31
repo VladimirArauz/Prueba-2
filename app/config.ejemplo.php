@@ -49,6 +49,19 @@ return [
         'nombre' => 'Necutla',
     ],
 
+    // Captcha de Cloudflare Turnstile (Cloudflare → Turnstile → Add widget, hostname necutla.com, modo Managed).
+    // site_key es pública (se manda al navegador); secret nunca sale del servidor. Vacías = sin captcha.
+    // En local, las llaves de prueba de Cloudflare: site_key '1x00000000000000000000AA' y
+    // secret '1x0000000000000000000000000000000AA' (siempre pasa) o '2x0000000000000000000000000000000AA' (siempre falla).
+    'turnstile' => [
+        'site_key' => '',
+        'secret' => '',
+    ],
+
+    // Token de Cloudflare Web Analytics (Analytics & Logs → Web Analytics → Add a site → fragmento manual).
+    // Es público. Vacío = no se cuentan visitas. No hace falta pasar el dominio a Cloudflare.
+    'cloudflare_analytics' => '',
+
     // Solo si IONOS pusiera un proxy delante y REMOTE_ADDR no fuera la IP del visitante. En hosting
     // compartido de IONOS se deja en false: si fuera true, cualquiera podría inventarse una IP.
     'confiar_x_forwarded_for' => false,

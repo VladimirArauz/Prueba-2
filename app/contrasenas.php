@@ -5,7 +5,13 @@
  */
 
 const BCRYPT_COSTO = 12;
-// bcrypt solo usa los primeros 72 bytes: más largo daría una falsa sensación de seguridad
+// Argon2id (recomendado por OWASP, Password Storage Cheat Sheet) con 64 MiB, 4 pasadas y 1 hilo: más que el
+// mínimo de OWASP (19 MiB, 2) y tarda en IONOS casi lo mismo que bcrypt 12 (~140 ms contra ~160 ms), así el
+// tiempo de respuesta no delata si una cuenta existe mientras queden hashes bcrypt de antes.
+// Si el PHP no trae Argon2, se sigue con bcrypt. Los hashes bcrypt viejos se cambian solos al entrar.
+const ARGON2_OPCIONES = ['memory_cost' => 65536, 'time_cost' => 4, 'threads' => 1];
+// bcrypt solo usa los primeros 72 bytes: más largo daría una falsa sensación de seguridad.
+// El límite se queda con Argon2 para que una cuenta no dependa del algoritmo con el que se guardó.
 const MAX_BYTES_CONTRASENA = 72;
 
 // Las más usadas que cumplen el largo mínimo (listas públicas de contraseñas filtradas y variantes en español)
@@ -63,11 +69,35 @@ function validar_contrasena($valor, int $minimo, string $campo = 'La contraseña
     return $valor;
 }
 
-function cifrar_contrasena(string $password): string
+function con_argon2(): bool
 {
-    return password_hash($password, PASSWORD_BCRYPT, ['cost' => BCRYPT_COSTO]);
+    return defined('PASSWORD_ARGON2ID');
 }
 
-// Hash fijo (costo 12) para comparar aunque la cuenta no exista: mismo tiempo de respuesta.
+function cifrar_contrasena(string $password): string
+{
+    return con_argon2()
+        ? password_hash($password, PASSWORD_ARGON2ID, ARGON2_OPCIONES)
+        : password_hash($password, PASSWORD_BCRYPT, ['cost' => BCRYPT_COSTO]);
+}
+
+// Después de un login correcto: si el hash es de bcrypt (o de otra configuración), se guarda uno nuevo.
+// $tabla es una constante del código ('admins' o 'clientes'), nunca un dato del usuario.
+function actualizar_hash_si_hace_falta(string $tabla, int $id, string $password, string $hash): void
+{
+    $nuevo = con_argon2()
+        ? password_needs_rehash($hash, PASSWORD_ARGON2ID, ARGON2_OPCIONES)
+        : password_needs_rehash($hash, PASSWORD_BCRYPT, ['cost' => BCRYPT_COSTO]);
+    if (!$nuevo || !in_array($tabla, ['admins', 'clientes'], true)) return;
+    q("UPDATE $tabla SET password_hash = ? WHERE id = ? AND password_hash = ?", [cifrar_contrasena($password), $id, $hash]);
+}
+
+// Hash fijo para comparar aunque la cuenta no exista: mismo tiempo de respuesta que una cuenta real.
 // Va escrito aquí porque PHP no tiene un arranque único donde calcularlo una vez.
-const HASH_FALSO = '$2y$12$OSfFltudRjDj3EJBENmkvenjb1BARBtziq/sF3grilHWt84f7Tt0u';
+const HASH_FALSO_BCRYPT = '$2y$12$OSfFltudRjDj3EJBENmkvenjb1BARBtziq/sF3grilHWt84f7Tt0u';
+const HASH_FALSO_ARGON2 = '$argon2id$v=19$m=65536,t=4,p=1$eWJ1cXBPemc3ak5oUjE5VQ$KLsbkLprZSKGT43duwKlqj+yrD+LBCyJz3RZXtyg5Wo';
+
+function hash_falso(): string
+{
+    return con_argon2() ? HASH_FALSO_ARGON2 : HASH_FALSO_BCRYPT;
+}

@@ -25,7 +25,7 @@ public/                Sitio: lo único que se publica (el dominio apunta aquí)
   necutools.html       Panel de administración
   js/                  comun.js (API, carrito, WhatsApp) + un archivo por página; graficas.js (Chart.js);
                        validacion.js (validación en vivo y medidor de contraseña)
-  vendor/chart.umd.js  Chart.js 4.4.7 (copia fija, revisada con el hash de npm)
+  vendor/chart.umd.js  Chart.js 4.6.1 (copia fija, revisada con el hash de npm)
   datos/paises.json    Países con su lada y el largo de sus teléfonos (lo usa también el servidor)
   style.css, iconos.js Sistema de diseño e iconos (Lucide)
 app/                   Servidor en PHP, FUERA de la carpeta pública
@@ -167,6 +167,8 @@ Estados: hover y presionado los da `style.css`. `disabled` lo pone gris en cualq
 | `correo_dns_prueba` | Solo en local: no consulta el DNS al revisar correos (todo dominio vale salvo `*.invalid` y `sin-correo.*`) |
 | `url_publica` | Dirección del sitio sin `/` al final (ej. `https://necutla.com`). Arma las direcciones completas de la vista previa del enlace (`og:url`, `og:image`). Vacía: la vista previa sale sin imagen |
 | `correo` | Buzón que manda los códigos de las cuentas de cliente: `modo` (`smtp`, o `archivo` solo en local: guarda los correos en `/tmp/necutla-correos/`), `host` (`smtp.ionos.mx`), `puerto` (465), `usuario` y `password` del buzón, `remitente` y `nombre` |
+| `turnstile` | Captcha de Cloudflare: `site_key` (pública) y `secret`. Vacías = sin captcha. En local, las llaves de prueba de Cloudflare (ver `app/config.ejemplo.php`) |
+| `cloudflare_analytics` | Token de Cloudflare Web Analytics (público). Vacío = no se cuentan visitas |
 | `hoy_prueba` | Solo en local: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones |
 
 `app/config.php` **nunca** se sube a git (está en `.gitignore`).
@@ -214,7 +216,8 @@ encargado), `clientes`, `resenas`, `bitacora`, `intentos_login`, `migraciones`, 
 ## Seguridad
 
 Auditoría completa en `plans/auditorias/2026-10-20-seguridad.md` (se hizo sobre la versión en Node; la
-versión en PHP pasa las mismas pruebas).
+versión en PHP pasa las mismas pruebas) y la revisión de versiones y parches del 2026-10-31 en
+`plans/auditorias/2026-10-31-seguridad-actualizaciones.md`.
 
 | Capa | Protección |
 |---|---|
@@ -222,14 +225,16 @@ versión en PHP pasa las mismas pruebas).
 | Cabeceras | En `public/.htaccess`: CSP estricta (sin scripts ni estilos en línea), HSTS con HTTPS, `nosniff`, `Permissions-Policy` sin cámara, micrófono ni ubicación; Necutools y `/api` con `noindex`; respuestas privadas con `no-store`; sin `X-Powered-By` |
 | Peticiones | Solo las rutas de Necutools que suben imágenes aceptan 2 MB; el resto, 20 KB. Lo que modifica datos debe venir de este sitio (`Origin` obligatorio y `Sec-Fetch-Site`). TRACE no se acepta. La redirección a HTTPS solo cree lo que dice Apache, no la cabecera `X-Forwarded-Proto` |
 | Sesión | En la tabla `sesiones` (solo el SHA-256 de la cookie); cookie `__Host-necutla.sid` (`HttpOnly`, `Secure`, `SameSite=Strict`); id nuevo al entrar y al salir; Necutools: 8 h sin uso o 24 h en total; clientes: 400 días renovados en cada visita, hasta cerrar sesión |
-| Cuentas | Correo y usuario se guardan en minúsculas y se comparan exactos (`josé` y `jose` son cuentas distintas); bcrypt (costo 12; las contraseñas de antes siguen sirviendo); 10 fallos seguidos frenan la cuenta 15 minutos, venga de la IP que venga; además, 10 por IP |
-| Dos pasos | Opcional en Necutools ("Mi cuenta"); 8 códigos de respaldo de un solo uso |
+| Cuentas | Correo y usuario se guardan en minúsculas y se comparan exactos (`josé` y `jose` son cuentas distintas); Argon2id (64 MiB, 4 pasadas; OWASP lo recomienda y pide al menos 19 MiB y 2; las de bcrypt de antes siguen sirviendo y se cambian solas al entrar); 10 fallos seguidos frenan la cuenta 15 minutos, venga de la IP que venga; además, 10 por IP |
+| Dos pasos | Opcional en Necutools ("Mi cuenta"); 8 códigos de respaldo de un solo uso; la clave se guarda cifrada (sodium) con una llave que sale del `secreto` (si cambias el `secreto`, hay que volver a activarla) |
+| Captcha | Cloudflare Turnstile en registro, entrar, olvidé mi contraseña, reenviar código, opiniones y pedidos (`app/captcha.php`, `public/js/captcha.js`). Casi nunca pide nada: solo aparece si Cloudflare duda. Si Cloudflare no responde, se deja pasar y se anota en el log |
+| Terceros | Solo Cloudflare (captcha y Web Analytics, sin cookies). La fuente Archivo está en `public/fuentes/` (antes venía de Google Fonts) |
 | Permisos | Revisados en el servidor en cada petición: un encargado no toca tiendas ajenas ni paquetes |
 | Datos | Consultas con parámetros; validación de cada campo; los precios los pone el servidor; todo texto se escapa al mostrarlo |
 | Imágenes | Tipo real por sus bytes, máximo 1 MB, sin SVG; sin metadatos (GPS, modelo del celular); las de algo oculto solo las ve quien puede editarlo |
 | Pedidos | Precios del servidor, hasta 30 piezas y 15 productos, sin duplicados en 10 minutos, 40 por hora por IP y 500 por hora en total |
 | Límites | 300 peticiones a la API cada 15 minutos por IP (tabla `limites`, con la IP cifrada con HMAC) |
-| PHP | 8.5 con parches al día; con una versión más vieja la API no arranca. En local: pool propio con `open_basedir` y sin funciones para correr comandos |
+| PHP | 8.5 con parches al día; en producción, 8.5.12 o más nuevo (si no, la API da 503). `public/.user.ini` apaga el progreso de subidas y los errores en pantalla. Necutools → Mi cuenta → Servidor (solo dueños) muestra las versiones que atienden la página. En local: pool propio con `open_basedir` y sin funciones para correr comandos |
 | Reportes | `/.well-known/security.txt` dice cómo reportar una falla en privado |
 
 **Pruebas de ataque** (solo contra tu computadora, nunca contra IONOS). Necesitan Node 22 solo para
@@ -248,6 +253,8 @@ Debe terminar con todas las pruebas bien.
    permisos 600 (SFTP → clic derecho → Permisos), para que solo tu usuario del hosting lo lea.
 2. Hosting → PHP: versión **8.5**. `https://TU-DOMINIO/healthz` debe decir `{"ok":true}` (con PHP viejo da 503).
 3. Revisar que `https://TU-DOMINIO/app/config.php`, `/.htaccess` y `/api/../app/config.php` no se vean.
-4. Necutools → Mi cuenta → activar la verificación en dos pasos en cada dueño.
+4. Necutools → Mi cuenta → activar la verificación en dos pasos en cada dueño, y revisar la tarjeta "Servidor".
+   Si la verificación ya estaba activa de antes, correr una vez `php8.5 scripts/cifrar-totp.php` por SSH
+   (después del `ALTER` de `db/mariadb/schema.sql`) para cifrar las claves guardadas.
 5. Respaldar la base (phpMyAdmin → Exportar) de vez en cuando.
 6. Si la contraseña de la base se filtró: cámbiala en IONOS → Bases de datos y en `app/config.php`.

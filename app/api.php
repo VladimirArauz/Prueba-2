@@ -250,7 +250,8 @@ function calcular_carrito(array $items): array
 
 function rutas_api(): void
 {
-    get('/api/config', fn() => ['whatsapp' => numeros_respaldo(), 'cuentas' => cuentas_clientes()]);
+    // captcha: llave pública de Turnstile ("" = apagado, ver app/captcha.php)
+    get('/api/config', fn() => ['whatsapp' => numeros_respaldo(), 'cuentas' => cuentas_clientes(), 'captcha' => captcha_site_key()]);
 
     // ================= Tiendas =================
     get('/api/stands', function () {

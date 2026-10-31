@@ -70,6 +70,7 @@ function grupoHTML(grupo) {
         </button>
       </div>
       <p class="cart-privacidad">Guardamos el pedido sin tus datos para que la tienda le dé seguimiento.</p>
+      <div class="captcha" data-captcha="${escapeHTML(grupo.clave)}"></div>
       <div data-enviado="${escapeHTML(grupo.clave)}"></div>
     </section>`;
 }
@@ -155,12 +156,18 @@ function mensajeDe(grupo) {
 }
 
 // Guarda el pedido para el resumen de Necutools. No bloquea ni avisa si falla: WhatsApp ya se abrió.
-function registrarPedido(grupo) {
+// El captcha casi nunca se ve; si Cloudflare duda, su recuadro aparece arriba del aviso "Ya lo envié".
+async function registrarPedido(grupo) {
   const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, ...(i.color ? { color: i.color.id } : {}), cantidad: i.cantidad }));
   const firma = `${grupo.clave}|${items.map(i => `${claveItem(i)}x${i.cantidad}`).join(",")}`;
   if (registrados.has(firma)) return;
   registrados.add(firma);
-  api("/pedidos", { method: "POST", body: { clave: grupo.clave, items } }).catch(() => registrados.delete(firma));
+  try {
+    const captcha = await tokenCaptcha(document.querySelector(`[data-captcha="${CSS.escape(grupo.clave)}"]`), "pedido");
+    await api("/pedidos", { method: "POST", body: { clave: grupo.clave, items, captcha } });
+  } catch (e) {
+    registrados.delete(firma);
+  }
 }
 
 function enviar(clave) {

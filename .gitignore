@@ -14,3 +14,4 @@ Thumbs.db
 
 # Configuración del servidor en PHP con la contraseña de la base y el secreto (NUNCA se sube)
 app/config.php
+app/config.php.*

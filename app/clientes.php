@@ -106,6 +106,8 @@ function rutas_clientes(): void
         $tel = v_telefono(campo('pais'), campo('telefono'));
         $correo = correo_real(campo('correo'));
         $password = password_cliente(campo('password'), campo('confirmar'), [$nombre, $usuario, explode('@', $correo)[0]]);
+        // Captcha antes de revisar si el correo ya existe: un bot no puede probar correos
+        exigir_captcha('registro');
         // Antes del bcrypt: un usuario o correo repetido no debe gastar CPU. No se dice cuál de los dos.
         if (valor('SELECT 1 FROM clientes WHERE correo = ? OR usuario = ?', [$correo, $usuario])) throw new ErrorHttp(409, DUPLICADO_CLIENTE);
         // La cuenta se crea hasta que llega el código del correo; mientras, el registro espera en el código
@@ -139,6 +141,7 @@ function rutas_clientes(): void
         if ($identificador === '' || $password === '' || mb_strlen($identificador) > 120 || mb_strlen($password) > 200) {
             throw dato_invalido('Escribe tu usuario o correo y tu contraseña.');
         }
+        exigir_captcha('login');
         // correo y usuario se guardan en minúsculas y la columna compara exacto (utf8mb4_nopad_bin)
         $campos = 'SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, password_hash, activo, sesion_version FROM clientes';
         $cliente = str_contains($identificador, '@')
@@ -147,12 +150,13 @@ function rutas_clientes(): void
         // El freno por cuenta usa el id: así no se esquiva alternando el usuario y el correo
         $freno = $cliente ? "id:{$cliente['id']}" : $identificador;
         exigir_no_frenada('cliente', $freno);
-        $valido = password_verify($password, $cliente ? $cliente['password_hash'] : HASH_FALSO);
+        $valido = password_verify($password, $cliente ? $cliente['password_hash'] : hash_falso());
         if (!$cliente || !$valido) {
             registrar_fallo('cliente', $freno);
             throw new ErrorHttp(401, 'Usuario, correo o contraseña incorrectos.');
         }
         limpiar_fallos('cliente', $freno);
+        actualizar_hash_si_hace_falta('clientes', (int) $cliente['id'], $password, $cliente['password_hash']);
         if (!a_bool($cliente['activo'])) throw new ErrorHttp(403, 'Esta cuenta está desactivada.');
         // La contraseña está bien: falta el código que llega al correo
         return crear_codigo('login', $cliente['correo'], (int) $cliente['id'], null, $cliente['nombre']);
@@ -167,6 +171,7 @@ function rutas_clientes(): void
     });
 
     post('/api/clientes/codigo/reenviar', function () {
+        exigir_captcha('reenviar');
         return reenviar_codigo();
     });
 
@@ -176,6 +181,7 @@ function rutas_clientes(): void
         $crudo = campo('identificador');
         $identificador = is_string($crudo) ? mb_strtolower(js_trim($crudo)) : '';
         if ($identificador === '' || mb_strlen($identificador) > 120) throw dato_invalido('Escribe tu usuario o correo.');
+        exigir_captcha('restablecer');
         $esCorreo = str_contains($identificador, '@');
         $cliente = fila('SELECT id, nombre, correo, activo FROM clientes WHERE ' . ($esCorreo ? 'correo' : 'usuario') . ' = ?', [$identificador]);
         $mostrar = $esCorreo ? $identificador : null;

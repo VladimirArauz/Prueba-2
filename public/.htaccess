@@ -15,6 +15,7 @@ ErrorDocument 403 /404.txt
     AddType image/svg+xml .svg
     AddCharset utf-8 .txt .html .css .js .json .svg
     AddType application/manifest+json .webmanifest
+    AddType font/woff2 .woff2
 </IfModule>
 
 RewriteEngine On
@@ -57,8 +58,10 @@ RewriteRule \.(php[0-9]?|phtml|phar)$ - [R=404,L]
 
 <IfModule mod_headers.c>
     # Cabeceras de seguridad (las mismas que ponía helmet). "always" también las pone en las respuestas de PHP.
-    Header always set Content-Security-Policy "default-src 'self';script-src 'self';script-src-attr 'none';style-src 'self' https://fonts.googleapis.com;font-src 'self' https://fonts.gstatic.com;img-src 'self' data:;connect-src 'self';object-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'none'"
-    Header always set Content-Security-Policy "default-src 'self';script-src 'self';script-src-attr 'none';style-src 'self' https://fonts.googleapis.com;font-src 'self' https://fonts.gstatic.com;img-src 'self' data:;connect-src 'self';object-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'none';upgrade-insecure-requests" "expr=%{HTTPS} == 'on'"
+    # Plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte: fuentes propias (/fuentes/), sin Google Fonts;
+    # challenges.cloudflare.com = captcha Turnstile (script y su recuadro); cloudflareinsights.com = Web Analytics.
+    Header always set Content-Security-Policy "default-src 'self';script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com;script-src-attr 'none';style-src 'self';font-src 'self';img-src 'self' data:;connect-src 'self' https://cloudflareinsights.com;frame-src https://challenges.cloudflare.com;worker-src 'none';manifest-src 'self';object-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'none'"
+    Header always set Content-Security-Policy "default-src 'self';script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com;script-src-attr 'none';style-src 'self';font-src 'self';img-src 'self' data:;connect-src 'self' https://cloudflareinsights.com;frame-src https://challenges.cloudflare.com;worker-src 'none';manifest-src 'self';object-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'none';upgrade-insecure-requests" "expr=%{HTTPS} == 'on'"
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"

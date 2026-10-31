@@ -75,6 +75,11 @@ function usar_codigo(array $admin, $valor): bool
     if ($codigo === '' || mb_strlen($codigo) > 20) return false;
     $paso = totp_verificar($admin['totp_secreto'], $codigo, $admin['totp_ultimo']);
     if ($paso !== null) {
+        // Un secreto que quedó en claro de antes se cifra en cuanto se usa
+        if (!str_starts_with((string) $admin['totp_secreto'], TOTP_PREFIJO)) {
+            q('UPDATE admins SET totp_secreto = ? WHERE id = ? AND totp_secreto = ?',
+              [totp_cifrar(totp_descifrar($admin['totp_secreto'])), $admin['id'], $admin['totp_secreto']]);
+        }
         return ejecutar('UPDATE admins SET totp_ultimo = ? WHERE id = ? AND (totp_ultimo IS NULL OR totp_ultimo < ?)',
             [$paso, $admin['id'], $paso]) === 1;
     }
@@ -133,12 +138,13 @@ function rutas_auth(): void
         // El freno por cuenta usa el id: así no se esquiva alternando el usuario y el correo
         $freno = $admin ? "id:{$admin['id']}" : $identificador;
         exigir_no_frenada('admin', $freno);
-        $valido = password_verify($password, $admin ? $admin['password_hash'] : HASH_FALSO);
+        $valido = password_verify($password, $admin ? $admin['password_hash'] : hash_falso());
         if (!$admin || !$valido) {
             registrar_fallo('admin', $freno);
             return json_respuesta(['error' => 'Usuario, correo o contraseña incorrectos.'], 401);
         }
         limpiar_fallos('admin', $freno);
+        actualizar_hash_si_hace_falta('admins', (int) $admin['id'], $password, $admin['password_hash']);
         if (!a_bool($admin['activo'])) {
             return json_respuesta(['error' => 'Tu cuenta está desactivada. Pídele a un dueño de Necutla que la active.'], 403);
         }

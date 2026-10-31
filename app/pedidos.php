@@ -325,6 +325,7 @@ function rutas_pedidos(): void
         limitar('pedidos', 40, UNA_HORA, 'Enviaste muchos pedidos seguidos. Espera un rato y vuelve a intentar.');
         $clave = is_string(campo('clave')) ? campo('clave') : '';
         if (!preg_match('/^(tienda|paquete)-([1-9][0-9]{0,9})$/', $clave, $m)) throw dato_invalido('El pedido no es válido.');
+        exigir_captcha('pedido');
 
         $grupo = null;
         foreach (calcular_carrito(leer_carrito(cuerpo()))['grupos'] as $g) if ($g['clave'] === $clave) $grupo = $g;

@@ -33,6 +33,16 @@ set_error_handler(function (int $nivel, string $mensaje, string $archivo, int $l
     throw new ErrorException($mensaje, 0, $nivel, $archivo, $linea);
 });
 
+// En producción, además, 8.5.12 o más nuevo (la que corrige PHP2Shell). En local no se exige: Ubuntu parcha sus
+// paquetes sin cambiar el número (8.5.4-0ubuntu1.5 ya trae el arreglo). La versión que atiende la página se ve en
+// Necutools → Mi cuenta → Servidor (solo dueños).
+const PHP_MINIMO_PRODUCCION = '8.5.12';
+
+function php_al_dia(): bool
+{
+    return version_compare(PHP_VERSION, PHP_MINIMO_PRODUCCION, '>=');
+}
+
 function config(string $clave)
 {
     static $config = null;
@@ -41,6 +51,11 @@ function config(string $clave)
         if (!is_file($ruta)) throw new RuntimeException('Falta app/config.php. Copia app/config.ejemplo.php y complétalo.');
         $config = require $ruta;
         if (strlen($config['secreto'] ?? '') < 32) throw new RuntimeException('El secreto de app/config.php debe tener al menos 32 caracteres.');
+        if (!empty($config['produccion']) && !php_al_dia() && PHP_SAPI !== 'cli') {
+            error_log('Necutla necesita PHP ' . PHP_MINIMO_PRODUCCION . ' o más nuevo en producción; este servidor tiene ' . PHP_VERSION);
+            http_response_code(503);
+            exit;
+        }
     }
     return $config[$clave] ?? null;
 }
@@ -52,6 +67,7 @@ function con_https(): bool { return config('produccion') && config('https') !== 
 require __DIR__ . '/bd.php';
 require __DIR__ . '/http.php';
 require __DIR__ . '/seguridad.php';
+require __DIR__ . '/captcha.php';
 require __DIR__ . '/sesiones.php';
 require __DIR__ . '/validar.php';
 require __DIR__ . '/contrasenas.php';

@@ -32,10 +32,13 @@ Cómo se usa:
 | `2026-10-30-codigo-por-correo-y-sesion-permanente.md` | Aplicado (prompts 0 a 5), probado en local y en vivo, subido a IONOS. Commit del 2026-10-30 en `main`; falta el push (token de `gh` vencido) | 2026-10-30 |
 | `2026-10-30-vista-previa-por-tienda.md` | Aplicado y subido a IONOS (2026-10-30). Falta probar en WhatsApp (pendiente 27b) | 2026-10-30 |
 | `2026-10-29-reels-esqueletos-botones-open-graph.md` | Aplicado, commit `d4a3289` en GitHub y subido a IONOS (2026-10-29). Falta probar el enlace en WhatsApp (pendiente 27) | 2026-10-29 |
+| `2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Falta que el usuario pruebe el captcha en su navegador (pendiente de abajo) | 2026-10-31 |
 
 ---
 
 ## Pendientes
+
+**Seguridad, Turnstile y Cloudflare aparte (2026-10-31, aplicado):** (a) Cloudflare va **aparte, sin tocar nada de IONOS** (decisión del usuario): solo Turnstile y Web Analytics, **sin protección DDoS de Cloudflare**; el escudo completo (nameservers) queda para un plan futuro. (b) Probar en el navegador del usuario (celular y compu) entrar, crear cuenta, "¿Olvidaste tu contraseña?", opinar y mandar un pedido: Turnstile real rechaza a Chrome automatizado, así que en vivo solo se probó que el servidor rechaza sin token o con token falso. (c) Necutools → Mi cuenta → Servidor (solo dueños): confirmar que "Progreso de subidas de PHP" diga apagado (que IONOS lee `public/.user.ini`). (d) Pedir a IONOS por ticket MariaDB 11.8.9 o más nueva (hoy 11.8.8). (e) Ver las visitas en Cloudflare → Web Analytics (tarda unos minutos en mostrar datos). (f) **Excepción de diseño por confirmar:** el recuadro de Turnstile es un iframe de Cloudflare que no usa los tokens; con `interaction-only` casi nunca se ve. (g) Si se cambia el `secreto` de `app/config.php`, los dueños con 2 pasos tienen que volver a activarla (la llave del cifrado sale del secreto). (h) No se agregó ningún aviso de "contamos visitas" en la página (Web Analytics no usa cookies); si se quiere, es una línea en el pie.
 
 **Mi cuenta (2026-10-31):** excepción de diseño autorizada por el usuario solo para el panel de los edificios de Mi cuenta: algunas ventanas parpadean solas a ratos (no es respuesta a una acción). Si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`.
 
@@ -127,6 +130,22 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-31: actualizaciones de seguridad, Turnstile y Web Analytics (plan `2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md`, prompts 1 a 7)
+- **Informe** `plans/auditorias/2026-10-31-seguridad-actualizaciones.md` (hallazgos N1–N14 con fuentes oficiales y su estado). Versiones: IONOS con PHP 8.5.12 (web y terminal), MariaDB 11.8.8, curl, sodium y Argon2; local PHP 8.5.4 de Ubuntu (parchado), sin curl.
+- **Servidor**: `app/arranque.php` (8.5.12 mínimo en producción); `app/contrasenas.php` (Argon2id 64 MiB / 4 pasadas, rehash al entrar en `app/auth.php` y `app/clientes.php`, hash falso del mismo tipo); `app/totp.php` (secreto cifrado con sodium, `s1:`; se cifra solo al usarse) + `scripts/cifrar-totp.php`; `db/mariadb/schema.sql` (`totp_secreto` VARCHAR(160), corrido en local y en IONOS; el secreto del dueño con 2 pasos de IONOS ya está cifrado); `app/admin.php` (`GET /api/admin/sistema`, solo dueños); `public/.user.ini`.
+- **Captcha**: `app/captcha.php` (siteverify con curl o socket TLS, hostname y action en producción, 5 s, deja pasar si Cloudflare no responde); `exigir_captcha()` en registro, login de clientes, restablecer, reenviar código (`app/clientes.php`), opiniones (`app/resenas.php`) y pedidos (`app/pedidos.php`); `/api/config` con `captcha`. `public/js/captcha.js` (render explícito, `interaction-only`, español) en `cuenta.html`/`cuenta.js`, `producto.html`/`producto.js` y `carrito.html`/`carrito.js` (el pedido se registra después de abrir WhatsApp, como antes). Estilo `.captcha` en `style.css`.
+- **Web Analytics**: `app/paginas.php` (`con_web_analytics`) pone el beacon en las páginas públicas si hay token (`cloudflare_analytics`).
+- **Front y dependencias**: Archivo alojada en `public/fuentes/` (sin Google Fonts); Chart.js 4.6.1; CSP con Turnstile y Analytics, sin Google, con `frame-src`, `worker-src` y `manifest-src` (`public/.htaccess`); tarjeta "Servidor" en Necutools (`necutools.html`, `necutools.js`, `.lista-sistema`); `security.txt` con `mailto:tienda@necutla.com`.
+- **Docs**: `app/config.ejemplo.php` (`turnstile`, `cloudflare_analytics`), `README.md` (configuración, seguridad, checklist), `.gitignore` (`app/config.php.*`). `scripts/seguridad/ataques.js`: token de prueba automático, pruebas del captcha y la prueba de 2 pasos ya no depende del reloj.
+- **Local**: XAMPP solo en 127.0.0.1 (copias `*.antes-localhost`); `necutla.conf` permite PUT y DELETE (el `httpd.conf` del proyecto "estudio" los bloqueaba en todo Apache); `app/config.php` local con las llaves de prueba de Turnstile.
+- **IONOS**: respaldo previo de `app/` y `public/` en la carpeta temporal; subida por rsync; `config.php` del servidor con `turnstile` y `cloudflare_analytics` (de `~/Escritorio/secrets.md`, líneas 71, 72 y 79, sin imprimirlos; copia `app/config.php.antes-turnstile`, permisos 600); `~/scripts/cifrar-totp.php` en el servidor (fuera de `public/`).
+- **Pruebas**: ataques 253 de 253; Chrome sin ventana 17 de 17 a 1280, 360 y movimiento reducido, llave que falla y reto interactivo; Necutools a 1280 y 360; en vivo: salud, páginas, CSP, fuente, Analytics, vista previa, 400 sin token o con token falso. Datos de prueba locales borrados.
+
+### 2026-10-31: plan de actualizaciones de seguridad, Turnstile y Cloudflare aparte
+- Nuevo plan `plans/planes/2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md` y sus 7 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Investigación preliminar: PHP 8.5.12 (CVE-2026-109618/109619), MariaDB 11.8.8/11.8.9, Apache 2.4.69, Turnstile (siteverify y CSP), Web Analytics sin cambiar el DNS.
+- Decisiones del usuario: Turnstile en registro, restablecer, login de clientes, opiniones y pedidos (no en Necutools); Cloudflare solo aparte, sin tocar IONOS; Archivo alojado en `public/` sin Google Fonts. El escudo completo (nameservers) quedó como opción para un plan futuro.
 
 ### 2026-10-31: Mi cuenta se ajusta al formulario y luces de los edificios (plan `2026-10-31-mi-cuenta-alto-y-luces.md`)
 - Pedido del usuario: en "Iniciar sesión" el panel de los edificios se veía muy alto porque la tarjeta `.auth` siempre medía lo del registro. Ahora mide lo del formulario visible y cambia con la animación del panel; está centrada.

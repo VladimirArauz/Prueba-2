@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS admins (
   creado_en      DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   rol            VARCHAR(10) NOT NULL DEFAULT 'encargado',
   activo         BOOLEAN NOT NULL DEFAULT TRUE,
-  totp_secreto   VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin,
+  totp_secreto   VARCHAR(160) CHARACTER SET ascii COLLATE ascii_bin,
   totp_activo    BOOLEAN NOT NULL DEFAULT FALSE,
   totp_ultimo    BIGINT,
   totp_respaldo  JSON NOT NULL DEFAULT '[]',
@@ -451,3 +451,8 @@ CREATE TABLE IF NOT EXISTS codigos_correo (
   KEY codigos_correo_creado_idx (creado_en),
   CONSTRAINT codigos_correo_proposito_check CHECK (proposito IN ('login', 'registro', 'restablecer'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte: el secreto de los 2 pasos se guarda cifrado
+-- (sodium, "s1:" + base64) y ya no cabe en 64. MODIFY se puede correr las veces que sea.
+-- Los secretos en claro que ya existan se cifran con scripts/cifrar-totp.php (o solos, la próxima vez que se usan).
+ALTER TABLE admins MODIFY totp_secreto VARCHAR(160) CHARACTER SET ascii COLLATE ascii_bin;

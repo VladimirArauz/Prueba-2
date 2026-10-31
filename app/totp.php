@@ -29,6 +29,33 @@ function de_base32(string $texto): string
     return $bytes;
 }
 
+// El secreto se guarda cifrado en la base (sodium secretbox, llave derivada del secreto de app/config.php):
+// quien lea un respaldo de la base no puede generar códigos. "s1:" + base64(nonce + cifrado).
+// Los que se guardaron antes en claro se siguen leyendo y se cifran la próxima vez que se usan.
+const TOTP_PREFIJO = 's1:';
+
+function totp_llave(): string
+{
+    return hash_hmac('sha256', 'necutla-totp-v1', config('secreto'), true);
+}
+
+function totp_cifrar(string $secreto): string
+{
+    $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+    return TOTP_PREFIJO . base64_encode($nonce . sodium_crypto_secretbox($secreto, $nonce, totp_llave()));
+}
+
+function totp_descifrar(?string $guardado): ?string
+{
+    if ($guardado === null || $guardado === '') return null;
+    if (!str_starts_with($guardado, TOTP_PREFIJO)) return $guardado; // de antes, en claro
+    $crudo = base64_decode(substr($guardado, strlen(TOTP_PREFIJO)), true);
+    if ($crudo === false || strlen($crudo) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) return null;
+    $claro = sodium_crypto_secretbox_open(substr($crudo, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES),
+        substr($crudo, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES), totp_llave());
+    return $claro === false ? null : $claro;
+}
+
 function totp_generar_secreto(): string
 {
     return a_base32(random_bytes(20));
@@ -49,8 +76,10 @@ function totp_codigo(string $secreto, int $paso): string
 
 // Devuelve el paso aceptado (para no aceptar el mismo código dos veces) o null.
 // Acepta el código anterior y el siguiente por si el reloj del celular va un poco desfasado.
+// $secreto puede venir cifrado (de la base) o en claro (activación en curso)
 function totp_verificar(?string $secreto, $codigo, $ultimoPaso = null): ?int
 {
+    $secreto = totp_descifrar($secreto);
     if (!$secreto || !is_string($codigo) || !preg_match('/^[0-9]{6}$/', $codigo)) return null;
     $ahora = totp_paso_actual();
     foreach ([$ahora - 1, $ahora, $ahora + 1] as $paso) {
