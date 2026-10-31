@@ -926,6 +926,8 @@ body {
 .main-content {
   flex: 1 0 auto;
   padding: 48px 0 72px;
+  /* Mientras llegan los datos, el pie queda fuera de la pantalla y no salta (CLS) */
+  min-height: 100vh;
 }
 
 .app-section {
@@ -3800,7 +3802,7 @@ a.card-img-wrap {
 }
 
 .esqueleto-fila {
-  min-height: 54px;
+  min-height: 57px; /* lo mismo que una fila real del tablero: así el hero no crece al llegar las tiendas */
 }
 
 .esqueleto-fila .esqueleto-linea.is-larga {
@@ -3969,4 +3971,120 @@ a.card-img-wrap {
   width: 100%;
   max-width: 100%;
   overflow: hidden;
+}
+
+/* =========================================================
+   PORTADA: QUÉ ES, CÓMO FUNCIONA Y PREGUNTAS FRECUENTES
+   (plan 2026-10-31-seo-iconos-contenido-y-legal). Texto en el HTML para que lo lean los buscadores.
+   ========================================================= */
+.info-portada {
+  margin-top: 56px;
+}
+
+.info-texto p + p {
+  margin-top: 12px;
+}
+
+.pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Los pasos son una secuencia real: el número sí informa */
+.paso-num {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--tinta);
+  border-radius: var(--r-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.faq {
+  background: var(--hoja);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  padding: 0 20px;
+}
+
+.faq details + details {
+  border-top: 1px solid var(--linea);
+}
+
+.faq summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 14px 0;
+  font-weight: 700;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary:focus-visible {
+  outline: 3px solid var(--senal);
+  outline-offset: 2px;
+}
+
+.faq summary .icon {
+  flex-shrink: 0;
+  transition: transform var(--t-fast);
+}
+
+.faq details[open] summary .icon {
+  transform: rotate(180deg);
+}
+
+.faq details p {
+  padding-bottom: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq summary .icon {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   AVISO DE PRIVACIDAD Y TÉRMINOS DE USO (plan 2026-10-31-seo-iconos-contenido-y-legal)
+   ========================================================= */
+.legal {
+  max-width: 68ch;
+}
+
+.legal h2 {
+  font-size: 1.375rem;
+  margin-top: 36px;
+  margin-bottom: 8px;
+}
+
+.legal p + p,
+.legal ul + p,
+.legal p + ul {
+  margin-top: 12px;
+}
+
+.legal ul {
+  padding-left: 1.25rem;
+}
+
+.legal li + li {
+  margin-top: 6px;
+}
+
+.legal-fecha {
+  color: var(--texto-2);
+  font-size: 0.9375rem;
 }

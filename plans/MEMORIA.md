@@ -33,10 +33,13 @@ Cómo se usa:
 | `2026-10-30-vista-previa-por-tienda.md` | Aplicado y subido a IONOS (2026-10-30). Falta probar en WhatsApp (pendiente 27b) | 2026-10-30 |
 | `2026-10-29-reels-esqueletos-botones-open-graph.md` | Aplicado, commit `d4a3289` en GitHub y subido a IONOS (2026-10-29). Falta probar el enlace en WhatsApp (pendiente 27) | 2026-10-29 |
 | `2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Falta que el usuario pruebe el captcha en su navegador (pendiente de abajo) | 2026-10-31 |
+| `2026-10-31-seo-iconos-contenido-y-legal.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Faltan los `[COMPLETAR]` del aviso y los términos, y Search Console (pendiente de abajo) | 2026-10-31 |
 
 ---
 
 ## Pendientes
+
+**SEO, iconos, contenido y legal (2026-10-31, aplicado):** (a) **Llenar los `[COMPLETAR]`** de `public/privacidad.html` (responsable, domicilio, fecha, si se permiten cuentas de menores) y `public/terminos.html` (fecha, ciudad o estado) y volver a subirlos; si se puede, que lo lea alguien que sepa de derecho. (b) Revisar el texto nuevo de la portada ("Qué es Necutla", "Cómo funciona", "Preguntas frecuentes": dice que el pago puede ser en efectivo o por transferencia y que para abrir una tienda se escribe a tienda@necutla.com). (c) Google Search Console: propiedad `https://necutla.com` (prefijo de URL), verificación por archivo HTML (pasarle a Claude solo el nombre del archivo para subirlo a `public/`) y enviar `sitemap.xml`. Opcional: Bing Webmaster Tools. (d) Probar "Agregar a inicio" en un celular. (e) Volver a pasar el revisor de IONOS: la CDN seguirá marcada a propósito (no se activa: solo funciona en `www`). (f) **Excepción técnica por confirmar:** `theme-color` y `site.webmanifest` llevan el hex de `--tinta` y `--gis` (no leen variables CSS). (g) Si cambian las tiendas o los productos, el sitemap se actualiza solo (caché de 1 hora).
 
 **Seguridad, Turnstile y Cloudflare aparte (2026-10-31, aplicado):** (a) Cloudflare va **aparte, sin tocar nada de IONOS** (decisión del usuario): solo Turnstile y Web Analytics, **sin protección DDoS de Cloudflare**; el escudo completo (nameservers) queda para un plan futuro. (b) Probar en el navegador del usuario (celular y compu) entrar, crear cuenta, "¿Olvidaste tu contraseña?", opinar y mandar un pedido: Turnstile real rechaza a Chrome automatizado, así que en vivo solo se probó que el servidor rechaza sin token o con token falso. (c) Necutools → Mi cuenta → Servidor (solo dueños): confirmar que "Progreso de subidas de PHP" diga apagado (que IONOS lee `public/.user.ini`). (d) Pedir a IONOS por ticket MariaDB 11.8.9 o más nueva (hoy 11.8.8). (e) Ver las visitas en Cloudflare → Web Analytics (tarda unos minutos en mostrar datos). (f) **Excepción de diseño por confirmar:** el recuadro de Turnstile es un iframe de Cloudflare que no usa los tokens; con `interaction-only` casi nunca se ve. (g) Si se cambia el `secreto` de `app/config.php`, los dueños con 2 pasos tienen que volver a activarla (la llave del cifrado sale del secreto). (h) No se agregó ningún aviso de "contamos visitas" en la página (Web Analytics no usa cookies); si se quiere, es una línea en el pie.
 
@@ -130,6 +133,21 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-10-31: recomendaciones de IONOS aplicadas (plan `2026-10-31-seo-iconos-contenido-y-legal.md`, prompts 1 a 7)
+- **Títulos, descripciones y JSON-LD** (`app/paginas.php`): `<title>` y descripción por tienda y producto (antes fijos), canonical, `noindex` en carrito, cuenta y Necutools (`necutools.html` con meta), 404 real para tienda o producto que no existe, `WebSite`/`Organization`/`Product`/`Service`/`BreadcrumbList`. Portada: título de 56 y descripción de 157; `OG_GENERAL` igual. `tienda.js` y `producto.js` ya no cambian `document.title`.
+- **Sitemap y robots**: `app/sitemap.php` (`GET /sitemap.xml`, solo lo visible), regla en `public/.htaccess`, `public/robots.txt`.
+- **Iconos**: `recursos/iconos/icono.html` (fuente) → `public/apple-touch-icon.png`, `public/favicon.ico`, `public/imagenes/favicon-32.png`, `icono-192.png`, `icono-512.png`, `icono-maskable-512.png`; `public/site.webmanifest`; enlaces y `theme-color` en todas las páginas.
+- **Portada** (`public/index.html`, `style.css`): "Qué es Necutla", "Cómo funciona" (3 pasos) y "Preguntas frecuentes" (8, `<details>`): 756 palabras en el HTML inicial.
+- **Legal y 404**: `public/privacidad.html`, `public/terminos.html` (con `[COMPLETAR]`), `public/404.html` (reemplaza `404.txt`, borrado también en IONOS); enlaces en el pie de todas las páginas y en el registro (`cuenta.html`); `.legal` en `style.css`.
+- **Rendimiento**: gzip para texto, fuentes 30 días, `image/x-icon`; fila de esqueleto del tablero a 57 px y `.main-content` con `min-height: 100vh` (CLS); `h2` oculto antes del catálogo de la tienda (orden de títulos).
+- **Pruebas**: Lighthouse antes y después (ver plan), Chrome sin ventana a 1280, 360 y movimiento reducido (páginas nuevas, pie, aviso del registro, `<details>` con teclado, sin scroll horizontal ni errores), captcha 17 de 17, ataques 253 de 253; en vivo: títulos, canonical, JSON-LD, sitemap, robots, iconos, gzip, 404, sin errores de consola. Datos de prueba locales borrados.
+- Un error que se corrigió en el camino: las páginas nuevas salieron cortadas la primera vez (se calcularon las posiciones del HTML antes de cambiar el título); se volvieron a generar antes de subir.
+
+### 2026-10-31: plan de las recomendaciones de IONOS (SEO, icono touch, contenido) y aviso de privacidad
+- Nuevo plan `plans/planes/2026-10-31-seo-iconos-contenido-y-legal.md` y sus 7 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Puntos del revisor de IONOS: CDN, `sitemap.xml`, título corto (34), descripción corta (130), poco contenido (364 palabras) e icono touch. Revisión en vivo: tienda y producto con `<title>` fijo, sin `robots.txt`, manifest ni `canonical`, CSS y JS sin comprimir, 404 en texto plano.
+- Decisiones del usuario: **no activar la CDN de IONOS** (solo funciona en subdominios como `www` y el sitio usa `necutla.com`; además cambiaría la IP de los visitantes); portada con "Qué es Necutla", "Cómo funciona" y "Preguntas frecuentes"; aviso de privacidad (LFPDPPP) y términos de uso como borrador que el usuario completa.
 
 ### 2026-10-31: actualizaciones de seguridad, Turnstile y Web Analytics (plan `2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md`, prompts 1 a 7)
 - **Informe** `plans/auditorias/2026-10-31-seguridad-actualizaciones.md` (hallazgos N1–N14 con fuentes oficiales y su estado). Versiones: IONOS con PHP 8.5.12 (web y terminal), MariaDB 11.8.8, curl, sodium y Argon2; local PHP 8.5.4 de Ubuntu (parchado), sin curl.

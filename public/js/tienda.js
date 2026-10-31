@@ -36,7 +36,6 @@ function pestanasDisponibles() {
 
 function renderEncabezado() {
   const { tienda } = estado.datos;
-  document.title = `${tienda.nombre} | Necutla`;
   document.getElementById("store-title").innerHTML = `${icon(tienda.icono || "store")}${escapeHTML(tienda.nombre)}`;
   document.getElementById("store-desc").textContent = tienda.descripcion;
   document.getElementById("store-meta").hidden = false;

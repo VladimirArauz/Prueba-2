@@ -86,6 +86,7 @@ require __DIR__ . '/pedidos.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/og-imagen.php';
 require __DIR__ . '/paginas.php';
+require __DIR__ . '/sitemap.php';
 
 // Respuestas con datos privados: que no se guarden en caché
 // Sin importar mayúsculas, igual que el router: /API/ADMIN/… también es privado

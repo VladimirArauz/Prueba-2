@@ -23,6 +23,8 @@ public/                Sitio: lo único que se publica (el dominio apunta aquí)
   promociones.html     Promociones de temporada
   cuenta.html          Cuenta de cliente (para opinar)
   necutools.html       Panel de administración
+  privacidad.html      Aviso de privacidad;  terminos.html  Términos de uso;  404.html  Página de error
+  robots.txt, site.webmanifest, favicon.ico, apple-touch-icon.png   Buscadores e iconos
   js/                  comun.js (API, carrito, WhatsApp) + un archivo por página; graficas.js (Chart.js);
                        validacion.js (validación en vivo y medidor de contraseña)
   vendor/chart.umd.js  Chart.js 4.6.1 (copia fija, revisada con el hash de npm)
@@ -212,6 +214,28 @@ Tablas: `stands` (tiendas), `subcategorias`, `productos` (productos y servicios)
 `ofertas`, `promociones`, `promocion_items`, `pedidos`, `admins`, `admin_stands` (tiendas de cada
 encargado), `clientes`, `resenas`, `bitacora`, `intentos_login`, `migraciones`, `sesiones`, `limites` y
 `dns_correo`.
+
+## Buscadores, iconos y rendimiento
+
+Plan `plans/planes/2026-10-31-seo-iconos-contenido-y-legal.md` (recomendaciones del revisor de IONOS).
+
+- **Títulos y descripciones:** `app/paginas.php` pone el `<title>` (hasta 60 caracteres), la descripción (140 a 160),
+  la dirección canónica y los datos estructurados (JSON-LD: `WebSite` y `Organization` en la portada, `Product` o
+  `Service` con precio y existencias, y migas de pan) de cada página. Carrito, cuenta y Necutools van con `noindex`;
+  una tienda o producto que no existe responde 404.
+- **Mapa del sitio:** `/sitemap.xml` lo arma `app/sitemap.php` con lo visible (portada, promociones, aviso de
+  privacidad, términos, tiendas y productos). `public/robots.txt` lo anuncia y deja fuera la API, Necutools,
+  carrito y cuenta. Después de subir, envíalo en Google Search Console.
+- **Iconos:** `favicon.svg`, `favicon-32.png`, `favicon.ico`, `apple-touch-icon.png` (180) y los de la app (192, 512
+  y maskable) en `public/site.webmanifest`. Se generan desde `recursos/iconos/icono.html` con Chrome sin ventana.
+- **Legal:** `privacidad.html` (aviso de privacidad, LFPDPPP) y `terminos.html`, enlazados en el pie y en el
+  registro. Los huecos `[COMPLETAR]` los llena el responsable.
+- **Rendimiento:** gzip para todo lo que es texto (`mod_deflate` en `.htaccess`), fuentes con caché de 30 días, y
+  el contenido reserva su alto mientras llegan los datos para que la página no salte.
+- **CDN: no se usa.** La CDN de IONOS solo funciona en subdominios (`www.necutla.com`) y el sitio usa
+  `necutla.com` como dirección única (cookie `__Host-`, vista previa, Turnstile). Además, todas las visitas
+  llegarían con la IP de Cloudflare y habría que cambiar `ip_cliente()`. Los visitantes son de la misma zona, así
+  que gzip y caché dan casi lo mismo. El revisor de IONOS seguirá marcando ese punto.
 
 ## Seguridad
 

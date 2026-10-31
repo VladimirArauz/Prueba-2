@@ -1,0 +1,9 @@
+# Necutla: qué pueden leer los buscadores (plan 2026-10-31-seo-iconos-contenido-y-legal)
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /necutools.html
+Disallow: /carrito.html
+Disallow: /cuenta.html
+
+Sitemap: https://necutla.com/sitemap.xml

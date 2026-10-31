@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aviso de privacidad de Necutla: tus datos personales</title>
+  <meta name="description" content="Aviso de privacidad de Necutla: qué datos personales guardamos, para qué los usamos, con quién se comparten y cómo pedir que los corrijamos o los borremos.">
+  <!--og:inicio-->
+  <meta property="og:title" content="Necutla — tiendas de estudiantes con pedido por WhatsApp">
+  <!--og:fin-->
+  <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/imagenes/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <!-- theme-color y el manifest no leen variables CSS: es el valor de --tinta (excepción técnica) -->
+  <meta name="theme-color" content="#17295C">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="nav-brand" href="/">
+      <span class="brand-emblem" aria-hidden="true">N</span>
+      <span class="brand-title">Necutla</span>
+    </a>
+    <div class="topbar-actions">
+      <a class="btn secondary btn-icon side-carrito" href="/carrito.html" aria-label="Carrito">
+        <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+        <span class="cart-pill cart-count" aria-hidden="true">0</span>
+      </a>
+      <button type="button" class="btn secondary btn-icon" id="menu-abrir" data-action="menu-abrir" aria-label="Abrir menú" aria-controls="main-navbar" aria-expanded="false">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
+      </button>
+    </div>
+  </div>
+
+  <nav class="sidebar" id="main-navbar" aria-label="Principal">
+    <div class="side-top">
+      <a class="side-brand" href="/">
+        <span class="brand-emblem" aria-hidden="true">N</span>
+        <span class="brand-text-wrap side-text">
+          <span class="brand-title">Necutla</span>
+          <span class="brand-badge">Ciudad del Estudiante</span>
+        </span>
+      </a>
+      <button type="button" class="btn ghost btn-icon side-cerrar" data-action="menu-cerrar" aria-label="Cerrar menú">
+        <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </div>
+
+    <form class="side-search" action="/" method="get" role="search">
+      <label class="visually-hidden" for="side-q">Buscar productos</label>
+      <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+      <input id="side-q" name="q" type="search" placeholder="Buscar productos" minlength="2" maxlength="60" required>
+    </form>
+
+    <div class="side-scroll">
+      <ul class="side-nav">
+        <li><a class="side-link" href="/"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-house"></use></svg></span><span class="side-text">Inicio</span></a></li>
+        <li class="side-tiendas">
+          <a class="side-link" id="side-tiendas-btn" href="/#tiendas-head" aria-controls="side-tiendas-menu" aria-expanded="false" data-action="menu-tiendas">
+            <span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg></span>
+            <span class="side-text">Tiendas</span>
+            <svg class="icon side-caret" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+          </a>
+        </li>
+        <li><a class="side-link" href="/promociones.html" aria-current="page"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg></span><span class="side-text">Promociones</span></a></li>
+        <li><a class="side-link" href="/carrito.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg><span class="cart-pill cart-count" aria-label="productos en el carrito">0</span></span><span class="side-text">Carrito</span></a></li>
+        <li><a class="side-link" href="/cuenta.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg></span><span class="side-text">Mi cuenta</span></a></li>
+      </ul>
+      <ul class="side-nav side-abajo">
+        <li><a class="side-link" href="/necutools.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-wrench"></use></svg></span><span class="side-text">Necutools</span></a></li>
+      </ul>
+    </div>
+
+    <div class="side-flyout" id="side-tiendas-menu">
+      <button type="button" class="btn ghost btn-sm side-volver" data-action="menu-tiendas">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        Volver al menú
+      </button>
+      <div class="side-flyout-head">
+        <p class="side-flyout-title">Tiendas</p>
+        <a href="/#tiendas-head">Ver todas</a>
+      </div>
+      <ul class="side-tiendas-list" id="side-tiendas-list"></ul>
+    </div>
+  </nav>
+  <div class="side-fondo" id="side-fondo" data-action="menu-cerrar"></div>
+
+  <main class="main-content container" id="contenido">
+
+    <div class="page-head">
+      <h1>Aviso de privacidad</h1>
+      <p>Qué datos tuyos guardamos en Necutla, para qué los usamos y cómo puedes pedir que los cambiemos o los borremos.</p>
+    </div>
+
+    <article class="legal">
+      <p class="legal-fecha">Última actualización: [COMPLETAR: fecha de publicación]</p>
+
+      <h2>Quién es responsable de tus datos</h2>
+      <p>[COMPLETAR: nombre completo de la persona o grupo responsable de Necutla], con domicilio en [COMPLETAR: domicilio o, si no hay uno público, ciudad y estado], es responsable de tratar tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares. Para cualquier tema de este aviso, escríbenos a <a href="mailto:tienda@necutla.com">tienda@necutla.com</a>.</p>
+
+      <h2>Qué datos guardamos</h2>
+      <p>Para comprar no necesitas cuenta. Solo guardamos datos personales si creas una cuenta, opinas o administras una tienda:</p>
+      <ul>
+        <li><strong>Cuenta de cliente:</strong> nombre, nombre de usuario, correo, país y número de teléfono. Tu contraseña se guarda cifrada: nadie puede leerla, ni nosotros.</li>
+        <li><strong>Opiniones:</strong> la calificación, el comentario y la fecha, junto con tu nombre visible.</li>
+        <li><strong>Cuentas de las tiendas (Necutools):</strong> usuario, correo opcional, contraseña cifrada y un registro de los cambios que hacen en el catálogo.</li>
+        <li><strong>Pedidos:</strong> se guardan los productos, las cantidades, el total y la tienda, <strong>sin tu nombre ni tu teléfono</strong>, para que la tienda le dé seguimiento.</li>
+        <li><strong>Datos técnicos:</strong> una huella cifrada de tu dirección IP (no la dirección en sí) para frenar abusos, y la cookie de sesión cuando inicias sesión.</li>
+      </ul>
+      <p>No pedimos datos sensibles ni datos de pago.</p>
+
+      <h2>Para qué usamos tus datos</h2>
+      <p>Usamos tus datos solo para lo necesario para que Necutla funcione:</p>
+      <ul>
+        <li>Crear y administrar tu cuenta, comprobar que tu correo es tuyo y enviarte los códigos para entrar o cambiar tu contraseña.</li>
+        <li>Mostrar tus opiniones en los productos que calificaste.</li>
+        <li>Que cada tienda vea los pedidos que recibió y lleve su control de ventas y existencias.</li>
+        <li>Proteger la página contra robots, intentos de entrar a cuentas ajenas y otros abusos.</li>
+      </ul>
+      <p>No usamos tus datos para publicidad, no los vendemos y no los rentamos.</p>
+
+      <h2>Con quién se comparten</h2>
+      <p>Para que la página funcione, estos servicios procesan datos por nosotros y solo para eso:</p>
+      <ul>
+        <li><strong>IONOS:</strong> guarda la página, la base de datos y el correo de Necutla.</li>
+        <li><strong>Cloudflare:</strong> revisa que no seas un robot al entrar, crear tu cuenta, opinar o mandar un pedido (Turnstile), y cuenta las visitas a la página sin usar cookies (Web Analytics).</li>
+      </ul>
+      <p>Cuando mandas un pedido por WhatsApp, eres tú quien abre el chat con la tienda: la tienda ve tu número de WhatsApp como en cualquier conversación. Ese mensaje no pasa por Necutla.</p>
+
+      <h2>Cookies y datos en tu navegador</h2>
+      <p>Usamos una sola cookie, la de sesión (<code>__Host-necutla.sid</code>), para que no tengas que entrar cada vez. El carrito se guarda en tu propio navegador y no llega a Necutla hasta que mandas el pedido. No usamos cookies de publicidad ni de rastreo.</p>
+
+      <h2>Cuánto tiempo los guardamos</h2>
+      <p>Los datos de tu cuenta y tus opiniones se guardan mientras tengas tu cuenta. Los códigos que te mandamos por correo vencen a los 10 minutos. Si pides que borremos tu cuenta, borramos tus datos, salvo lo que la ley nos pida conservar.</p>
+
+      <h2>Tus derechos</h2>
+      <p>Puedes pedir en cualquier momento <strong>acceder</strong> a tus datos, <strong>corregirlos</strong>, <strong>cancelarlos</strong> (borrarlos) u <strong>oponerte</strong> a que los usemos, y también retirar tu consentimiento. Escribe a <a href="mailto:tienda@necutla.com">tienda@necutla.com</a> desde el correo de tu cuenta con:</p>
+      <ul>
+        <li>Tu nombre y tu usuario de Necutla.</li>
+        <li>Qué quieres que hagamos con tus datos.</li>
+        <li>Cualquier dato que nos ayude a encontrarlos.</li>
+      </ul>
+      <p>Te respondemos en un máximo de 20 días hábiles y, si procede, lo hacemos dentro de los 15 días hábiles siguientes. Tu contraseña la puedes cambiar tú en <a href="/cuenta.html">Mi cuenta</a>.</p>
+
+      <h2>Menores de edad</h2>
+      <p>Si eres menor de edad, pide a tu madre, padre o tutor que lea este aviso antes de crear tu cuenta. [COMPLETAR: confirmar con el usuario si se permiten cuentas de menores]</p>
+
+      <h2>Cambios a este aviso</h2>
+      <p>Si cambiamos este aviso, lo publicaremos en esta misma página con su nueva fecha. Si el cambio es importante, también lo avisaremos en la página principal.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer on-tinta">
+    <div class="container footer-main">
+      <div class="footer-grid">
+
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="brand-emblem" aria-hidden="true">N</span>
+            <h3>Necutla</h3>
+          </div>
+          <p>Los stands de la comunidad estudiantil en un solo lugar. Arma tu pedido y cada tienda lo confirma por WhatsApp.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegación</h4>
+          <ul class="footer-links">
+            <li><a href="/">Tiendas</a></li>
+            <li><a href="/promociones.html">Promociones</a></li>
+            <li><a href="/carrito.html">Carrito</a></li>
+            <li><a href="/cuenta.html">Mi cuenta</a></li>
+            <li><a href="/necutools.html">Necutools</a></li>
+            <li><a href="/privacidad.html">Aviso de privacidad</a></li>
+            <li><a href="/terminos.html">Términos de uso</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Tiendas</h4>
+          <ul class="footer-links" id="footer-stores"></ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pedidos</h4>
+          <p>Cada tienda tiene sus propios vendedores: tu pedido les llega directo por WhatsApp.</p>
+          <p class="footer-hours">
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+            Lun a sáb, 8:00 a 20:00
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+    </div>
+  </footer>
+
+  <script src="/iconos.js"></script>
+  <script src="/js/comun.js"></script>
+</body>
+</html>

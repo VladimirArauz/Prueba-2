@@ -9,6 +9,11 @@
   <meta property="og:title" content="Necutla — tiendas de estudiantes con pedido por WhatsApp">
   <!--og:fin-->
   <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/imagenes/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <!-- theme-color y el manifest no leen variables CSS: es el valor de --tinta (excepción técnica) -->
+  <meta name="theme-color" content="#17295C">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -96,7 +101,9 @@
     <div class="tabs" id="store-tabs" role="group" aria-label="Secciones de la tienda" hidden></div>
     <div class="filters" id="store-filters" role="group" aria-label="Subcategorías" hidden></div>
 
-    <section class="grid" id="store-grid" aria-live="polite"></section>
+    <!-- Título para lectores de pantalla y buscadores: las tarjetas llevan h3 y no deben saltarse el h2 -->
+    <h2 class="visually-hidden" id="store-grid-title">Catálogo de la tienda</h2>
+    <section class="grid" id="store-grid" aria-live="polite" aria-labelledby="store-grid-title"></section>
     <div id="store-empty"></div>
     <div class="list-more" id="store-more" hidden>
       <button type="button" class="btn secondary" data-action="ver-mas">
@@ -153,6 +160,8 @@
             <li><a href="/carrito.html">Carrito</a></li>
             <li><a href="/cuenta.html">Mi cuenta</a></li>
             <li><a href="/necutools.html">Necutools</a></li>
+            <li><a href="/privacidad.html">Aviso de privacidad</a></li>
+            <li><a href="/terminos.html">Términos de uso</a></li>
           </ul>
         </div>
 

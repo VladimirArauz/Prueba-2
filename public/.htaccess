@@ -7,8 +7,9 @@
 Options -Indexes -MultiViews
 DirectoryIndex index.html
 AddDefaultCharset utf-8
-ErrorDocument 404 /404.txt
-ErrorDocument 403 /404.txt
+# Página de error con el diseño del sitio (la API responde su propio JSON)
+ErrorDocument 404 /404.html
+ErrorDocument 403 /404.html
 
 <IfModule mod_mime.c>
     AddType text/javascript .js
@@ -16,6 +17,7 @@ ErrorDocument 403 /404.txt
     AddCharset utf-8 .txt .html .css .js .json .svg
     AddType application/manifest+json .webmanifest
     AddType font/woff2 .woff2
+    AddType image/x-icon .ico
 </IfModule>
 
 RewriteEngine On
@@ -40,12 +42,14 @@ RewriteRule (^|/)\.(?!well-known/) - [R=404,L]
 # La API y la revisión de salud
 RewriteRule ^api(/.*)?$ api/index.php [END,QSA]
 RewriteRule ^healthz/?$ api/index.php [END,QSA]
+# Mapa del sitio para los buscadores (app/sitemap.php): se arma con las tiendas y productos visibles
+RewriteRule ^sitemap\.xml$ api/index.php [END,QSA]
 
 # Páginas públicas: PHP pone la vista previa del enlace (Open Graph) de cada una (app/paginas.php).
 # Una sola página para todas las tiendas (/t/ropa, /t/tecnologia?sub=cables…) y una para cada producto (/p/12)
 RewriteRule ^t/[a-z0-9-]{1,60}/?$ api/index.php [END,QSA]
 RewriteRule ^p/[1-9][0-9]{0,9}/?$ api/index.php [END,QSA]
-RewriteRule ^(index\.html|carrito\.html|promociones\.html|cuenta\.html)?$ api/index.php [END,QSA]
+RewriteRule ^(index\.html|carrito\.html|promociones\.html|cuenta\.html|privacidad\.html|terminos\.html)?$ api/index.php [END,QSA]
 
 # Las direcciones de las páginas fijas que había antes siguen funcionando
 RewriteRule ^(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)/carrito\.html$ /carrito.html [R=301,L]
@@ -55,6 +59,11 @@ RewriteRule ^(ropa|tecnologia|dulces|propaganda|papeleria|regalos|otra)/([a-z0-9
 # Ningún otro .php se ejecuta (solo api/index.php)
 RewriteCond %{REQUEST_URI} !^/api/index\.php$
 RewriteRule \.(php[0-9]?|phtml|phar)$ - [R=404,L]
+
+# Compresión gzip de todo lo que es texto (IONOS la acepta; no tiene brotli). Las imágenes y fuentes ya van comprimidas.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml text/xml text/plain image/svg+xml application/manifest+json image/x-icon
+</IfModule>
 
 <IfModule mod_headers.c>
     # Cabeceras de seguridad (las mismas que ponía helmet). "always" también las pone en las respuestas de PHP.
@@ -86,8 +95,12 @@ RewriteRule \.(php[0-9]?|phtml|phar)$ - [R=404,L]
     <FilesMatch "\.(html|css|js)$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
-    <FilesMatch "\.(png|jpe?g|webp|gif|svg|ico|json|txt|woff2?)$">
+    <FilesMatch "\.(png|jpe?g|webp|gif|svg|ico|json|txt|webmanifest)$">
         Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+    # Las fuentes casi nunca cambian: 30 días (si se cambia una, se le cambia el nombre al archivo)
+    <FilesMatch "\.woff2?$">
+        Header set Cache-Control "public, max-age=2592000"
     </FilesMatch>
 
     # Necutools no debe aparecer en buscadores

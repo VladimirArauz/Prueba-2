@@ -1,0 +1,16 @@
+{
+  "name": "Necutla: tiendas de estudiantes",
+  "short_name": "Necutla",
+  "description": "Directorio de tiendas de estudiantes con pedidos por WhatsApp.",
+  "lang": "es-MX",
+  "start_url": "/",
+  "scope": "/",
+  "display": "browser",
+  "theme_color": "#17295C",
+  "background_color": "#EDF0F4",
+  "icons": [
+    { "src": "/imagenes/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/imagenes/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/imagenes/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -3,12 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Necutla — La Ciudad del Estudiante</title>
-  <meta name="description" content="Directorio comercial estudiantil Necutla. Compra en tiendas de ropa, tecnología, dulces, papelería y más con pedidos por WhatsApp.">
+  <title>Necutla: tiendas de estudiantes con pedidos por WhatsApp</title>
+  <meta name="description" content="Directorio de tiendas de estudiantes: ropa, tecnología, dulces, papelería, regalos y más. Arma tu carrito y manda tu pedido por WhatsApp directo al vendedor.">
   <!--og:inicio-->
-  <meta property="og:title" content="Necutla — tiendas de estudiantes con pedido por WhatsApp">
+  <meta property="og:title" content="Necutla: tiendas de estudiantes con pedidos por WhatsApp">
   <!--og:fin-->
   <link rel="icon" href="/imagenes/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/imagenes/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <!-- theme-color y el manifest no leen variables CSS: es el valor de --tinta (excepción técnica) -->
+  <meta name="theme-color" content="#17295C">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -163,6 +168,89 @@
       </div>
       <div id="vitrina-bloques"></div>
     </section>
+
+    <section class="info-portada" id="que-es" aria-labelledby="que-es-title">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="que-es-title">Qué es Necutla</h2>
+          <p class="section-desc">Las tiendas de la comunidad estudiantil, juntas en un solo lugar.</p>
+        </div>
+      </div>
+      <div class="info-texto">
+        <p>Necutla es el directorio de las tiendas que manejan estudiantes de nuestra comunidad. Aquí encuentras ropa, tecnología, dulces, papelería, regalos, propaganda y otros productos y servicios, con sus precios, sus ofertas del día y las opiniones de otros estudiantes.</p>
+        <p>En Necutla no se cobra ni se paga en línea. La página arma tu pedido y te lleva a WhatsApp para que lo confirmes directo con quien vende. Así el trato es entre estudiantes y tú acuerdas la entrega y el pago como te quede mejor.</p>
+        <p>Cada tienda tiene sus propios vendedores y su catálogo. Ellos suben sus productos, servicios y ofertas desde Necutools, el panel de las tiendas, y los cambios se ven aquí en cuanto los guardan.</p>
+      </div>
+    </section>
+
+    <section class="info-portada" id="como-funciona" aria-labelledby="como-funciona-title">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="como-funciona-title">Cómo funciona</h2>
+          <p class="section-desc">Tres pasos para pedir, sin crear una cuenta.</p>
+        </div>
+      </div>
+      <ol class="grid pasos">
+        <li class="card paso">
+          <span class="paso-num" aria-hidden="true">1</span>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>Elige una tienda</h3>
+          <p>Entra desde el tablero o desde la lista de tiendas, o usa el buscador para encontrar un producto o servicio por su nombre. En cada tienda puedes filtrar por categoría y ver sus ofertas de hoy.</p>
+        </li>
+        <li class="card paso">
+          <span class="paso-num" aria-hidden="true">2</span>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>Arma tu carrito</h3>
+          <p>Agrega lo que quieras de una o de varias tiendas. El carrito separa tu pedido por tienda y calcula el total con los precios y las ofertas que valen hoy.</p>
+        </li>
+        <li class="card paso">
+          <span class="paso-num" aria-hidden="true">3</span>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-message-circle"></use></svg>Manda tu pedido por WhatsApp</h3>
+          <p>Toca el botón de WhatsApp de cada tienda. Se abre el chat con su vendedor y el mensaje ya lleva tus productos, las cantidades y el total. Ahí acuerdan la entrega y el pago.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="info-portada" id="preguntas" aria-labelledby="preguntas-title">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="preguntas-title">Preguntas frecuentes</h2>
+          <p class="section-desc">Lo que más nos preguntan antes de hacer su primer pedido.</p>
+        </div>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>¿Necesito una cuenta para comprar?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>No. Puedes armar tu carrito y mandar tu pedido sin cuenta. La cuenta solo sirve para calificar los productos y dejar tu opinión.</p>
+        </details>
+        <details>
+          <summary>¿Cómo pago mi pedido?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>El pago lo acuerdas directo con el vendedor por WhatsApp: en efectivo, por transferencia o como lo maneje cada tienda. Necutla no cobra nada ni guarda datos de pago.</p>
+        </details>
+        <details>
+          <summary>¿Cómo recibo lo que pedí?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>La tienda te dice en el chat dónde y cuándo puede entregarte. Si necesitas una hora o un lugar en especial, escríbelo en las indicaciones del carrito antes de mandar el pedido.</p>
+        </details>
+        <details>
+          <summary>¿Qué pasa después de mandar mi pedido?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>El vendedor lo revisa y te confirma por WhatsApp si hay piezas, el total y la entrega. Cuando ya lo mandaste, toca "Ya lo envié" para quitar esos productos de tu carrito.</p>
+        </details>
+        <details>
+          <summary>¿Por qué mi carrito se separa por tienda?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>Cada tienda tiene sus propios vendedores. Por eso cada una recibe solo su parte del pedido, en su propio chat, y te confirma por separado.</p>
+        </details>
+        <details>
+          <summary>¿Los precios pueden cambiar?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>Los precios los pone cada tienda. El carrito siempre usa el precio de hoy y las ofertas que valen hoy; si algo cambió desde que lo agregaste, lo verás al abrir tu carrito.</p>
+        </details>
+        <details>
+          <summary>¿Qué datos guardan de mí?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>Si pides sin cuenta, tu pedido se guarda sin tu nombre ni tu teléfono, solo para que la tienda le dé seguimiento. Si creas una cuenta, guardamos tu nombre, usuario, correo y teléfono. Los detalles están en el <a href="/privacidad.html">Aviso de privacidad</a>.</p>
+        </details>
+        <details>
+          <summary>¿Cómo abro mi tienda en Necutla?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>
+          <p>Escríbenos a <a href="mailto:tienda@necutla.com">tienda@necutla.com</a> con el nombre de tu tienda y lo que vendes. Te damos acceso a Necutools para que subas tus productos, tus servicios y tus ofertas.</p>
+        </details>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer on-tinta">
@@ -185,6 +273,8 @@
             <li><a href="/carrito.html">Carrito</a></li>
             <li><a href="/cuenta.html">Mi cuenta</a></li>
             <li><a href="/necutools.html">Necutools</a></li>
+            <li><a href="/privacidad.html">Aviso de privacidad</a></li>
+            <li><a href="/terminos.html">Términos de uso</a></li>
           </ul>
         </div>
 

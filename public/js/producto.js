@@ -24,7 +24,6 @@ function estrellasDe(n) {
 // ================= Producto =================
 function renderProducto() {
   const p = est.producto;
-  document.title = `${p.nombre} | Necutla`;
   const volver = $("producto-volver");
   volver.href = `/t/${encodeURIComponent(p.slug)}${p.tipo === "servicio" ? "#servicios" : ""}`;
   volver.innerHTML = `${icon("arrow-left")}Volver a ${escapeHTML(p.tienda)}`;
