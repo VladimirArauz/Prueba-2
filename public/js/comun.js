@@ -156,8 +156,22 @@ function migrarCarritoViejo() {
 }
 
 // ================= WhatsApp =================
+// Directo a api.whatsapp.com: la redirección de wa.me cambia cada emoji por "�" (se ve en WhatsApp Web)
 function enlaceWhatsApp(numero, mensaje) {
-  return `https://wa.me/${String(numero).replace(/\D/g, "")}?text=${encodeURIComponent(mensaje)}`;
+  return `https://api.whatsapp.com/send?phone=${String(numero).replace(/\D/g, "")}&text=${encodeURIComponent(mensaje)}`;
+}
+
+// Piezas compartidas de los mensajes (los emojis solo se permiten en el texto que va a WhatsApp)
+const SEPARADOR_WA = "━".repeat(15);
+
+function fechaMensaje() {
+  return new Date().toLocaleString("es-MX", {
+    weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City"
+  });
+}
+
+function enlaceSitio(ruta) {
+  return location.origin + ruta;
 }
 
 // Abre el chat con el primer número. Si hay más vendedores, deja botones para escribirles también

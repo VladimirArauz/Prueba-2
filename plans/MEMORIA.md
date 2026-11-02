@@ -35,10 +35,13 @@ Cómo se usa:
 | `2026-10-31-seguridad-turnstile-y-cloudflare-aparte.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Falta que el usuario pruebe el captcha en su navegador (pendiente de abajo) | 2026-10-31 |
 | `2026-10-31-seo-iconos-contenido-y-legal.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Faltan los `[COMPLETAR]` del aviso y los términos, y Search Console (pendiente de abajo) | 2026-10-31 |
 | `2026-10-31-fotos-tiendas-portada.md` | Aplicado (prompts 1 a 4) y subido a IONOS. Falta que el usuario revise las 7 fotos | 2026-10-31 |
+| `2026-11-01-whatsapp-emojis-y-mensaje-vistoso.md` | Aplicado (prompts 0 a 4) y subido a IONOS. Falta que el usuario pruebe en WhatsApp Web y en el celular | 2026-11-01 |
 
 ---
 
 ## Pendientes
+
+**Emojis en WhatsApp y mensaje nuevo (2026-11-01, aplicado):** (a) el usuario manda un pedido y una solicitud de servicio de prueba por WhatsApp Web y por el celular, y confirma que los emojis se ven y que el mensaje le gusta. (b) Si algún día WhatsApp también rompe `api.whatsapp.com/send`, la otra opción en compu es `web.whatsapp.com/send?phone=…&text=…`.
 
 **Fotos de Unsplash en la portada (2026-10-31, aplicado):** el usuario revisa las 7 fotos en necutla.com y dice cuál cambiar; hay una de respaldo por tienda en `recursos/fotos-unsplash/creditos.md` (ahí está cómo cambiarla). Una tienda nueva no tiene foto (se ve su imagen de relleno) hasta agregarla a `FOTOS_TIENDAS` en `public/js/portada.js`, o hasta que suba su portada en Necutools.
 
@@ -136,6 +139,19 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-01: emojis bien en WhatsApp Web y mensajes de pedido y servicio más completos (plan `2026-11-01-whatsapp-emojis-y-mensaje-vistoso.md`, prompts 1 a 4)
+- **Emojis**: `enlaceWhatsApp()` (`public/js/comun.js`) arma `https://api.whatsapp.com/send?phone=…&text=…` en vez de `wa.me` (la redirección de `wa.me` cambiaba cada emoji por `%EF%BF%BD`). Comprobado con `curl`: con el enlace nuevo, el emoji llega intacto hasta `web.whatsapp.com/send`. No quedaba otro `wa.me` en `public/` ni `app/`.
+- `comun.js`: `SEPARADOR_WA`, `fechaMensaje()` (día, fecha y hora de CDMX) y `enlaceSitio()`.
+- `public/js/carrito.js` (`mensajeDe`, `piezas`): encabezado, tienda, cliente, fecha, productos numerados con `cantidad × precio = subtotal`, oferta con el precio final, subtotal, ahorro, total, indicaciones, enlace al catálogo (`/t/<slug>`) o a promociones si es un paquete (con la lista de lo que incluye) y despedida.
+- `public/js/producto.js` (`pedirServicio`): servicio, precio (`textoPrecio`), fecha, enlace a `/p/<id>` y despedida.
+- **Pruebas** en local con Chrome sin ventana (cliente CDP propio), a 1280 y 360 px: carrito con un producto normal, uno con oferta (20 %), uno con color y un paquete de 2 tiendas; 3 grupos, 6 enlaces abiertos y 3 botones "Vendedor N", todos con `api.whatsapp.com`, sin "�", con los emojis, con totales iguales a los de la página, sin errores de consola ni scroll horizontal; los pedidos se siguieron registrando; servicios con precio "desde" y "a cotizar". Los datos de prueba (stock, números, oferta, paquete y pedidos 38 a 40) se borraron.
+- Subido a IONOS por rsync (los 3 JS); en vivo, los archivos son idénticos a los locales y `comun.js` ya usa `api.whatsapp.com`.
+
+### 2026-11-01: plan de los emojis rotos en WhatsApp Web y el mensaje de pedido más vistoso
+- Nuevo plan `plans/planes/2026-11-01-whatsapp-emojis-y-mensaje-vistoso.md` y sus 5 prompts (0 a 4) en `plans/prompts/` (mismo nombre). No se cambió código.
+- Causa comprobada con `curl`: `wa.me` redirige a `api.whatsapp.com/send/` y en la redirección cambia cada emoji por `%EF%BF%BD` ("�"); acentos y ñ pasan bien. Arreglo: armar el enlace directo a `api.whatsapp.com/send` en `enlaceWhatsApp()` (`public/js/comun.js`).
+- Decisiones del usuario: estilo vistoso moderado; precio unitario y subtotal, detalle de ofertas y ahorro, enlace a la tienda y fecha con día y hora; el mensaje de servicios también se rediseña.
 
 ### 2026-10-31: fotos de Unsplash en las tarjetas de tiendas de la portada (plan `2026-10-31-fotos-tiendas-portada.md`, prompts 1 a 4)
 - 20 candidatas buscadas con WebFetch en `unsplash.com/es/s/fotos/…`, todas con "Unsplash License" (las Unsplash+ se descartaron); elegidas 7 con una hoja de contacto (Pillow). Origen, fotógrafo, `alt` y respaldo de cada una en `recursos/fotos-unsplash/creditos.md`.

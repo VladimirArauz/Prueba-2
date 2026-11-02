@@ -131,28 +131,51 @@ async function cargar(ajustados) {
   }
 }
 
+function piezas(n) {
+  return n === 1 ? "1 pieza" : `${n} piezas`;
+}
+
 function mensajeDe(grupo) {
   const nombre = document.getElementById("order-customer-name").value.trim();
   const notas = document.getElementById("order-customer-notes").value.trim();
-  let mensaje = `*¡Hola ${grupo.nombre}! Vi su catálogo en Necutla y quisiera hacer este pedido:*\n\n`;
-  if (nombre) mensaje += `👤 *Cliente:* ${nombre}\n`;
-  mensaje += `📅 *Fecha:* ${new Date().toLocaleDateString("es-MX")}\n\n`;
-  if (grupo.tipo === "paquete") {
-    mensaje += `🎁 *Paquete:* ${grupo.nombre} x${grupo.items[0].cantidad} = ${money(grupo.total)}\n`;
-    mensaje += `Incluye: ${grupo.incluye.map(i => `${i.cantidad} × ${i.nombre} (${i.tienda})`).join(", ")}\n`;
+  const paquete = grupo.tipo === "paquete";
+  const lineas = [
+    "🛍️ *Nuevo pedido desde Necutla*",
+    SEPARADOR_WA,
+    paquete
+      ? `¡Hola! Vi la promoción *${grupo.nombre}* en Necutla y quiero hacer este pedido.`
+      : `¡Hola, *${grupo.nombre}*! Vi su catálogo en Necutla y quiero hacer este pedido.`,
+    "",
+    paquete ? `🏪 *Tiendas:* ${grupo.tiendas.join(", ")}` : `🏪 *Tienda:* ${grupo.nombre}`
+  ];
+  if (nombre) lineas.push(`👤 *Cliente:* ${nombre}`);
+  lineas.push(`📅 *Fecha:* ${fechaMensaje()}`, "");
+
+  if (paquete) {
+    const item = grupo.items[0];
+    lineas.push(`🎁 *Paquete:* ${grupo.nombre}`, `    ${item.cantidad} × ${money(item.precio)} = *${money(item.subtotal)}*`, "", "📦 *Incluye (por paquete):*");
+    grupo.incluye.forEach(i => lineas.push(`• ${i.cantidad} × ${i.nombre} (${i.tienda})`));
   } else {
-    mensaje += `🛒 *Pedido:*\n`;
-    grupo.items.forEach(item => {
-      mensaje += `• *${item.nombre}* x${item.cantidad} = ${money(item.subtotal)}`;
-      if (item.oferta) mensaje += ` (oferta: ${item.oferta})`;
-      mensaje += "\n";
+    const total = grupo.items.reduce((suma, i) => suma + i.cantidad, 0);
+    lineas.push(`🛒 *Productos (${piezas(total)})*`);
+    grupo.items.forEach((item, n) => {
+      const conOferta = item.subtotal < item.subtotal_base;
+      lineas.push(`${n + 1}. *${item.nombre}*`, `    ${item.cantidad} × ${money(item.precio)} = ${conOferta ? money(item.subtotal_base) : `*${money(item.subtotal)}*`}`);
+      if (conOferta) lineas.push(`    🏷️ Oferta${item.oferta ? `: ${item.oferta}` : ""} → *${money(item.subtotal)}*`);
     });
-    if (grupo.descuento > 0) mensaje += `\n🏷️ *Ahorro por ofertas de hoy:* ${money(grupo.descuento)}\n`;
   }
-  mensaje += `\n💰 *Total:* ${money(grupo.total)}\n`;
-  if (notas) mensaje += `\n📝 *Indicaciones:* ${notas}\n`;
-  mensaje += `\nQuedo a la espera de confirmación y de cómo hacemos la entrega y el pago. ¡Gracias!`;
-  return mensaje;
+
+  lineas.push(SEPARADOR_WA);
+  if (grupo.descuento > 0) lineas.push(`🧾 Subtotal: ${money(grupo.subtotal_base)}`, `✨ Ahorras: ${money(grupo.descuento)}`);
+  lineas.push(`💰 *Total a pagar: ${money(grupo.total)}*`);
+  if (notas) lineas.push("", `📝 *Indicaciones:* ${notas}`);
+  lineas.push(
+    SEPARADOR_WA,
+    paquete ? `🔗 Promociones: ${enlaceSitio("/promociones.html")}` : `🔗 Catálogo: ${enlaceSitio(`/t/${grupo.slug}`)}`,
+    "",
+    "Quedo pendiente de su confirmación y de cómo hacemos la entrega y el pago. ¡Gracias! 🙌"
+  );
+  return lineas.join("\n");
 }
 
 // Guarda el pedido para el resumen de Necutools. No bloquea ni avisa si falla: WhatsApp ya se abrió.

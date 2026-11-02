@@ -84,8 +84,19 @@ function elegirColor(color) {
 
 function pedirServicio() {
   const p = est.producto;
-  const mensaje = `¡Hola! Vi en Necutla el servicio *${p.nombre}* de ${p.tienda} ` +
-    `(${textoPrecio(p)}). Quisiera más información, por favor.`;
+  const mensaje = [
+    "🛠️ *Solicitud de servicio desde Necutla*",
+    SEPARADOR_WA,
+    `¡Hola, *${p.tienda}*! Vi en Necutla su servicio y quiero más información.`,
+    "",
+    `🔧 *Servicio:* ${p.nombre}`,
+    `💵 *Precio:* ${textoPrecio(p)}`,
+    `📅 *Fecha:* ${fechaMensaje()}`,
+    SEPARADOR_WA,
+    `🔗 Ver el servicio: ${enlaceSitio(`/p/${p.id}`)}`,
+    "",
+    "¿Me pueden decir la disponibilidad y cómo lo agendamos? ¡Gracias! 🙌"
+  ].join("\n");
   abrirWhatsApp(p.whatsapp, mensaje, $("producto-wa"));
 }
 
