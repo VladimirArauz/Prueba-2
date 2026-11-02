@@ -121,21 +121,49 @@ function abrirDialogo({ titulo, mensaje = "", aceptar, volver = "Volver", tipo =
           <button type="submit" class="btn${peligro ? " danger" : ""}" value="aceptar">${escapeHTML(aceptar)}</button>
         </div>
       </form>`;
+    // Cierre con fundido: primero la animación de salida y después el close() nativo.
+    // Con movimiento reducido (o si la animación no termina) se cierra en seguida.
+    let cerrando = false;
+    const cerrar = valor => {
+      if (cerrando || !dialogo.open) return;
+      cerrando = true;
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) { dialogo.close(valor); return; }
+      dialogo.classList.add("is-cerrando");
+      const alTerminar = event => { if (event.target === dialogo) terminar(); };
+      const terminar = () => {
+        clearTimeout(respaldo);
+        dialogo.removeEventListener("animationend", alTerminar);
+        if (dialogo.open) dialogo.close(valor);
+      };
+      const respaldo = setTimeout(terminar, 400);
+      dialogo.addEventListener("animationend", alTerminar);
+    };
+    const form = dialogo.querySelector("form");
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      cerrar(event.submitter?.value === "aceptar" ? "aceptar" : "volver");
+    });
+    // Escape: el navegador lo cerraría de golpe (Chrome no siempre deja frenar "cancel", por eso también la tecla)
+    const alCancelar = event => { event.preventDefault(); cerrar("volver"); };
+    form.addEventListener("keydown", event => { if (event.key === "Escape") alCancelar(event); });
+    dialogo.addEventListener("cancel", alCancelar);
     const textarea = dialogo.querySelector("#dialogo-campo");
     if (textarea) {
       const contar = () => { dialogo.querySelector("#dialogo-contador").textContent = `${textarea.value.length} de ${campo.max}`; };
       textarea.addEventListener("input", contar);
       textarea.addEventListener("keydown", event => {
-        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) dialogo.close("aceptar");
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) cerrar("aceptar");
       });
       contar();
     }
     // Clic en el fondo (fuera de la tarjeta) = Volver
-    const alClicFondo = event => { if (event.target === dialogo) dialogo.close("volver"); };
+    const alClicFondo = event => { if (event.target === dialogo) cerrar("volver"); };
     dialogo.addEventListener("click", alClicFondo);
     const previo = document.activeElement;
     dialogo.addEventListener("close", () => {
+      dialogo.classList.remove("is-cerrando");
       dialogo.removeEventListener("click", alClicFondo);
+      dialogo.removeEventListener("cancel", alCancelar);
       if (previo && previo.isConnected) previo.focus();
       const ok = dialogo.returnValue === "aceptar";
       resolver(ok ? (textarea ? textarea.value : true) : (textarea ? null : false));

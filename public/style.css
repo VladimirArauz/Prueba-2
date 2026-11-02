@@ -1551,6 +1551,15 @@ textarea {
   animation: dialogo-fondo var(--t-media) both;
 }
 
+/* Al cerrar: fundido corto antes del close() (comun.js, cerrar) */
+.dialogo[open].is-cerrando {
+  animation: dialogo-sale 0.18s ease-in both;
+}
+
+.dialogo[open].is-cerrando::backdrop {
+  animation: dialogo-fondo-sale 0.18s ease-in both;
+}
+
 .dialogo-caja {
   display: flex;
   flex-direction: column;
@@ -1635,6 +1644,16 @@ textarea {
 @keyframes dialogo-fondo {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes dialogo-sale {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(.96); }
+}
+
+@keyframes dialogo-fondo-sale {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @keyframes insignia-pop {

@@ -42,7 +42,7 @@ Cómo se usa:
 
 ## Pendientes
 
-**Avisos y confirmaciones propios (2026-11-01, aplicado):** (a) el usuario revisa en su navegador (compu y celular) cancelar un pedido, marcarlo pagado, la nota y un error en Necutools, y vaciar el carrito. (b) **Excepción de diseño:** la sombra `--sombra-2` de la ventana `.dialogo` la autorizó el usuario solo para este plan; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) Al cerrar, la ventana desaparece sin fundido (el `<dialog>` nativo se cierra de golpe); solo la entrada está animada.
+**Avisos y confirmaciones propios (2026-11-01, aplicado):** (a) el usuario revisa en su navegador (compu y celular) cancelar un pedido, marcarlo pagado, la nota y un error en Necutools, y vaciar el carrito. (b) **Excepción de diseño:** la sombra `--sombra-2` de la ventana `.dialogo` la autorizó el usuario solo para este plan; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) (Resuelto 2026-11-01: ya se desvanece al cerrar.) **Falta subir a IONOS** `public/js/comun.js` y `public/style.css` con el fundido de salida (el permiso de subida se negó en la sesión).
 
 **Emojis en WhatsApp y mensaje nuevo (2026-11-01, aplicado):** (a) el usuario manda un pedido y una solicitud de servicio de prueba por WhatsApp Web y por el celular, y confirma que los emojis se ven y que el mensaje le gusta. (b) Si algún día WhatsApp también rompe `api.whatsapp.com/send`, la otra opción en compu es `web.whatsapp.com/send?phone=…&text=…`.
 
@@ -142,6 +142,11 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-01: la ventana de confirmación se desvanece al cerrar (pendiente (c) del plan `2026-11-01-avisos-y-confirmaciones-propios.md`)
+- `public/js/comun.js` (`abrirDialogo`): `cerrar(valor)` pone `.is-cerrando`, espera el `animationend` de la ventana (o 400 ms de respaldo) y luego hace `close()`. Volver, la acción, Escape (tecla y `cancel`), el clic en el fondo y Ctrl+Enter pasan por ahí; un segundo clic mientras se cierra no hace nada. Con movimiento reducido se cierra en seguida.
+- `public/style.css`: `.dialogo[open].is-cerrando` y su `::backdrop` con `dialogo-sale` / `dialogo-fondo-sale` (0.18 s, opacidad y `scale(.96)`).
+- Probado en local con Chrome sin ventana: 15 de 15 con animación y 15 de 15 con movimiento reducido (cada forma de cerrar devuelve lo correcto, doble clic, nota con Ctrl+Enter, cola de dos ventanas, sin errores de consola). No subido a IONOS todavía.
 
 ### 2026-11-01: avisos y confirmaciones propios en lugar de `alert`, `confirm` y `prompt` (plan `2026-11-01-avisos-y-confirmaciones-propios.md`, prompts 1 a 4)
 - `public/js/comun.js`: `confirmar()` y `pedirTexto()` (una sola `<dialog id="app-dialogo">` con `showModal()`, cola si se piden dos, Escape y clic en el fondo = Volver, foco en Volver si es `peligro`, el foco regresa al botón que la abrió); `showToast(…, { tipo: "error" })` y `avisarError()`; la tienda sin WhatsApp avisa con el toast de error.
