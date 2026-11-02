@@ -113,7 +113,7 @@ function manejarError(error) {
     st.sesion = null;
     renderAcceso();
   }
-  alert(error.message);
+  avisarError(error.message);
 }
 
 // Envía un formulario con su botón ocupado ("Guardando…") mientras espera
@@ -182,7 +182,7 @@ async function enviarCodigo(event) {
     await cargarTodo();
     showToast(`Sesión iniciada: ${st.sesion.usuario}`);
   } catch (error) {
-    alert(error.message);
+    avisarError(error.message);
     // Si el primer paso venció, se vuelve a pedir usuario y contraseña
     const sesion = await api("/auth/sesion").catch(() => ({}));
     if (!sesion.segundoPaso) mostrarCodigo(false);
@@ -647,12 +647,12 @@ function actualizarColorArticulo() {
 function agregarArticuloPedido() {
   const ed = st.editorPedido;
   const a = ed.articulos.find(x => x.id === Number($("pedido-articulo").value));
-  if (!a) return alert("Elige el artículo que quieres agregar.");
+  if (!a) return avisarError("Elige el artículo que quieres agregar.");
   const cantidad = Number($("pedido-articulo-cantidad").value);
-  if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 30) return alert("Escribe de 1 a 30 piezas.");
+  if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 30) return avisarError("Escribe de 1 a 30 piezas.");
   leerEditorPedido();
   const color = a.colores.length ? a.colores.find(c => c.id === Number($("pedido-articulo-color").value)) : null;
-  if (a.colores.length && !color) return alert(`Elige el color de ${a.nombre}.`);
+  if (a.colores.length && !color) return avisarError(`Elige el color de ${a.nombre}.`);
   const previa = ed.lineas.find(l => l.tipo === "producto" && l.id === a.id && l.color === (color ? color.id : null));
   if (previa) previa.cantidad += cantidad;
   else ed.lineas.push({ tipo: "producto", id: a.id, color: color ? color.id : null, cantidad, contenido: [], colores: {},
@@ -689,10 +689,17 @@ async function guardarEditorPedido(boton) {
   }
 }
 
-function notaPedido(id) {
+async function notaPedido(id) {
   const pedido = st.pedidos.pedidos.find(p => p.id === id);
   if (!pedido) return;
-  const nota = prompt(`Nota del pedido ${id} (hasta 200 caracteres). Déjala vacía para quitarla.`, pedido.nota || "");
+  const nota = await pedirTexto({
+    titulo: `Nota del pedido ${id}`,
+    mensaje: "Solo la ven los vendedores en Necutools. Déjala vacía para quitarla.",
+    etiqueta: "Nota",
+    valor: pedido.nota || "",
+    max: 200,
+    aceptar: "Guardar nota"
+  });
   if (nota === null) return;
   guardarPedido(id, { nota: nota.slice(0, 200) }, nota.trim() ? `Nota guardada en el pedido ${id}` : `Nota quitada del pedido ${id}`);
 }
@@ -775,7 +782,8 @@ async function guardarTienda(event) {
 
 async function borrarTienda(id) {
   const t = tiendaPorId(id);
-  if (!t || !confirm(`¿Eliminar la tienda "${t.nombre}"? Solo se puede si ya no tiene productos.`)) return;
+  if (!t || !(await confirmar({ tipo: "peligro", titulo: `¿Eliminar la tienda "${t.nombre}"?`,
+    mensaje: "Solo se puede si ya no tiene productos. No se puede deshacer.", aceptar: "Eliminar tienda" }))) return;
   try {
     await api(`/admin/tiendas/${t.id}`, { method: "DELETE" });
     await recargar("tiendas");
@@ -834,7 +842,8 @@ async function guardarSubcategoria(id) {
 }
 
 async function borrarSubcategoria(id) {
-  if (!confirm("¿Eliminar esta subcategoría? Sus productos se quedan en la tienda, sin subcategoría.")) return;
+  if (!(await confirmar({ tipo: "peligro", titulo: "¿Eliminar esta subcategoría?",
+    mensaje: "Sus productos se quedan en la tienda, sin subcategoría.", aceptar: "Eliminar subcategoría" }))) return;
   try {
     await api(`/admin/subcategorias/${id}`, { method: "DELETE" });
     await recargar("tiendas", "productos", "ofertas");
@@ -984,7 +993,8 @@ async function guardarColor(event) {
 async function borrarColor(id) {
   const p = productoConColores();
   const c = p && p.colores.find(x => x.id === id);
-  if (!c || !confirm(`¿Eliminar el color "${c.nombre}" de ${p.nombre}?`)) return;
+  if (!c || !(await confirmar({ tipo: "peligro", titulo: `¿Eliminar el color "${c.nombre}"?`,
+    mensaje: `Se quita de ${p.nombre} junto con su foto y su stock.`, aceptar: "Eliminar color" }))) return;
   try {
     await api(`/admin/colores/${c.id}`, { method: "DELETE" });
     if (st.editando.color && st.editando.color.id === c.id) cancelarColor();
@@ -1067,7 +1077,8 @@ async function guardarProducto(event) {
 
 async function borrarProducto(id) {
   const p = st.productos.find(x => x.id === id);
-  if (!p || !confirm(`¿Eliminar "${p.nombre}"? También se quita de sus ofertas y promociones.`)) return;
+  if (!p || !(await confirmar({ tipo: "peligro", titulo: `¿Eliminar "${p.nombre}"?`,
+    mensaje: "También se quita de sus ofertas y promociones. No se puede deshacer.", aceptar: p.tipo === "servicio" ? "Eliminar servicio" : "Eliminar producto" }))) return;
   try {
     await api(`/admin/productos/${p.id}`, { method: "DELETE" });
     if (st.editando.producto && st.editando.producto.id === p.id) cancelarProducto();
@@ -1232,7 +1243,8 @@ async function guardarOferta(event) {
 
 async function borrarOferta(id) {
   const o = st.ofertas.find(x => x.id === id);
-  if (!o || !confirm(`¿Eliminar la oferta "${o.titulo}"?`)) return;
+  if (!o || !(await confirmar({ tipo: "peligro", titulo: `¿Eliminar la oferta "${o.titulo}"?`,
+    mensaje: "Los precios vuelven a ser los normales.", aceptar: "Eliminar oferta" }))) return;
   try {
     await api(`/admin/ofertas/${o.id}`, { method: "DELETE" });
     if (st.editando.oferta && st.editando.oferta.id === o.id) cancelarOferta();
@@ -1416,7 +1428,8 @@ async function guardarPromo(event) {
 
 async function borrarPromo(id) {
   const p = st.promos.find(x => x.id === id);
-  if (!p || !confirm(`¿Eliminar la promoción "${p.titulo}"?`)) return;
+  if (!p || !(await confirmar({ tipo: "peligro", titulo: `¿Eliminar la promoción "${p.titulo}"?`,
+    mensaje: "El paquete deja de verse en Promociones. No se puede deshacer.", aceptar: "Eliminar promoción" }))) return;
   try {
     await api(`/admin/promociones/${p.id}`, { method: "DELETE" });
     if (st.editando.promo && st.editando.promo.id === p.id) cancelarPromo();
@@ -1601,7 +1614,8 @@ function renderBitacora() {
 }
 
 async function cancelarPedidosViejos() {
-  if (!confirm("¿Cancelar todos los pedidos en proceso de más de 7 días? Puedes reabrirlos uno por uno.")) return;
+  if (!(await confirmar({ tipo: "importante", titulo: "¿Cancelar los pedidos de más de 7 días?",
+    mensaje: "Se cancelan todos los pedidos en proceso de más de 7 días. Puedes reabrirlos uno por uno.", aceptar: "Cancelar pedidos viejos" }))) return;
   try {
     const { cancelados } = await api("/admin/pedidos/cancelar-viejos", { method: "POST" });
     await recargar("pedidos");
@@ -1664,7 +1678,8 @@ async function activar2fa(event) {
 async function desactivar2fa(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  if (!confirm("¿Desactivar la verificación en dos pasos? Tu cuenta quedará protegida solo con la contraseña.")) return;
+  if (!(await confirmar({ tipo: "peligro", titulo: "¿Desactivar la verificación en dos pasos?",
+    mensaje: "Tu cuenta quedará protegida solo con la contraseña.", aceptar: "Desactivar verificación" }))) return;
   await enviar(form, async () => {
     await api("/admin/2fa/desactivar", {
       method: "POST", body: { password: campo(form, "password").value, codigo: campo(form, "codigo").value }
@@ -1699,17 +1714,20 @@ Object.assign(ACCIONES, {
     st.pedidosPagina = Number(el.dataset.pagina);
     cargarPedidos();
   },
-  "pedido-estado": el => {
+  "pedido-estado": async el => {
     const id = Number(el.dataset.id);
     const estado = el.dataset.estado;
     const pedido = st.pedidos.pedidos.find(p => p.id === id);
     const pagado = pedido && pedido.estado === "pagado";
     const preguntas = {
-      pagado: `¿Marcar el pedido ${id} como pagado? Sus piezas se descuentan del stock.`,
-      cancelado: `¿Cancelar el pedido ${id}?${pagado ? " Sus piezas regresan al stock." : ""} Puedes reabrirlo después.`,
-      en_proceso: pagado ? `¿Regresar el pedido ${id} a en proceso? Sus piezas regresan al stock y podrás editarlo.` : null
+      pagado: { tipo: "importante", titulo: `¿Marcar el pedido ${id} como pagado?`,
+        mensaje: "Sus piezas se descuentan del stock.", aceptar: "Marcar como pagado" },
+      cancelado: { tipo: "peligro", titulo: `¿Cancelar el pedido ${id}?`,
+        mensaje: `${pagado ? "Sus piezas regresan al stock. " : ""}Puedes reabrirlo después.`, aceptar: "Cancelar pedido" },
+      en_proceso: pagado ? { tipo: "importante", titulo: `¿Regresar el pedido ${id} a en proceso?`,
+        mensaje: "Sus piezas regresan al stock y podrás editarlo.", aceptar: "Regresar a en proceso" } : null
     };
-    if (preguntas[estado] && !confirm(preguntas[estado])) return;
+    if (preguntas[estado] && !(await confirmar(preguntas[estado]))) return;
     const avisos = { pagado: "Pedido marcado como pagado", cancelado: "Pedido cancelado", en_proceso: pagado ? "Pedido regresado a en proceso" : "Pedido reabierto" };
     guardarPedido(id, { estado }, `${avisos[estado]}: ${id}`);
   },

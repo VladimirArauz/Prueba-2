@@ -252,7 +252,8 @@ async function guardarOpinion(event) {
 }
 
 async function borrarOpinion() {
-  if (!confirm("¿Borrar tu opinión? Ya no se verá en este producto.")) return;
+  if (!(await confirmar({ tipo: "peligro", titulo: "¿Borrar tu opinión?",
+    mensaje: "Ya no se verá en este producto. Puedes escribir otra después.", aceptar: "Borrar opinión" }))) return;
   try {
     await api(`/productos/${est.id}/resena`, { method: "DELETE" });
     est.editando = false;

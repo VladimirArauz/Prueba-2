@@ -1462,6 +1462,200 @@ textarea {
   pointer-events: auto;
 }
 
+/* Toast de error: admiración en rojo, temblor corto y botón para cerrarlo */
+.toast-notice.is-error {
+  border-left: 4px solid var(--aviso);
+  padding-right: 8px;
+}
+
+.toast-insignia {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--aviso);
+}
+
+.toast-notice .toast-insignia .icon {
+  color: var(--hoja);
+  width: 16px;
+  height: 16px;
+}
+
+.toast-cerrar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: transparent;
+  color: var(--tinta-suave);
+  cursor: pointer;
+}
+
+.toast-notice .toast-cerrar .icon {
+  color: inherit;
+}
+
+.toast-cerrar:hover {
+  color: var(--hoja);
+}
+
+.toast-cerrar:focus-visible {
+  outline: 3px solid var(--senal);
+  outline-offset: 2px;
+}
+
+.toast-notice.is-error.show {
+  animation: toast-tiembla 0.3s ease;
+}
+
+@keyframes toast-tiembla {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+/* ================= VENTANAS DE CONFIRMACIÓN =================
+   Reemplazan a confirm() y prompt() (confirmar() y pedirTexto() en comun.js).
+   Excepción autorizada solo para el plan 2026-11-01-avisos-y-confirmaciones-propios: sombra --sombra-2. */
+.dialogo {
+  width: min(440px, calc(100% - 32px));
+  max-width: none;
+  margin: auto; /* el reset global quita el centrado del navegador */
+  padding: 0;
+  border: 2px solid var(--tinta);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+  color: var(--tinta);
+  box-shadow: var(--sombra-2);
+}
+
+.dialogo::backdrop {
+  background: var(--velo);
+}
+
+.dialogo[open] {
+  animation: dialogo-entra var(--t-media) both;
+}
+
+.dialogo[open]::backdrop {
+  animation: dialogo-fondo var(--t-media) both;
+}
+
+.dialogo-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+}
+
+.dialogo-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dialogo-cabeza h2 {
+  font-size: 1.25rem;
+  font-variation-settings: 'wdth' 112;
+}
+
+.dialogo-insignia {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--tinta);
+}
+
+.dialogo[open] .dialogo-insignia {
+  animation: insignia-pop 0.35s 0.08s cubic-bezier(.2, .7, .2, 1) both;
+}
+
+.dialogo-insignia .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.dialogo-insignia.is-peligro {
+  background: var(--aviso);
+  border-color: var(--aviso);
+  color: var(--hoja);
+}
+
+.dialogo-insignia.is-importante {
+  background: var(--senal);
+  color: var(--tinta);
+}
+
+.dialogo-insignia.is-info,
+.dialogo-insignia.is-nota {
+  background: var(--tinta);
+  color: var(--senal);
+}
+
+.dialogo-mensaje {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--texto-2);
+}
+
+.dialogo-contador {
+  align-self: flex-end;
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.dialogo-acciones {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+@keyframes dialogo-entra {
+  from { opacity: 0; transform: scale(.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dialogo-fondo {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes insignia-pop {
+  0% { transform: scale(.6); }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 640px) {
+  .dialogo-caja {
+    padding: 20px;
+  }
+  /* En celular, la acción arriba y Volver abajo, a lo ancho */
+  .dialogo-acciones {
+    flex-direction: column-reverse;
+  }
+  .dialogo-acciones .btn {
+    width: 100%;
+  }
+}
+
 /* ================= 4. FOOTER ================= */
 .site-footer {
   flex-shrink: 0;

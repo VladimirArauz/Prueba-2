@@ -157,6 +157,21 @@ Estados: hover y presionado los da `style.css`. `disabled` lo pone gris en cualq
 (agotado, sin datos). Mientras espera al servidor se usa `botonOcupado(boton)` / `botonListo(boton)` de
 `comun.js`: el texto cambia a la acción en curso ("Guardando producto"), sin spinner.
 
+### Preguntar y avisar (sin `alert`, `confirm` ni `prompt`)
+
+Las ventanas del navegador ("necutla.com dice") no se usan. En su lugar, de `comun.js`:
+
+| Función | Para qué | Devuelve |
+|---|---|---|
+| `await confirmar({ titulo, mensaje, aceptar, volver, tipo })` | Confirmar una acción. `tipo`: `"peligro"` (borrar, cancelar, vaciar: botón rojo y el foco empieza en Volver), `"importante"` (admiración amarilla) o `"info"` | `true` / `false` |
+| `await pedirTexto({ titulo, mensaje, etiqueta, valor, max, aceptar })` | Pedir un texto corto (la nota de un pedido) | el texto, o `null` si eligió Volver |
+| `avisarError(mensaje)` | Errores y validaciones: toast con admiración roja, temblor y botón para cerrarlo (6 s) | |
+| `showToast(mensaje, icono)` | Avisos de que algo salió bien (3.2 s) | |
+
+`aceptar` es el texto exacto de la acción ("Cancelar pedido", "Eliminar tienda"); `volver` es "Volver" si no se pasa.
+Escape y el clic en el fondo cuentan como Volver. La ventana es un `<dialog>` con `showModal()` (estilos en la
+sección "VENTANAS DE CONFIRMACIÓN" de `style.css`).
+
 ## Configuración (`app/config.php`)
 
 | Clave | Para qué sirve |

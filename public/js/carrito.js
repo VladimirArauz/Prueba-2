@@ -217,8 +217,9 @@ Object.assign(ACCIONES, {
     quitarDelCarrito(el.dataset.claves.split(","));
     cargar();
   },
-  vaciar: () => {
-    if (!confirm("¿Quieres vaciar todo el carrito?")) return;
+  vaciar: async () => {
+    if (!(await confirmar({ tipo: "peligro", titulo: "¿Vaciar todo el carrito?",
+      mensaje: "Se quitan todos los productos de todas las tiendas.", aceptar: "Vaciar carrito" }))) return;
     guardarCarrito([]);
     cargar();
     showToast("Carrito vaciado.");

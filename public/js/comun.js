@@ -55,19 +55,108 @@ function imagenDe(item) {
 }
 
 // ================= Aviso flotante (toast) =================
-function showToast(message, iconName = "check") {
+// El tipo "error" lleva la admiración en rojo, un botón para cerrarlo y dura más
+function showToast(message, iconName = "check", { tipo } = {}) {
   let toast = document.getElementById("app-toast");
   if (!toast) {
     toast = document.createElement("div");
     toast.id = "app-toast";
     toast.className = "toast-notice";
-    toast.setAttribute("role", "status");
     document.body.appendChild(toast);
+    toast.addEventListener("click", event => {
+      if (event.target.closest(".toast-cerrar")) toast.classList.remove("show");
+    });
   }
-  toast.innerHTML = `${icon(iconName)}<span>${escapeHTML(message)}</span>`;
+  const error = tipo === "error";
+  toast.setAttribute("role", error ? "alert" : "status");
+  toast.classList.remove("is-error");
+  toast.innerHTML = error
+    ? `<span class="toast-insignia">${icon(iconName)}</span><span>${escapeHTML(message)}</span>
+       <button type="button" class="toast-cerrar" aria-label="Cerrar aviso">${icon("x")}</button>`
+    : `${icon(iconName)}<span>${escapeHTML(message)}</span>`;
+  // Se vuelve a poner la clase en otro cuadro para que el temblor se repita con cada error
+  if (error) requestAnimationFrame(() => toast.classList.add("is-error"));
   toast.classList.add("show");
   clearTimeout(window._toastTimeout);
-  window._toastTimeout = setTimeout(() => toast.classList.remove("show"), 3200);
+  window._toastTimeout = setTimeout(() => toast.classList.remove("show"), error ? 6000 : 3200);
+}
+
+function avisarError(message) {
+  showToast(message, "circle-alert", { tipo: "error" });
+}
+
+// ================= Ventanas de confirmación =================
+// Reemplazan a confirm() y prompt(): una sola <dialog> con showModal (atrapa el foco y deja el resto inerte).
+// Escape y el clic en el fondo cuentan como "Volver". Si ya hay una abierta, la siguiente espera su turno.
+const INSIGNIAS_DIALOGO = { peligro: "triangle-alert", importante: "circle-alert", info: "info", nota: "pencil" };
+let colaDialogo = Promise.resolve();
+
+function abrirDialogo({ titulo, mensaje = "", aceptar, volver = "Volver", tipo = "importante", campo = null }) {
+  const turno = colaDialogo.then(() => new Promise(resolver => {
+    let dialogo = document.getElementById("app-dialogo");
+    if (!dialogo) {
+      dialogo = document.createElement("dialog");
+      dialogo.id = "app-dialogo";
+      dialogo.className = "dialogo";
+      dialogo.setAttribute("aria-labelledby", "dialogo-titulo");
+      dialogo.setAttribute("aria-describedby", "dialogo-mensaje");
+      document.body.appendChild(dialogo);
+    }
+    const peligro = tipo === "peligro";
+    dialogo.innerHTML = `
+      <form method="dialog" class="dialogo-caja">
+        <div class="dialogo-cabeza">
+          <span class="dialogo-insignia is-${escapeHTML(tipo)}">${icon(INSIGNIAS_DIALOGO[tipo] || "info")}</span>
+          <h2 id="dialogo-titulo">${escapeHTML(titulo)}</h2>
+        </div>
+        <p id="dialogo-mensaje" class="dialogo-mensaje"${mensaje ? "" : " hidden"}>${escapeHTML(mensaje)}</p>
+        ${campo ? `
+        <div class="form-group">
+          <label for="dialogo-campo">${escapeHTML(campo.etiqueta)}</label>
+          <textarea id="dialogo-campo" rows="3" maxlength="${campo.max}">${escapeHTML(campo.valor)}</textarea>
+          <span class="dialogo-contador" id="dialogo-contador" aria-live="polite"></span>
+        </div>` : ""}
+        <div class="dialogo-acciones">
+          <button type="submit" class="btn secondary" value="volver">${escapeHTML(volver)}</button>
+          <button type="submit" class="btn${peligro ? " danger" : ""}" value="aceptar">${escapeHTML(aceptar)}</button>
+        </div>
+      </form>`;
+    const textarea = dialogo.querySelector("#dialogo-campo");
+    if (textarea) {
+      const contar = () => { dialogo.querySelector("#dialogo-contador").textContent = `${textarea.value.length} de ${campo.max}`; };
+      textarea.addEventListener("input", contar);
+      textarea.addEventListener("keydown", event => {
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) dialogo.close("aceptar");
+      });
+      contar();
+    }
+    // Clic en el fondo (fuera de la tarjeta) = Volver
+    const alClicFondo = event => { if (event.target === dialogo) dialogo.close("volver"); };
+    dialogo.addEventListener("click", alClicFondo);
+    const previo = document.activeElement;
+    dialogo.addEventListener("close", () => {
+      dialogo.removeEventListener("click", alClicFondo);
+      if (previo && previo.isConnected) previo.focus();
+      const ok = dialogo.returnValue === "aceptar";
+      resolver(ok ? (textarea ? textarea.value : true) : (textarea ? null : false));
+    }, { once: true });
+    dialogo.returnValue = "";
+    dialogo.showModal();
+    // En lo peligroso el foco empieza en Volver; en lo demás, en el campo o en la acción
+    (textarea || dialogo.querySelector(peligro ? '[value="volver"]' : '[value="aceptar"]')).focus();
+  }));
+  colaDialogo = turno.catch(() => {});
+  return turno;
+}
+
+// confirmar({ titulo, mensaje, aceptar, volver, tipo: "peligro" | "importante" | "info" }) → true / false
+function confirmar(opciones) {
+  return abrirDialogo(opciones);
+}
+
+// pedirTexto({ titulo, mensaje, etiqueta, valor, max, aceptar }) → el texto, o null si eligió Volver
+function pedirTexto({ etiqueta, valor = "", max = 200, tipo = "nota", ...resto }) {
+  return abrirDialogo({ ...resto, tipo, campo: { etiqueta, valor, max } });
 }
 
 // ================= Carrito =================
@@ -178,7 +267,7 @@ function enlaceSitio(ruta) {
 // (abrir varias ventanas seguidas lo bloquea el navegador).
 function abrirWhatsApp(numeros, mensaje, contenedor) {
   if (!numeros.length) {
-    alert("Esta tienda todavía no tiene números de WhatsApp. Intenta más tarde.");
+    avisarError("Esta tienda todavía no tiene números de WhatsApp. Intenta más tarde.");
     return false;
   }
   window.open(enlaceWhatsApp(numeros[0], mensaje), "_blank", "noopener");

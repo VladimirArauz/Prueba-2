@@ -36,10 +36,13 @@ Cómo se usa:
 | `2026-10-31-seo-iconos-contenido-y-legal.md` | Aplicado (prompts 1 a 7) y subido a IONOS. Faltan los `[COMPLETAR]` del aviso y los términos, y Search Console (pendiente de abajo) | 2026-10-31 |
 | `2026-10-31-fotos-tiendas-portada.md` | Aplicado (prompts 1 a 4) y subido a IONOS. Falta que el usuario revise las 7 fotos | 2026-10-31 |
 | `2026-11-01-whatsapp-emojis-y-mensaje-vistoso.md` | Aplicado (prompts 0 a 4) y subido a IONOS. Falta que el usuario pruebe en WhatsApp Web y en el celular | 2026-11-01 |
+| `2026-11-01-avisos-y-confirmaciones-propios.md` | Aplicado (prompts 0 a 4) y subido a IONOS. Falta que el usuario lo revise en su navegador | 2026-11-01 |
 
 ---
 
 ## Pendientes
+
+**Avisos y confirmaciones propios (2026-11-01, aplicado):** (a) el usuario revisa en su navegador (compu y celular) cancelar un pedido, marcarlo pagado, la nota y un error en Necutools, y vaciar el carrito. (b) **Excepción de diseño:** la sombra `--sombra-2` de la ventana `.dialogo` la autorizó el usuario solo para este plan; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) Al cerrar, la ventana desaparece sin fundido (el `<dialog>` nativo se cierra de golpe); solo la entrada está animada.
 
 **Emojis en WhatsApp y mensaje nuevo (2026-11-01, aplicado):** (a) el usuario manda un pedido y una solicitud de servicio de prueba por WhatsApp Web y por el celular, y confirma que los emojis se ven y que el mensaje le gusta. (b) Si algún día WhatsApp también rompe `api.whatsapp.com/send`, la otra opción en compu es `web.whatsapp.com/send?phone=…&text=…`.
 
@@ -139,6 +142,19 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-01: avisos y confirmaciones propios en lugar de `alert`, `confirm` y `prompt` (plan `2026-11-01-avisos-y-confirmaciones-propios.md`, prompts 1 a 4)
+- `public/js/comun.js`: `confirmar()` y `pedirTexto()` (una sola `<dialog id="app-dialogo">` con `showModal()`, cola si se piden dos, Escape y clic en el fondo = Volver, foco en Volver si es `peligro`, el foco regresa al botón que la abrió); `showToast(…, { tipo: "error" })` y `avisarError()`; la tienda sin WhatsApp avisa con el toast de error.
+- `public/style.css`: secciones del toast de error (insignia roja, temblor `toast-tiembla`, botón cerrar, 6 s) y "VENTANAS DE CONFIRMACIÓN" (`.dialogo`, insignias `is-peligro` / `is-importante` / `is-info` / `is-nota`, entrada `dialogo-entra`, `insignia-pop`; en celular los botones van a lo ancho). `margin: auto` en `.dialogo` porque el reset global quitaba el centrado. `public/iconos.js`: `triangle-alert`.
+- `public/js/necutools.js`: los 9 `confirm` (estado de pedido, cancelar viejos, quitar 2 pasos, eliminar tienda, subcategoría, color, producto, oferta, promoción), el `prompt` de la nota y los 5 `alert` (`manejarError`, código de 2 pasos, editor de pedido). `public/js/carrito.js` (vaciar) y `public/js/producto.js` (borrar opinión). Ya no queda ningún `alert(`, `confirm(` ni `prompt(` en `public/`.
+- `README.md`: "Preguntar y avisar".
+- **Pruebas** en local con Chrome sin ventana (cliente CDP propio, `window.alert/confirm/prompt` como trampa): 33 de 33 a 1280, 360 y con movimiento reducido (vaciar con Escape, clic en el fondo y aceptar; Tab dentro; foco de vuelta; cancelar, pagar y regresar un pedido; nota con contador, Ctrl+Enter, Volver y vacía; nota con `<b>` escapada; error de la API; cola de dos ventanas; sin scroll horizontal ni errores), borrar opinión y eliminar un producto temporal. Datos de prueba borrados (dueño `prueba_dialogos`, pedidos 41 a 43, stock, números, producto 68, su bitácora); también se vaciaron las sesiones y límites locales.
+- Subido a IONOS por rsync (6 archivos, idénticos en vivo); en necutla.com la ventana abre centrada con su animación y el toast de error funciona, sin errores de consola.
+
+### 2026-11-01: plan de avisos y confirmaciones propios (sin `alert`, `confirm` ni `prompt`)
+- Nuevo plan `plans/planes/2026-11-01-avisos-y-confirmaciones-propios.md` y sus 5 prompts (0 a 4) en `plans/prompts/` (mismo nombre). No se cambió código.
+- Hoy hay 11 `confirm`, 1 `prompt` y 6 `alert` (casi todos en `public/js/necutools.js`; también vaciar carrito, borrar opinión y tienda sin WhatsApp).
+- Decisiones del usuario: confirmaciones en una ventana centrada (`<dialog>`) con icono por tipo (peligro, importante, info) y animación corta; avisos de error en el toast con tipo (admiración roja, temblor, botón cerrar); **sombra `--sombra-2` en la ventana como excepción solo para este plan**.
 
 ### 2026-11-01: emojis bien en WhatsApp Web y mensajes de pedido y servicio más completos (plan `2026-11-01-whatsapp-emojis-y-mensaje-vistoso.md`, prompts 1 a 4)
 - **Emojis**: `enlaceWhatsApp()` (`public/js/comun.js`) arma `https://api.whatsapp.com/send?phone=…&text=…` en vez de `wa.me` (la redirección de `wa.me` cambiaba cada emoji por `%EF%BF%BD`). Comprobado con `curl`: con el enlace nuevo, el emoji llega intacto hasta `web.whatsapp.com/send`. No quedaba otro `wa.me` en `public/` ni `app/`.
