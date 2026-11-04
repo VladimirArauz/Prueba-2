@@ -182,6 +182,9 @@
               </div>
             </div>
           </div>
+          <div class="form-group">
+            <label class="check-label casilla-edad" for="registro-edad"><input id="registro-edad" name="edad" type="checkbox" required> Tengo 18 años o más, o mi madre, padre o tutor me dio permiso de crear esta cuenta</label>
+          </div>
           <div class="captcha"></div>
           <button class="btn btn-block" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>Crear cuenta</button>
           <p class="form-hint">Al crear tu cuenta aceptas los <a href="/terminos.html">Términos de uso</a> y el <a href="/privacidad.html">Aviso de privacidad</a>.</p>
@@ -271,7 +274,7 @@
     <div class="cuenta-dentro" id="cuenta-dentro" hidden>
       <section class="admin-card admin-auth" id="cuenta-completar" aria-labelledby="completar-title" hidden>
         <h2 id="completar-title">Completa tu cuenta</h2>
-        <p class="section-desc">Ahora las cuentas llevan nombre de usuario y teléfono. Agrégalos una sola vez; tu teléfono no se muestra a nadie.</p>
+        <p class="section-desc">A tu cuenta le falta un dato de los que ahora piden las cuentas. Agrégalo una sola vez; tu teléfono no se muestra a nadie.</p>
         <form id="form-completar" novalidate>
           <div class="auth-campos">
             <div class="form-group" id="completar-usuario-grupo">
@@ -281,7 +284,7 @@
                 <input id="completar-usuario" name="usuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="Ej. ana.g">
               </div>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="completar-telefono-grupo">
               <label for="completar-telefono">Teléfono</label>
               <div class="campo-telefono">
                 <select id="completar-pais" name="pais" autocomplete="tel-country-code" aria-label="País y lada del teléfono"><option value="MX">México (+52)</option></select>
@@ -290,6 +293,9 @@
                   <input id="completar-telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="20" placeholder="55 1234 5678" required>
                 </div>
               </div>
+            </div>
+            <div class="form-group" id="completar-edad-grupo">
+              <label class="check-label casilla-edad" for="completar-edad"><input id="completar-edad" name="edad" type="checkbox" required> Tengo 18 años o más, o mi madre, padre o tutor me dio permiso de tener esta cuenta</label>
             </div>
           </div>
           <button class="btn" type="submit">Guardar mis datos</button>
@@ -341,6 +347,17 @@
           </div>
           <button class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-key-round"></use></svg>Cambiar contraseña</button>
         </form>
+      </section>
+
+      <section class="admin-card admin-auth" aria-labelledby="eliminar-title">
+        <h2 id="eliminar-title">Eliminar mi cuenta</h2>
+        <p class="section-desc">Se borran tu nombre, usuario, correo y teléfono. Tus opiniones se quedan, pero sin tu nombre. No se puede deshacer.</p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="eliminar-cuenta" data-action="eliminar-cuenta">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash-2"></use></svg>
+            Eliminar mi cuenta
+          </button>
+        </div>
       </section>
     </div>
   </main>

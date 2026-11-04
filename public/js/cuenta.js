@@ -1,7 +1,8 @@
 /**
  * NECUTLA — Cuenta de cliente: iniciar sesión (usuario o correo), crear cuenta, completar una cuenta
  * vieja, cambiar contraseña, restablecerla y cerrar sesión. La validación en vivo está en validacion.js.
- * Entrar, crear la cuenta y restablecer piden el código que llega al correo (codigo.js).
+ * Entrar, crear la cuenta, restablecer y eliminar la cuenta piden el código que llega al correo (codigo.js).
+ * Crear la cuenta pide la casilla de edad; las cuentas de antes la marcan en "Completa tu cuenta".
  * ?volver=/p/12 regresa al producto después de entrar.
  */
 
@@ -20,7 +21,8 @@ function vista(nombre) {
 const PASOS_CODIGO = {
   login: { ruta: "/clientes/login/codigo", titulo: "Revisa tu correo para entrar" },
   registro: { ruta: "/clientes/registro/codigo", titulo: "Revisa tu correo para crear tu cuenta" },
-  restablecer: { ruta: "/clientes/restablecer/codigo", titulo: "Revisa tu correo para cambiar tu contraseña" }
+  restablecer: { ruta: "/clientes/restablecer/codigo", titulo: "Revisa tu correo para cambiar tu contraseña" },
+  eliminar: { ruta: "/clientes/eliminar/codigo", titulo: "Revisa tu correo para eliminar tu cuenta" }
 };
 
 let campoCodigo = null;
@@ -60,6 +62,7 @@ function mostrarCodigo(respuesta) {
   campoCodigo.limpiar();
   estadoCodigo("");
   esperarReenvio(respuesta.espera ?? 0);
+  $("cuenta-dentro").hidden = true; // eliminar la cuenta: el código se pide con la sesión abierta
   vista("codigo");
   campoCodigo.enfocar();
 }
@@ -87,6 +90,9 @@ async function verificarCodigo(codigo) {
     if (paso === "restablecer") {
       vista("nueva");
       $("nueva-password").focus();
+    } else if (paso === "eliminar") {
+      render(null);
+      showToast("Eliminamos tu cuenta.");
     } else {
       entrar(respuesta, paso === "registro" ? `Cuenta creada. Te damos la bienvenida, ${respuesta.nombre}.` : `Sesión iniciada: ${respuesta.nombre}`);
     }
@@ -105,6 +111,12 @@ function volverDelCodigo() {
   const paso = pasoCodigo;
   pasoCodigo = null;
   if (location.hash === "#restablecer") history.replaceState(null, "", location.pathname + location.search);
+  if (paso === "eliminar") {
+    vista(null);
+    $("cuenta-dentro").hidden = false;
+    $("eliminar-cuenta").focus();
+    return;
+  }
   vista("fuera");
   modoAuth(paso === "registro", true);
 }
@@ -169,11 +181,16 @@ function render(sesion) {
   $("dentro-correo").textContent = sesion.usuario
     ? `Tu usuario es ${sesion.usuario} y tu correo ${sesion.correo}.`
     : `Entraste con ${sesion.correo}.`;
+  const falta = sesion.falta || { usuario: !sesion.usuario, telefono: Boolean(sesion.incompleta), edad: false };
   $("cuenta-completar").hidden = !sesion.incompleta;
-  $("completar-usuario-grupo").hidden = Boolean(sesion.usuario);
+  $("completar-usuario-grupo").hidden = !falta.usuario;
+  $("completar-telefono-grupo").hidden = !falta.telefono;
+  $("completar-edad-grupo").hidden = !falta.edad;
   const volver = destinoDeVuelta();
   $("dentro-seguir").href = volver || "/";
   $("dentro-seguir").textContent = volver ? "Volver al producto" : "Ver tiendas";
+  // Al recargar a medio paso de eliminar la cuenta, se retoma el código
+  if (sesion.codigoPendiente && sesion.codigoPendiente.proposito === "eliminar") mostrarCodigo({ ...sesion.codigoPendiente, espera: 0 });
 }
 
 function abrirRestablecer(enfocar = true) {
@@ -207,7 +224,8 @@ async function enviarForm(event, { ruta, metodo = "POST", campos, captcha: accio
   const form = event.currentTarget;
   if (!(await validarFormulario(form))) return;
   const boton = form.querySelector('[type="submit"]');
-  const body = Object.fromEntries(campos.map(c => [c, form.elements[c].value]));
+  const valorDe = el => (el.type === "checkbox" ? el.checked : el.value);
+  const body = Object.fromEntries(campos.map(c => [c, valorDe(form.elements[c])]));
   botonOcupado(boton);
   try {
     if (accion) body.captcha = await tokenCaptcha(form.querySelector(".captcha"), accion);
@@ -233,6 +251,10 @@ async function prepararTelefono(select, input) {
   paises = await llenarPaises(select);
 }
 
+const revisarEdad = casilla => () => (casilla.checked
+  ? { ok: true, mensaje: "" }
+  : { ok: false, mensaje: "Marca la casilla para seguir." });
+
 function prepararValidacion() {
   prepararCampo($("registro-nombre"), valor => (valor.trim().length >= 2
     ? { ok: true, mensaje: "" }
@@ -241,9 +263,11 @@ function prepararValidacion() {
   prepararCampo($("registro-correo"), revisarCorreo, { enVivo: revisarCorreoEnVivo });
   prepararTelefono($("registro-pais"), $("registro-telefono"));
   prepararPassword($("registro-password"), { minimo: MIN_PASSWORD_CLIENTE, confirmar: $("registro-confirmar") });
+  prepararCampo($("registro-edad"), revisarEdad($("registro-edad")));
 
   prepararCampo($("completar-usuario"), valor => revisarUsuario(valor));
   prepararTelefono($("completar-pais"), $("completar-telefono"));
+  prepararCampo($("completar-edad"), revisarEdad($("completar-edad")));
 
   prepararCampo($("restablecer-identificador"), valor => (valor.trim() ? { ok: true, mensaje: "" } : { ok: false, mensaje: "Escribe tu usuario o correo." }));
   prepararPassword($("nueva-password"), { minimo: MIN_PASSWORD_CLIENTE, confirmar: $("nueva-confirmar") });
@@ -282,6 +306,22 @@ Object.assign(ACCIONES, {
     el.setAttribute("aria-label", ver ? "Ocultar contraseña" : "Mostrar contraseña");
     el.innerHTML = icon(ver ? "eye-off" : "eye");
   },
+  "eliminar-cuenta": async el => {
+    const seguro = await confirmar({
+      tipo: "peligro", titulo: "¿Eliminar tu cuenta?",
+      mensaje: "Se borran tu nombre, usuario, correo y teléfono. Tus opiniones se quedan sin tu nombre. Para confirmar, te mandamos un código a tu correo.",
+      aceptar: "Mandar código para eliminar", volver: "Volver"
+    });
+    if (!seguro) return;
+    botonOcupado(el, "Mandando código");
+    try {
+      mostrarCodigo(await api("/clientes/eliminar", { method: "POST" }));
+    } catch (error) {
+      avisarError(error.message);
+    } finally {
+      botonListo(el);
+    }
+  },
   salir: async () => {
     try {
       await api("/clientes/logout", { method: "POST" });
@@ -316,7 +356,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     alFallar: error => { if (error.status === 401) alarmaVentanas(); }
   }));
   $("form-registro").addEventListener("submit", event => enviarForm(event, {
-    ruta: "/clientes/registro", campos: ["nombre", "usuario", "correo", "pais", "telefono", "password", "confirmar"], captcha: "registro",
+    ruta: "/clientes/registro", campos: ["nombre", "usuario", "correo", "pais", "telefono", "password", "confirmar", "edad"], captcha: "registro",
     listo: s => siguientePaso(s, `Cuenta creada. Te damos la bienvenida, ${s.nombre}.`)
   }));
   $("form-restablecer").addEventListener("submit", event => enviarForm(event, {
@@ -328,7 +368,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     listo: s => entrar(s, "Contraseña cambiada. Ya entraste a tu cuenta.")
   }));
   $("form-completar").addEventListener("submit", event => enviarForm(event, {
-    ruta: "/clientes/completar", metodo: "PUT", campos: ["usuario", "pais", "telefono"],
+    ruta: "/clientes/completar", metodo: "PUT", campos: ["usuario", "pais", "telefono", "edad"],
     listo: s => {
       render(s);
       showToast("Datos guardados.");

@@ -683,14 +683,14 @@ function rutas_admin(): void
     get('/api/admin/resenas', function () {
         requiere_admin();
         [$filtro, $params] = filtro_tiendas('p.stand_id', stand_filtro(consulta('stand')));
-        $lista = filas("SELECT r.id, r.producto_id, p.nombre AS producto, p.stand_id, s.nombre AS stand, c.nombre AS cliente,
+        $lista = filas("SELECT r.id, r.producto_id, p.nombre AS producto, p.stand_id, s.nombre AS stand, COALESCE(c.nombre, ?) AS cliente,
                                r.calificacion, r.comentario, r.respuesta, r.visible, r.creado_en
                         FROM resenas r
                         JOIN productos p ON p.id = r.producto_id
                         JOIN stands s ON s.id = p.stand_id
-                        JOIN clientes c ON c.id = r.cliente_id
+                        LEFT JOIN clientes c ON c.id = r.cliente_id
                         WHERE $filtro
-                        ORDER BY r.creado_en DESC, r.id DESC LIMIT 300", $params);
+                        ORDER BY r.creado_en DESC, r.id DESC LIMIT 300", [CLIENTE_ANONIMO, ...$params]);
         return array_map(fn($r) => [...$r, 'visible' => a_bool($r['visible']), 'creado_en' => fecha_iso($r['creado_en'])], $lista);
     });
 

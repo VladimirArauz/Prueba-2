@@ -1,6 +1,7 @@
 <?php
 /**
- * Códigos de verificación por correo de las cuentas de cliente: entrar, crear la cuenta y restablecer la contraseña.
+ * Códigos de verificación por correo de las cuentas de cliente: entrar, crear la cuenta, restablecer la contraseña
+ * y eliminar la cuenta.
  * - 6 dígitos al azar, guardados como HMAC con el secreto de app/config.php.
  * - Vencen a los 10 minutos, sirven una vez y aguantan 5 intentos.
  * - Solo valen en el navegador que los pidió: la sesión guarda el id del código (clave `codigo`).

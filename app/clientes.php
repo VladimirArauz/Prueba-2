@@ -6,10 +6,15 @@
  * (app/codigos.php): también para crear la cuenta y para restablecer la contraseña. El teléfono es privado:
  * no sale en ninguna respuesta pública (opiniones, tiendas, pedidos).
  * La sesión es la misma cookie que la de Necutools, con clienteId en vez de adminId.
+ * Al crear la cuenta se acepta la casilla de edad; la persona puede eliminar su cuenta con un código al correo
+ * (sus opiniones se quedan como "Cliente de Necutla"). Plan: plans/planes/2026-11-04-cumplimiento-legal-cuenta-y-edad.md
  */
 
 const MIN_PASSWORD_CLIENTE = 10;
 const DUPLICADO_CLIENTE = 'Ese nombre de usuario o ese correo ya tienen cuenta. Inicia sesión o usa otros.';
+const FALTA_EDAD = 'Marca la casilla de edad para seguir.';
+// Lo que se lee de un cliente para su sesión (sin la contraseña)
+const CAMPOS_CLIENTE = 'id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, edad_aceptada_en IS NOT NULL AS con_edad, activo, sesion_version';
 
 // Carga al cliente en cada petición: si desactivan su cuenta, se nota de inmediato
 function cargar_cliente(): ?array
@@ -17,7 +22,7 @@ function cargar_cliente(): ?array
     if (!cuentas_clientes()) return null;
     $id = Sesion::get('clienteId');
     if (!$id) return null;
-    $c = fila('SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, activo, sesion_version FROM clientes WHERE id = ?', [$id]);
+    $c = fila('SELECT ' . CAMPOS_CLIENTE . ' FROM clientes WHERE id = ?', [$id]);
     if (!$c || !a_bool($c['activo'])) return null;
     // Sesión iniciada antes del último cambio de contraseña: ya no vale
     if ((int) (Sesion::get('clienteVersion') ?? 0) !== (int) $c['sesion_version']) return null;
@@ -36,12 +41,20 @@ function password_cliente($valor, $confirmar, array $contiene, string $campo = '
     return validar_contrasena($valor, MIN_PASSWORD_CLIENTE, $campo, $contiene, is_string($confirmar) ? $confirmar : '');
 }
 
-// Lo que ve el propio cliente de su sesión. incompleta: cuenta de antes del registro con usuario y teléfono
+// La casilla "Tengo 18 años o más, o mi madre, padre o tutor me dio permiso": tiene que llegar marcada (true)
+function exigir_edad(): void
+{
+    if (campo('edad') !== true) throw dato_invalido(FALTA_EDAD);
+}
+
+// Lo que ve el propio cliente de su sesión. incompleta: cuenta de antes del registro con usuario y teléfono,
+// o de antes de la casilla de edad; falta dice qué pedirle en "Completa tu cuenta"
 function datos_sesion_cliente(array $c): array
 {
+    $falta = ['usuario' => !$c['usuario'], 'telefono' => !a_bool($c['con_telefono']), 'edad' => !a_bool($c['con_edad'] ?? false)];
     return [
         'autenticado' => true, 'nombre' => $c['nombre'], 'usuario' => $c['usuario'] ?: null, 'correo' => $c['correo'],
-        'incompleta' => !$c['usuario'] || !a_bool($c['con_telefono']),
+        'incompleta' => in_array(true, $falta, true), 'falta' => $falta,
     ];
 }
 
@@ -67,6 +80,30 @@ function iniciar_sesion_cliente(array $cliente): array
     return datos_sesion_cliente($cliente);
 }
 
+// Cierra la sesión de cliente de este navegador. Si también hay una de Necutools, esa sigue (con otro id de sesión).
+function cerrar_sesion_cliente(): void
+{
+    if (Sesion::get('adminId')) {
+        Sesion::regenerar(['adminId', 'usuario', 'creada', 'adminUso']);
+    } else {
+        Sesion::destruir();
+    }
+}
+
+// Borra la cuenta y lo que la identifica: códigos, frenos de login y sesiones. Las opiniones se quedan
+// con cliente_id NULL (la llave foránea es ON DELETE SET NULL) y se muestran como "Cliente de Necutla".
+function eliminar_cliente(array $c): void
+{
+    $id = (int) $c['id'];
+    en_transaccion(function () use ($c, $id) {
+        q('DELETE FROM codigos_correo WHERE correo = ? OR cliente_id = ?', [$c['correo'], $id]);
+        q("DELETE FROM intentos_login WHERE tipo = 'cliente' AND cuenta IN (?, ?, ?, ?)",
+          ["id:$id", "password:$id", $c['correo'], (string) $c['usuario']]);
+        cerrar_otras_sesiones_cliente($id, Sesion::id());
+        q('DELETE FROM clientes WHERE id = ?', [$id]);
+    });
+}
+
 function limitar_cambios_cliente(): void
 {
     limitar('cambios-cliente', 20, MIN_15, 'Demasiados cambios seguidos. Espera 15 minutos y vuelve a intentar.');
@@ -81,8 +118,9 @@ function rutas_clientes(): void
     get('/api/clientes/sesion', function () {
         if (!cuentas_clientes()) return ['autenticado' => false, 'pausa' => true];
         $cliente = cargar_cliente();
-        if ($cliente) return datos_sesion_cliente($cliente);
         $pendiente = codigo_pendiente();
+        // Con sesión, el único paso de código que se retoma es el de eliminar la cuenta
+        if ($cliente) return datos_sesion_cliente($cliente) + ($pendiente && $pendiente['proposito'] === 'eliminar' ? ['codigoPendiente' => $pendiente] : []);
         return ['autenticado' => false] + ($pendiente ? ['codigoPendiente' => $pendiente] : []);
     });
 
@@ -106,13 +144,14 @@ function rutas_clientes(): void
         $tel = v_telefono(campo('pais'), campo('telefono'));
         $correo = correo_real(campo('correo'));
         $password = password_cliente(campo('password'), campo('confirmar'), [$nombre, $usuario, explode('@', $correo)[0]]);
+        exigir_edad();
         // Captcha antes de revisar si el correo ya existe: un bot no puede probar correos
         exigir_captcha('registro');
         // Antes del bcrypt: un usuario o correo repetido no debe gastar CPU. No se dice cuál de los dos.
         if (valor('SELECT 1 FROM clientes WHERE correo = ? OR usuario = ?', [$correo, $usuario])) throw new ErrorHttp(409, DUPLICADO_CLIENTE);
         // La cuenta se crea hasta que llega el código del correo; mientras, el registro espera en el código
         $datos = ['nombre' => $nombre, 'usuario' => $usuario, 'pais' => $tel['pais'], 'telefono' => $tel['telefono'],
-                  'hash' => cifrar_contrasena($password)];
+                  'hash' => cifrar_contrasena($password), 'edad' => true];
         return crear_codigo('registro', $correo, null, $datos, $nombre);
     });
 
@@ -120,15 +159,18 @@ function rutas_clientes(): void
     post('/api/clientes/registro/codigo', function () {
         $f = verificar_codigo('registro', campo('codigo'));
         $d = $f['datos'];
+        // Un registro pendiente de antes de la casilla no la trae: la cuenta la acepta después en "Completa tu cuenta"
+        $edad = !empty($d['edad']);
         try {
-            q('INSERT INTO clientes (nombre, usuario, correo, pais, telefono, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
-              [$d['nombre'], $d['usuario'], $f['correo'], $d['pais'], $d['telefono'], $d['hash']]);
+            q('INSERT INTO clientes (nombre, usuario, correo, pais, telefono, password_hash, edad_aceptada_en)
+               VALUES (?, ?, ?, ?, ?, ?, IF(?, UTC_TIMESTAMP(6), NULL))',
+              [$d['nombre'], $d['usuario'], $f['correo'], $d['pais'], $d['telefono'], $d['hash'], (int) $edad]);
         } catch (PDOException $e) {
             if (error_bd($e) === 1062) throw new ErrorHttp(409, DUPLICADO_CLIENTE);
             throw $e;
         }
         $cliente = ['id' => ultimo_id(), 'nombre' => $d['nombre'], 'usuario' => $d['usuario'], 'correo' => $f['correo'],
-                    'con_telefono' => 1, 'sesion_version' => 0];
+                    'con_telefono' => 1, 'con_edad' => $edad, 'sesion_version' => 0];
         return iniciar_sesion_cliente($cliente);
     });
 
@@ -143,7 +185,7 @@ function rutas_clientes(): void
         }
         exigir_captcha('login');
         // correo y usuario se guardan en minúsculas y la columna compara exacto (utf8mb4_nopad_bin)
-        $campos = 'SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, password_hash, activo, sesion_version FROM clientes';
+        $campos = 'SELECT ' . CAMPOS_CLIENTE . ', password_hash FROM clientes';
         $cliente = str_contains($identificador, '@')
             ? fila("$campos WHERE correo = ?", [$identificador])
             : fila("$campos WHERE usuario = ?", [$identificador]);
@@ -164,8 +206,7 @@ function rutas_clientes(): void
 
     post('/api/clientes/login/codigo', function () {
         $f = verificar_codigo('login', campo('codigo'));
-        $cliente = fila('SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, activo, sesion_version FROM clientes WHERE id = ?',
-                        [(int) $f['cliente_id']]);
+        $cliente = fila('SELECT ' . CAMPOS_CLIENTE . ' FROM clientes WHERE id = ?', [(int) $f['cliente_id']]);
         if (!$cliente || !a_bool($cliente['activo'])) throw new ErrorHttp(403, 'Esta cuenta está desactivada.');
         return iniciar_sesion_cliente($cliente);
     });
@@ -212,8 +253,7 @@ function rutas_clientes(): void
             Sesion::quitar('restablecer');
             throw new ErrorHttp(410, 'Pasaron más de 10 minutos. Pide otro código para cambiar tu contraseña.');
         }
-        $cliente = fila('SELECT id, nombre, usuario, correo, telefono IS NOT NULL AS con_telefono, activo, sesion_version FROM clientes WHERE id = ?',
-                        [$r['clienteId']]);
+        $cliente = fila('SELECT ' . CAMPOS_CLIENTE . ' FROM clientes WHERE id = ?', [$r['clienteId']]);
         if (!$cliente || !a_bool($cliente['activo'])) throw new ErrorHttp(403, 'Esta cuenta está desactivada.');
         $contiene = [$cliente['nombre'], $cliente['usuario'], explode('@', $cliente['correo'])[0]];
         $nueva = password_cliente(campo('nueva'), campo('confirmar'), $contiene, 'La contraseña nueva');
@@ -252,28 +292,44 @@ function rutas_clientes(): void
         return ['ok' => true];
     });
 
-    // Cuentas de antes del registro con usuario y teléfono: los completan una vez
+    // Cuentas de antes del registro con usuario y teléfono, o de antes de la casilla de edad: completan lo que falte
     put('/api/clientes/completar', function () {
         limitar_cambios_cliente();
         $cliente = requiere_cliente();
         $usuario = $cliente['usuario'] ?: usuario_valido(campo('usuario'));
-        $tel = v_telefono(campo('pais'), campo('telefono'));
+        $tel = a_bool($cliente['con_telefono']) ? ['pais' => null, 'telefono' => null] : v_telefono(campo('pais'), campo('telefono'));
+        if (!a_bool($cliente['con_edad'])) exigir_edad();
         try {
-            q('UPDATE clientes SET usuario = ?, pais = ?, telefono = ? WHERE id = ?', [$usuario, $tel['pais'], $tel['telefono'], $cliente['id']]);
+            q('UPDATE clientes SET usuario = ?, pais = COALESCE(?, pais), telefono = COALESCE(?, telefono),
+                      edad_aceptada_en = COALESCE(edad_aceptada_en, UTC_TIMESTAMP(6)) WHERE id = ?',
+              [$usuario, $tel['pais'], $tel['telefono'], $cliente['id']]);
         } catch (PDOException $e) {
             if (error_bd($e) === 1062) throw new ErrorHttp(409, 'Ese nombre de usuario ya está ocupado. Elige otro.');
             throw $e;
         }
-        return datos_sesion_cliente(['nombre' => $cliente['nombre'], 'usuario' => $usuario, 'correo' => $cliente['correo'], 'con_telefono' => 1]);
+        return datos_sesion_cliente(['nombre' => $cliente['nombre'], 'usuario' => $usuario, 'correo' => $cliente['correo'],
+                                     'con_telefono' => 1, 'con_edad' => 1]);
     });
 
-    // Si en este navegador también hay una sesión de Necutools, solo se cierra la del cliente (con otro id de sesión)
+    // Eliminar la cuenta, paso 1: manda un código al correo de la cuenta (con sesión iniciada)
+    post('/api/clientes/eliminar', function () {
+        limitar_cambios_cliente();
+        $cliente = requiere_cliente();
+        return crear_codigo('eliminar', $cliente['correo'], (int) $cliente['id'], null, $cliente['nombre']);
+    });
+
+    // Paso 2: con el código correcto de esta misma cuenta se borra y se cierra la sesión de cliente
+    post('/api/clientes/eliminar/codigo', function () {
+        $cliente = requiere_cliente();
+        $f = verificar_codigo('eliminar', campo('codigo'));
+        if ((int) $f['cliente_id'] !== (int) $cliente['id']) throw new ErrorHttp(410, 'Pide un código nuevo para seguir.');
+        eliminar_cliente($cliente);
+        cerrar_sesion_cliente();
+        return ['autenticado' => false, 'eliminada' => true];
+    });
+
     post('/api/clientes/logout', function () {
-        if (Sesion::get('adminId')) {
-            Sesion::regenerar(['adminId', 'usuario', 'creada', 'adminUso']);
-        } else {
-            Sesion::destruir();
-        }
+        cerrar_sesion_cliente();
         return ['autenticado' => false];
     });
 }

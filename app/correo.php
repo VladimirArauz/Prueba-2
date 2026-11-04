@@ -134,17 +134,20 @@ function enviar_correo(string $para, string $asunto, string $texto, string $html
     }
 }
 
-// Texto y HTML del correo con el código. $proposito: login, registro o restablecer.
+// Texto y HTML del correo con el código. $proposito: login, registro, restablecer o eliminar.
 function correo_codigo(string $proposito, string $codigo, string $nombre): array
 {
     $para = [
         'login' => ['Tu código para entrar a Necutla', 'Usa este código para iniciar sesión en Necutla.'],
         'registro' => ['Tu código para crear tu cuenta en Necutla', 'Usa este código para terminar de crear tu cuenta en Necutla.'],
         'restablecer' => ['Tu código para cambiar tu contraseña de Necutla', 'Usa este código para poner una contraseña nueva en tu cuenta de Necutla.'],
+        'eliminar' => ['Tu código para eliminar tu cuenta de Necutla', 'Usa este código para confirmar que quieres eliminar tu cuenta de Necutla. Se borran tu nombre, usuario, correo y teléfono, y no se puede deshacer.'],
     ][$proposito];
     [$asunto, $frase] = $para;
     $saludo = $nombre !== '' ? 'Hola, ' . rtrim($nombre, '.') . '.' : 'Hola.';
-    $aviso = 'Si no fuiste tú, ignora este correo: nadie puede entrar sin el código. Nunca te lo pediremos por WhatsApp ni por teléfono.';
+    $aviso = $proposito === 'eliminar'
+        ? 'Si no fuiste tú, no compartas este código y cambia tu contraseña en Mi cuenta: alguien entró a tu cuenta. Nunca te lo pediremos por WhatsApp ni por teléfono.'
+        : 'Si no fuiste tú, ignora este correo: nadie puede entrar sin el código. Nunca te lo pediremos por WhatsApp ni por teléfono.';
     $texto = "$saludo\n\n$frase\n\n$codigo\n\nVence en 10 minutos y solo sirve una vez.\n\n$aviso\n\nNecutla, la ciudad del estudiante\n";
 
     $e = fn($v) => htmlspecialchars($v, ENT_QUOTES | ENT_HTML5, 'UTF-8');

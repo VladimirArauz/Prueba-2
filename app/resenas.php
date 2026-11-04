@@ -6,6 +6,7 @@
  */
 
 const RESENAS_POR_PAGINA = 10;
+const CLIENTE_ANONIMO = 'Cliente de Necutla'; // nombre de las opiniones de cuentas eliminadas
 const ORDENES_RESENAS = [
     'recientes' => 'r.creado_en DESC, r.id DESC',
     'mejores' => 'r.calificacion DESC, r.creado_en DESC, r.id DESC',
@@ -52,10 +53,11 @@ function rutas_resenas(): void
         $pagina = v_entero(consulta('pagina'), 'La página', 1, 1000, 1);
 
         $resumen = filas('SELECT calificacion, COUNT(*) AS total FROM resenas WHERE producto_id = ? AND visible GROUP BY calificacion', [$productoId]);
-        $lista = filas('SELECT r.id, c.nombre, r.calificacion, r.comentario, r.respuesta, r.creado_en, r.actualizado_en
-                        FROM resenas r JOIN clientes c ON c.id = r.cliente_id
+        // Opinión de una cuenta eliminada: se queda sin nombre
+        $lista = filas('SELECT r.id, COALESCE(c.nombre, ?) AS nombre, r.calificacion, r.comentario, r.respuesta, r.creado_en, r.actualizado_en
+                        FROM resenas r LEFT JOIN clientes c ON c.id = r.cliente_id
                         WHERE r.producto_id = ? AND r.visible
-                        ORDER BY ' . ORDENES_RESENAS[$orden] . ' LIMIT ? OFFSET ?', [$productoId, RESENAS_POR_PAGINA, ($pagina - 1) * RESENAS_POR_PAGINA]);
+                        ORDER BY ' . ORDENES_RESENAS[$orden] . ' LIMIT ? OFFSET ?', [CLIENTE_ANONIMO, $productoId, RESENAS_POR_PAGINA, ($pagina - 1) * RESENAS_POR_PAGINA]);
         $cliente = cargar_cliente();
 
         $distribucion = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];

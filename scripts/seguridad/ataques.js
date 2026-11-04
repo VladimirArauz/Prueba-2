@@ -8,7 +8,7 @@
  * encargados al terminar. Cada prueba dice qué espera y a qué hallazgo de
  * plans/auditorias/2026-10-20-seguridad.md corresponde. Sale con código 1 si alguna falla.
  *
- * Entrar, registrarse y restablecer piden el código del correo: en local, app/config.php lleva
+ * Entrar, registrarse, restablecer y eliminar la cuenta piden el código del correo: en local, app/config.php lleva
  * 'correo' => ['modo' => 'archivo'] y el código se lee de /tmp/necutla-correos/ (codigoDe).
  *
  * Cada petición lleva su propia IP en X-Forwarded-For para que el límite general de la API no
@@ -87,7 +87,7 @@ function datosCliente(nombre, extra = {}) {
   return {
     nombre, usuario: `${nombre}-${SUFIJO}`.toLowerCase().slice(0, 30), correo: `${nombre}-${SUFIJO}@prueba.local`,
     pais: "MX", telefono: `55${String(Date.now() % 1e4).padStart(4, "0")}${String(telSeq).padStart(4, "0")}`,
-    password: PASS_CLIENTE, confirmar: PASS_CLIENTE, ...extra
+    password: PASS_CLIENTE, confirmar: PASS_CLIENTE, edad: true, ...extra
   };
 }
 
@@ -677,7 +677,7 @@ async function main() {
   });
   await prueba("R", "registro: teléfono de España con 9 dígitos se acepta y se guarda privado", async () => {
     const r = await registrarConDatos(datosCliente("espana", { pais: "ES", telefono: "612 345 678" }));
-    return espera(r.status === 200 && !/612345678|telefono/.test(r.texto) && r.json.usuario === `espana-${SUFIJO}`, `${r.status} ${r.texto}`);
+    return espera(r.status === 200 && !/612345678|"telefono"\s*:\s*"/.test(r.texto) && r.json.usuario === `espana-${SUFIJO}`, `${r.status} ${r.texto}`);
   });
   await prueba("R", "registro: usuario o correo repetido → 409 con el mismo mensaje (no dice cuál)", async () => {
     const a = await registro(datosCliente("cliente1", { correo: `otro-${SUFIJO}@prueba.local` }));
@@ -722,7 +722,7 @@ async function main() {
     await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: s, body: { estrellas: 5, comentario: "Muy bueno" } });
     const a = await pedir("GET", "/api/clientes/sesion", { sesion: s });
     const b = await pedir("GET", `/api/productos/${prodA}/resenas`);
-    return espera(!/\+52|telefono|pais/.test(a.texto + b.texto) && a.json.incompleta === false, `${a.texto} ${b.texto.slice(0, 120)}`);
+    return espera(!/\+52|"telefono"\s*:\s*"|"pais"/.test(a.texto + b.texto) && a.json.incompleta === false, `${a.texto} ${b.texto.slice(0, 120)}`);
   });
   await prueba("R", "cliente: cambiar contraseña pide la actual, la confirma y saca a los otros navegadores", async () => {
     const { correo } = await registrarCliente("cambio");
@@ -746,9 +746,10 @@ async function main() {
     const r = await pedir("PUT", "/api/clientes/password", { body: { actual: "a", nueva: "b", confirmar: "b" } });
     return espera(r.status === 401, r.status);
   });
-  await prueba("R", "cliente: completar cuenta valida el teléfono", async () => {
+  // Completar solo pide lo que falta (plan 2026-11-04): un teléfono que ya está no se cambia por ahí
+  await prueba("R", "cliente: completar no cambia un teléfono que ya está, aunque llegue uno inválido", async () => {
     const r = await pedir("PUT", "/api/clientes/completar", { sesion: cli2.sesion, body: { pais: "MX", telefono: "123" } });
-    return espera(r.status === 400, `${r.status} ${r.texto}`);
+    return espera(r.status === 200 && r.json.incompleta === false && !/123/.test(JSON.stringify(r.json.falta)), `${r.status} ${r.texto}`);
   });
 
   // Necutools: correo opcional y login con usuario o correo
@@ -902,6 +903,64 @@ async function main() {
       const vence = (r.galletas.find(c => /necutla\.sid=/.test(c)) || "").match(/Expires=([^;]+)/);
       const horas = vence ? (Date.parse(vence[1]) - Date.now()) / 36e5 : 99;
       return espera(r.status === 200 && horas <= 8.1, `${r.status} ${horas}`);
+    });
+  }
+
+  // ---------- Casilla de edad y eliminar la cuenta (plan 2026-11-04-cumplimiento-legal-cuenta-y-edad) ----------
+  {
+    for (const [nombre, edad] of [["sin la casilla", undefined], ["con la casilla en texto", "true"], ["con la casilla en false", false]]) {
+      await prueba("LEG", `registro ${nombre} → 400`, async () => {
+        const body = datosCliente(`edad-${nombre.length}`);
+        if (edad === undefined) delete body.edad; else body.edad = edad;
+        const r = await pedir("POST", "/api/clientes/registro", { body });
+        return espera(r.status === 400 && /casilla de edad/.test(r.texto), `${r.status} ${r.texto}`);
+      });
+    }
+    const borrar = datosCliente("borrar");
+    const sb = {};
+    await registrarConDatos(borrar, sb);
+    await prueba("LEG", "una cuenta nueva no queda incompleta", async () => {
+      const r = await pedir("GET", "/api/clientes/sesion", { sesion: sb });
+      return espera(r.json && r.json.incompleta === false && r.json.falta && r.json.falta.edad === false, r.texto);
+    });
+    await prueba("LEG", "eliminar sin sesión → 401", async () => {
+      const a = await pedir("POST", "/api/clientes/eliminar");
+      const b = await pedir("POST", "/api/clientes/eliminar/codigo", { body: { codigo: "123456" } });
+      return espera(a.status === 401 && b.status === 401, `${a.status} ${b.status}`);
+    });
+    await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: sb, body: { calificacion: 4, comentario: "Opinión que se queda sin nombre" } });
+    const pide = await pedir("POST", "/api/clientes/eliminar", { sesion: sb });
+    const codigo = await codigoDe(borrar.correo);
+    await prueba("LEG", "eliminar: responde que falta el código, sin mandarlo en la respuesta", async () =>
+      espera(pide.status === 200 && pide.json.codigo === true && pide.json.proposito === "eliminar" && !pide.texto.includes(codigo), `${pide.status} ${pide.texto}`));
+    await prueba("LEG", "el código de eliminar no sirve en la sesión de otra cuenta → 410", async () => {
+      const r = await pedir("POST", "/api/clientes/eliminar/codigo", { body: { codigo }, sesion: cli1.sesion });
+      const sigue = await pedir("GET", "/api/clientes/sesion", { sesion: cli1.sesion });
+      return espera(r.status === 410 && sigue.json.autenticado === true, `${r.status} ${sigue.texto}`);
+    });
+    await prueba("LEG", "el código de eliminar no sirve para entrar → 410", async () => {
+      const r = await pedir("POST", "/api/clientes/login/codigo", { body: { codigo }, sesion: sb });
+      return espera(r.status === 410, `${r.status} ${r.texto}`);
+    });
+    await prueba("LEG", "código equivocado → 401 y la cuenta sigue", async () => {
+      const malo = String((Number(codigo) + 1) % 1e6).padStart(6, "0");
+      const r = await pedir("POST", "/api/clientes/eliminar/codigo", { body: { codigo: malo }, sesion: sb });
+      const sigue = await pedir("GET", "/api/clientes/sesion", { sesion: sb });
+      return espera(r.status === 401 && sigue.json.autenticado === true, `${r.status} ${sigue.texto}`);
+    });
+    await prueba("LEG", "con el código correcto se elimina, se cierra la sesión y la opinión queda sin nombre", async () => {
+      const pide2 = await pedir("POST", "/api/clientes/eliminar", { sesion: sb });
+      const r = await pedir("POST", "/api/clientes/eliminar/codigo", { body: { codigo: pide2.status === 200 ? await codigoDe(borrar.correo) : "" }, sesion: sb });
+      const ses = await pedir("GET", "/api/clientes/sesion", { sesion: sb });
+      const entra = await pedir("POST", "/api/clientes/login", { body: { identificador: borrar.usuario, password: PASS_CLIENTE } });
+      const opiniones = await pedir("GET", `/api/productos/${prodA}/resenas`);
+      return espera(r.status === 200 && r.json.eliminada === true && ses.json.autenticado === false && entra.status === 401
+        && opiniones.texto.includes("Cliente de Necutla") && !opiniones.texto.includes(borrar.nombre),
+        `${r.status} ${r.texto} ${ses.texto} ${entra.status}`);
+    });
+    await prueba("LEG", "el mismo correo y usuario se pueden registrar otra vez", async () => {
+      const r = await registrarConDatos({ ...borrar }, {});
+      return espera(r.status === 200 && r.json.autenticado === true, `${r.status} ${r.texto}`);
     });
   }
 

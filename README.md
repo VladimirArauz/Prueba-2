@@ -116,9 +116,14 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   solo editan las tiendas que tienen asignadas. Se entra con el usuario o con el correo en el mismo campo.
 - **Cuentas de cliente** (`/cuenta.html`, solo para opinar): nombre, usuario único, correo con un dominio
   que reciba correos (revisión DNS MX), teléfono con la lada de su país (privado: no sale en ninguna
-  respuesta) y contraseña escrita dos veces.
-- **Código por correo** (`app/codigos.php`, `app/correo.php`, `public/js/codigo.js`): entrar, crear la cuenta y
-  "¿Olvidaste tu contraseña?" piden un código de 6 dígitos que llega desde `tienda@necutla.com`. Vence a los
+  respuesta), contraseña escrita dos veces y la casilla "Tengo 18 años o más, o mi madre, padre o tutor me dio
+  permiso" (se guarda la fecha en `clientes.edad_aceptada_en`; las cuentas de antes la marcan en "Completa tu cuenta").
+- **Eliminar mi cuenta** (Mi cuenta, plan `2026-11-04-cumplimiento-legal-cuenta-y-edad.md`): ventana de confirmación
+  y código por correo (`/api/clientes/eliminar` y `/api/clientes/eliminar/codigo`). Se borran la cuenta, sus códigos,
+  sus frenos de login y sus sesiones (la de Necutools del mismo navegador sigue). Sus opiniones se quedan con
+  `cliente_id` en NULL y salen como "Cliente de Necutla" en la tienda y en Necutools.
+- **Código por correo** (`app/codigos.php`, `app/correo.php`, `public/js/codigo.js`): entrar, crear la cuenta,
+  eliminarla y "¿Olvidaste tu contraseña?" piden un código de 6 dígitos que llega desde `tienda@necutla.com`. Vence a los
   10 minutos, sirve una vez, aguanta 5 intentos y solo vale en el navegador que lo pidió; se reenvía cada 60 s
   (5 por hora). La cuenta se crea hasta poner el código, y entonces la sesión se inicia sola. Restablecer no dice
   si una cuenta existe. En local los correos se guardan en `/tmp/necutla-correos/` (`correo.modo = 'archivo'`).

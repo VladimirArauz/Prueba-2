@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 CREATE TABLE IF NOT EXISTS resenas (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   producto_id     INT UNSIGNED NOT NULL,
-  cliente_id      INT UNSIGNED NOT NULL,
+  cliente_id      INT UNSIGNED,
   calificacion    SMALLINT NOT NULL,
   comentario      VARCHAR(500) NOT NULL,
   respuesta       VARCHAR(500),
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS resenas (
   KEY resenas_producto_idx (producto_id, visible),
   KEY resenas_cliente_idx (cliente_id),
   CONSTRAINT resenas_producto_fk FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE CASCADE,
-  CONSTRAINT resenas_cliente_fk FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE,
+  CONSTRAINT resenas_cliente_fk2 FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE SET NULL,
   CONSTRAINT resenas_calificacion_check CHECK (calificacion BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -449,10 +449,25 @@ CREATE TABLE IF NOT EXISTS codigos_correo (
   PRIMARY KEY (id),
   UNIQUE KEY codigos_correo_proposito_idx (correo, proposito),
   KEY codigos_correo_creado_idx (creado_en),
-  CONSTRAINT codigos_correo_proposito_check CHECK (proposito IN ('login', 'registro', 'restablecer'))
+  CONSTRAINT codigos_correo_proposito_check2 CHECK (proposito IN ('login', 'registro', 'restablecer', 'eliminar'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte: el secreto de los 2 pasos se guarda cifrado
 -- (sodium, "s1:" + base64) y ya no cabe en 64. MODIFY se puede correr las veces que sea.
 -- Los secretos en claro que ya existan se cifran con scripts/cifrar-totp.php (o solos, la próxima vez que se usan).
 ALTER TABLE admins MODIFY totp_secreto VARCHAR(160) CHARACTER SET ascii COLLATE ascii_bin;
+
+-- ---------- 2026-11-04: casilla de edad, eliminar la cuenta y opiniones anónimas (plan 2026-11-04-cumplimiento-legal-cuenta-y-edad.md) ----------
+
+-- Cuándo aceptó la cuenta "Tengo 18 años o más, o mi madre, padre o tutor me dio permiso". NULL = cuenta de antes:
+-- la acepta en "Completa tu cuenta".
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS edad_aceptada_en DATETIME(6) NULL AFTER sesion_version;
+
+-- Al eliminar una cuenta, sus opiniones se quedan sin dueño ("Cliente de Necutla") en vez de borrarse
+ALTER TABLE resenas DROP FOREIGN KEY IF EXISTS resenas_cliente_fk;
+ALTER TABLE resenas MODIFY cliente_id INT UNSIGNED NULL;
+ALTER TABLE resenas ADD CONSTRAINT resenas_cliente_fk2 FOREIGN KEY IF NOT EXISTS (cliente_id) REFERENCES clientes (id) ON DELETE SET NULL;
+
+-- Código por correo para eliminar la cuenta
+ALTER TABLE codigos_correo DROP CONSTRAINT IF EXISTS codigos_correo_proposito_check;
+ALTER TABLE codigos_correo ADD CONSTRAINT IF NOT EXISTS codigos_correo_proposito_check2 CHECK (proposito IN ('login', 'registro', 'restablecer', 'eliminar'));

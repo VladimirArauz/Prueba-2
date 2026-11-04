@@ -2225,6 +2225,16 @@ textarea {
   cursor: pointer;
 }
 
+.check-label.casilla-edad {
+  align-items: flex-start;
+  line-height: 1.5;
+}
+
+.casilla-edad input[type="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
 input[type="checkbox"] {
   width: 18px;
   height: 18px;

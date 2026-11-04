@@ -155,7 +155,8 @@ function estadoDe(input) {
     estado.className = "campo-estado";
     estado.id = `${input.id}-estado`;
     estado.setAttribute("aria-live", "polite");
-    const despues = grupo.querySelector(":scope > .medidor-bloque") || input.closest(".campo-telefono") || input.closest(".campo-icono") || input;
+    const casilla = input.type === "checkbox" && input.closest("label");
+    const despues = grupo.querySelector(":scope > .medidor-bloque") || input.closest(".campo-telefono") || input.closest(".campo-icono") || casilla || input;
     despues.after(estado);
     const ids = new Set((input.getAttribute("aria-describedby") || "").split(" ").filter(Boolean));
     ids.add(estado.id);
@@ -230,7 +231,8 @@ function prepararCampo(input, revisar, { espera = 0, enVivo = null } = {}) {
     const destino = event.relatedTarget;
     if (destino && destino.type === "submit" && destino.form === input.form) return;
     clearTimeout(temporizador);
-    if (input.value || datos.tocado) revisarCampo(input);
+    // Una casilla sin marcar no cuenta como escrita: pasar por ella con Tab no marca error
+    if ((input.type === "checkbox" ? input.checked : input.value) || datos.tocado) revisarCampo(input);
   });
   input.addEventListener("input", () => {
     if (!CAMPOS.get(input).tocado) return;
