@@ -122,6 +122,12 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   y código por correo (`/api/clientes/eliminar` y `/api/clientes/eliminar/codigo`). Se borran la cuenta, sus códigos,
   sus frenos de login y sus sesiones (la de Necutools del mismo navegador sigue). Sus opiniones se quedan con
   `cliente_id` en NULL y salen como "Cliente de Necutla" en la tienda y en Necutools.
+- **Sin groserías en lo público** (`app/groserias.php`, plan `2026-11-04-filtro-groserias.md`): nombre y usuario de
+  los clientes, opiniones, respuestas de las tiendas y todo lo que se publica desde Necutools (tiendas, productos,
+  servicios, subcategorías, colores, ofertas y promociones) pasan por `v_publico()` y dan 400 si llevan groserías en
+  español o en inglés, aunque vengan con acentos, números (`pend3jo`), letras repetidas o separadas. Para agregar o
+  quitar una palabra se edita la lista de ese archivo: `GROSERIAS_PALABRAS` (palabra completa, para las que van dentro de
+  palabras normales, como "puta" en computadora) o `GROSERIAS_RAICES` (cuentan dentro de otra palabra).
 - **Código por correo** (`app/codigos.php`, `app/correo.php`, `public/js/codigo.js`): entrar, crear la cuenta,
   eliminarla y "¿Olvidaste tu contraseña?" piden un código de 6 dígitos que llega desde `tienda@necutla.com`. Vence a los
   10 minutos, sirve una vez, aguanta 5 intentos y solo vale en el navegador que lo pidió; se reenvía cada 60 s

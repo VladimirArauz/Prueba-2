@@ -23,7 +23,7 @@ function exigir_producto_publico($id): int
 
 function comentario_valido($valor): string
 {
-    $comentario = v_texto($valor, 'tu comentario', 500, true);
+    $comentario = v_publico($valor, 'tu comentario', 500, true);
     if (mb_strlen($comentario) < 3) throw dato_invalido('Escribe un comentario de al menos 3 letras.');
     // Sin enlaces: es la forma más común de spam
     if (preg_match('/(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|mx|ly|io)\b)/i', $comentario)) {

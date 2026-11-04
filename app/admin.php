@@ -64,11 +64,11 @@ function conflicto(Throwable $e, string $mensaje): void
 // ================= Tiendas =================
 function datos_tienda(array $b): array
 {
-    $nombre = v_texto($b['nombre'] ?? null, 'el nombre de la tienda', 50, true);
+    $nombre = v_publico($b['nombre'] ?? null, 'el nombre de la tienda', 50, true);
     return [
         'nombre' => $nombre,
         'slug' => v_slug($b['slug'] ?? null, 'la dirección de la tienda', $nombre),
-        'descripcion' => v_texto($b['descripcion'] ?? null, 'la descripción', 300),
+        'descripcion' => v_publico($b['descripcion'] ?? null, 'la descripción', 300),
         'icono' => in_array($b['icono'] ?? null, ICONOS_TIENDA, true) ? $b['icono'] : 'store',
         'whatsapp' => numeros_whatsapp($b['whatsapp'] ?? null),
         'orden' => v_entero($b['orden'] ?? null, 'El orden', 0, 9999, 100),
@@ -93,13 +93,13 @@ function datos_producto(array $b): array
         'standId' => $stand['id'],
         'subcategoriaId' => $subcategoriaId,
         'tipo' => $tipo,
-        'nombre' => v_texto($b['nombre'] ?? null, $tipo === 'producto' ? 'el nombre del producto' : 'el nombre del servicio', 120, true),
+        'nombre' => v_publico($b['nombre'] ?? null, $tipo === 'producto' ? 'el nombre del producto' : 'el nombre del servicio', 120, true),
         'precioModo' => $precioModo,
         'precio' => $precioModo === 'cotizar' ? null : v_precio($b['precio'] ?? null),
         'disponibilidad' => in_array($b['disponibilidad'] ?? null, DISPONIBILIDAD, true) ? $b['disponibilidad'] : 'Disponible',
         // Obligatorio en productos sin colores (la ruta lo revisa); los servicios no llevan stock
         'stock' => $tipo === 'producto' ? v_entero($b['stock'] ?? null, 'El stock', 0, MAX_STOCK, null) : null,
-        'descripcion' => v_texto($b['descripcion'] ?? null, 'la descripción', 1000),
+        'descripcion' => v_publico($b['descripcion'] ?? null, 'la descripción', 1000),
         'visible' => v_booleano($b['visible'] ?? null, true),
         'orden' => v_entero($b['orden'] ?? null, 'El orden', 0, 9999, 0),
         'imagen' => imagen_de($b),
@@ -137,7 +137,7 @@ function datos_color(array $b, bool $nuevo): array
     $imagen = imagen_de($b);
     if ($nuevo && !$imagen) throw dato_invalido('Sube la foto del producto en ese color.');
     return [
-        'nombre' => v_texto($b['nombre'] ?? null, 'el nombre del color', 30, true),
+        'nombre' => v_publico($b['nombre'] ?? null, 'el nombre del color', 30, true),
         'hex' => $hex,
         'imagen' => $imagen,
         'disponible' => v_booleano($b['disponible'] ?? null, true),
@@ -213,7 +213,7 @@ function datos_oferta(array $b): array
         }
         if (!$dias) throw dato_invalido('Elige al menos un día de la semana.');
     } elseif ($clase === 'temporada') {
-        $temporada = v_texto($b['temporada'] ?? null, 'la temporada', 40, true);
+        $temporada = v_publico($b['temporada'] ?? null, 'la temporada', 40, true);
         $inicio = v_fecha($b['inicio'] ?? null, 'la fecha de inicio');
         $fin = v_fecha($b['fin'] ?? null, 'la fecha de fin');
     } else {
@@ -226,8 +226,8 @@ function datos_oferta(array $b): array
     return [
         'standId' => $stand['id'], 'productoId' => $productoId, 'subcategoriaId' => $subcategoriaId, 'tipo' => $tipo, 'valor' => $valor,
         'dias' => json_encode($dias), 'clase' => $clase, 'temporada' => $temporada, 'inicio' => $inicio, 'fin' => $fin, 'piezas' => $piezas,
-        'titulo' => v_texto($b['titulo'] ?? null, 'el título de la oferta', 80, true),
-        'descripcion' => v_texto($b['descripcion'] ?? null, 'la descripción', 300),
+        'titulo' => v_publico($b['titulo'] ?? null, 'el título de la oferta', 80, true),
+        'descripcion' => v_publico($b['descripcion'] ?? null, 'la descripción', 300),
         'activa' => v_booleano($b['activa'] ?? null, true),
     ];
 }
@@ -259,8 +259,8 @@ function datos_promocion(array $b): array
     $encontrados = filas('SELECT id FROM productos WHERE id IN (' . marcas($ids) . ") AND tipo = 'producto'", $ids);
     if (count($encontrados) !== count($items)) throw dato_invalido('Algún producto del paquete ya no existe.');
     return [
-        'titulo' => v_texto($b['titulo'] ?? null, 'el título de la promoción', 100, true),
-        'descripcion' => v_texto($b['descripcion'] ?? null, 'la descripción', 600),
+        'titulo' => v_publico($b['titulo'] ?? null, 'el título de la promoción', 100, true),
+        'descripcion' => v_publico($b['descripcion'] ?? null, 'la descripción', 600),
         'precio' => v_precio($b['precio'] ?? null, 'el precio del paquete'),
         'inicio' => $inicio, 'fin' => $fin,
         'destacada' => v_booleano($b['destacada'] ?? null, false),
@@ -440,7 +440,7 @@ function rutas_admin(): void
 
     // ================= Subcategorías =================
     $datosSub = function (array $b): array {
-        $nombre = v_texto($b['nombre'] ?? null, 'el nombre de la subcategoría', 60, true);
+        $nombre = v_publico($b['nombre'] ?? null, 'el nombre de la subcategoría', 60, true);
         return ['nombre' => $nombre, 'slug' => v_slug($nombre, 'el nombre de la subcategoría'), 'orden' => v_entero($b['orden'] ?? null, 'El orden', 0, 9999, 0)];
     };
     $exigirSub = function ($id): array {
@@ -700,7 +700,7 @@ function rutas_admin(): void
         $r = $id ? fila('SELECT r.id, p.stand_id FROM resenas r JOIN productos p ON p.id = r.producto_id WHERE r.id = ?', [$id]) : null;
         if (!$r) throw new ErrorHttp(404, 'Esa opinión no existe.');
         exigir_stand($r['stand_id']);
-        $respuesta = v_texto(campo('respuesta'), 'la respuesta', 500) ?: null;
+        $respuesta = v_publico(campo('respuesta'), 'la respuesta', 500) ?: null;
         $visible = v_booleano(campo('visible'), true);
         // respondida_en primero: compara con la respuesta de antes
         q('UPDATE resenas SET

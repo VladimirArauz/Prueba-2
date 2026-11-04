@@ -964,6 +964,48 @@ async function main() {
     });
   }
 
+  // ---------- Groserías en lo que se publica (plan 2026-11-04-filtro-groserias) ----------
+  {
+    const grs = r => espera(r.status === 400 && /no se permiten en Necutla/.test(r.texto), `${r.status} ${r.texto}`);
+    await prueba("GRS", "registro: nombre con groserías → 400", async () =>
+      grs(await pedir("POST", "/api/clientes/registro", { body: datosCliente("grsnombre", { nombre: "Pinche Pend3jo" }) })));
+    await prueba("GRS", "registro: usuario con una grosería pegada → 400", async () =>
+      grs(await pedir("POST", "/api/clientes/registro", { body: datosCliente("grsusuario", { usuario: `elpendejo-${SUFIJO}` }) })));
+    await prueba("GRS", "opinión con groserías (letras repetidas y separadas) → 400", async () =>
+      grs(await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: cli1.sesion, body: { calificacion: 1, comentario: "Qué puuuta m i e r d a" } })));
+    await prueba("GRS", "opinión en inglés con groserías → 400", async () =>
+      grs(await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: cli1.sesion, body: { calificacion: 1, comentario: "This is bullsh1t" } })));
+    await prueba("GRS", "opinión limpia con palabras parecidas (computadora, disputa, class) → 200", async () => {
+      const r = await pedir("PUT", `/api/productos/${prodA}/resena`, { sesion: cli1.sesion, body: { calificacion: 5, comentario: "Computadora de primera class, sin disputa" } });
+      return espera(r.status === 200 || r.status === 201, `${r.status} ${r.texto}`);
+    });
+    await prueba("GRS", "Necutools: nombre de producto → 400", async () =>
+      grs(await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "Playera chingona", precio: 1, stock: 1 } })));
+    await prueba("GRS", "Necutools: descripción de producto → 400", async () =>
+      grs(await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "Playera", descripcion: "What the fuck", precio: 1, stock: 1 } })));
+    await prueba("GRS", "Necutools: color → 400", async () =>
+      grs(await pedir("POST", `/api/admin/productos/${prodA}/colores`, { sesion: dueno, body: { nombre: "Verga", hex: "#000000", stock: 1, imagen: dataUrl("image/png", PNG_1x1) } })));
+    await prueba("GRS", "Necutools: subcategoría → 400", async () =>
+      grs(await pedir("POST", `/api/admin/tiendas/${A.id}/subcategorias`, { sesion: dueno, body: { nombre: "Cabrones" } })));
+    await prueba("GRS", "Necutools: nombre de la tienda → 400", async () =>
+      grs(await pedir("PUT", `/api/admin/tiendas/${A.id}`, { sesion: dueno, body: { nombre: "P u t a" } })));
+    await prueba("GRS", "Necutools: título de oferta → 400", async () =>
+      grs(await pedir("POST", "/api/admin/ofertas", { sesion: dueno, body: { stand_id: A.id, tipo: "porcentaje", aplica: "tienda", valor: 10, titulo: "Oferta de mierda", dias: [1] } })));
+    await prueba("GRS", "Necutools: título de promoción → 400", async () =>
+      grs(await pedir("POST", "/api/admin/promociones", { sesion: dueno, body: { titulo: "Promo culera", precio: 10,
+        inicio: "2026-01-01", fin: "2026-12-31", items: [{ producto_id: prodA, cantidad: 1 }] } })));
+    await prueba("GRS", "Necutools: respuesta a una opinión → 400", async () => {
+      const lista = (await pedir("GET", "/api/admin/resenas", { sesion: dueno })).json || [];
+      const opinion = lista.find(o => o.producto_id === prodA);
+      if (!opinion) return no("no hay opinión para responder");
+      return grs(await pedir("PUT", `/api/admin/resenas/${opinion.id}`, { sesion: dueno, body: { respuesta: "No mames, mamón" } }));
+    });
+    await prueba("GRS", "Necutools: nombre limpio con palabras parecidas → 201", async () => {
+      const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: `Película y computadora ${SUFIJO}`, precio: 1, stock: 1 } });
+      return espera(r.status === 201, `${r.status} ${r.texto}`);
+    });
+  }
+
   // ---------- Captcha (plan 2026-10-31-seguridad-turnstile-y-cloudflare-aparte) ----------
   const captchaActivo = Boolean(((await pedir("GET", "/api/config")).json || {}).captcha);
   await prueba("N11", "/api/config manda la llave pública del captcha", async () => espera(captchaActivo, "captcha vacío en app/config.php"));

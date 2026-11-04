@@ -22,6 +22,12 @@ function v_texto($valor, string $campo, int $max, bool $requerido = false, ?stri
     return $limpio !== '' ? $limpio : $defecto;
 }
 
+// Texto que se publica y ve todo el mundo: como v_texto, y además sin groserías (app/groserias.php)
+function v_publico($valor, string $campo, int $max, bool $requerido = false, ?string $defecto = ''): ?string
+{
+    return sin_groserias(v_texto($valor, $campo, $max, $requerido, $defecto), $campo);
+}
+
 function id_valido($valor): ?int
 {
     $id = js_numero($valor);
@@ -145,7 +151,7 @@ function usuario_valido($valor, int $max = 30): string
     if (!preg_match('/^[a-z0-9._-]{3,' . $max . '}$/', $usuario)) {
         throw dato_invalido("El nombre de usuario debe tener de 3 a $max letras sin acentos, números, punto, guion o guion bajo.");
     }
-    return $usuario;
+    return sin_groserias($usuario, 'el nombre de usuario');
 }
 
 // Mismo formato que public/js/validacion.js: sin espacios, un solo @, dominio con punto y terminación de 2 letras o más

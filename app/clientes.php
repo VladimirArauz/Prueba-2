@@ -138,7 +138,7 @@ function rutas_clientes(): void
         // se podrían probar correos sin límite.
         limitar_si('registro', 30, UNA_HORA, 'Se crearon muchas cuentas desde esta conexión. Espera una hora y vuelve a intentar.',
             fn($s) => $s < 400 || $s === 409);
-        $nombre = v_texto(campo('nombre'), 'tu nombre', 60, true);
+        $nombre = v_publico(campo('nombre'), 'tu nombre', 60, true);
         if (mb_strlen($nombre) < 2) throw dato_invalido('Escribe tu nombre con al menos 2 letras.');
         $usuario = usuario_valido(campo('usuario'));
         $tel = v_telefono(campo('pais'), campo('telefono'));

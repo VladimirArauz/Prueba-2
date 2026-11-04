@@ -70,6 +70,7 @@ require __DIR__ . '/seguridad.php';
 require __DIR__ . '/captcha.php';
 require __DIR__ . '/sesiones.php';
 require __DIR__ . '/validar.php';
+require __DIR__ . '/groserias.php';
 require __DIR__ . '/contrasenas.php';
 require __DIR__ . '/intentos.php';
 require __DIR__ . '/totp.php';

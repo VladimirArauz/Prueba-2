@@ -1,7 +1,7 @@
 # Plan: lo que le falta a Necutla de la lista legal de @cooked_dev_ (eliminar cuenta, edad y textos legales)
 
 - **Fecha:** 2026-11-04
-- **Estado:** aplicado en local (prompts 1 a 4, 2026-11-04). Falta subirlo a IONOS (schema y archivos)
+- **Estado:** aplicado y subido a IONOS (prompts 1 a 4, 2026-11-04)
 - **Prompts:** `plans/prompts/2026-11-04-cumplimiento-legal-cuenta-y-edad.md`
 - **Alcance:** `db/mariadb/schema.sql` (consentimiento de edad, opiniones anónimas, código para eliminar), `app/clientes.php`,
   `app/codigos.php`, `app/correo.php`, `app/resenas.php`, `app/admin.php` (lista de opiniones), `public/cuenta.html`,

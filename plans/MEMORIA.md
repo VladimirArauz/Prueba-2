@@ -37,13 +37,16 @@ Cómo se usa:
 | `2026-10-31-fotos-tiendas-portada.md` | Aplicado (prompts 1 a 4) y subido a IONOS. Falta que el usuario revise las 7 fotos | 2026-10-31 |
 | `2026-11-01-whatsapp-emojis-y-mensaje-vistoso.md` | Aplicado (prompts 0 a 4) y subido a IONOS. Falta que el usuario pruebe en WhatsApp Web y en el celular | 2026-11-01 |
 | `2026-11-01-avisos-y-confirmaciones-propios.md` | Aplicado (prompts 0 a 4) y subido a IONOS. Falta que el usuario lo revise en su navegador | 2026-11-01 |
-| `2026-11-04-cumplimiento-legal-cuenta-y-edad.md` | Aplicado y probado en local (prompts 1 a 4). Falta subirlo a IONOS: el modo automático bloqueó el despliegue | 2026-11-04 |
+| `2026-11-04-cumplimiento-legal-cuenta-y-edad.md` | Aplicado y subido a IONOS (2026-11-04). Faltan los `[COMPLETAR]` y revisar 2 frases de la portada | 2026-11-04 |
+| `2026-11-04-filtro-groserias.md` | Aplicado (prompts 1 a 3) y subido a IONOS | 2026-11-04 |
 
 ---
 
 ## Pendientes
 
-**Casilla de edad, eliminar cuenta y textos legales (2026-11-04, aplicado en local, sin subir):** (a) **Subir a IONOS en este orden**: primero el schema (respaldo previo de `clientes`, `resenas` y `codigos_correo` en el servidor; correr `db/mariadb/schema.sql` 2 veces) y después por rsync `app/clientes.php`, `app/codigos.php`, `app/correo.php`, `app/resenas.php`, `app/admin.php`, `public/cuenta.html`, `public/index.html`, `public/privacidad.html`, `public/terminos.html`, `public/style.css`, `public/js/cuenta.js`, `public/js/validacion.js`. Si se suben los archivos sin el schema, el registro y entrar fallan (no existe `edad_aceptada_en`). Al intentarlo, el modo automático de Claude Code lo bloqueó por ser despliegue a producción: el usuario lo autoriza o lo corre él. Después, probar en vivo `/healthz`, el registro sin casilla (400) y las opiniones. (b) **Faltan los `[COMPLETAR]`**: nombre del responsable y domicilio (o ciudad y estado) en `public/privacidad.html:101`, y ciudad o estado para controversias en `public/terminos.html`. Las fechas ya dicen 4 de noviembre de 2026. (c) **Frases de la portada por revisar con el usuario** (no se cambiaron): el horario "Lun a sáb, 8:00 a 20:00" del tablero (¿lo cumplen todas las tiendas?) y "las opiniones de otros estudiantes" en "Qué es Necutla" (opina cualquiera con cuenta, sin compra verificada). (d) Los 2 clientes reales verán "Completa tu cuenta" con la casilla la próxima vez que entren. (e) Quedan en la base local 28 clientes `@prueba.local` del 2026-10-31 (de una corrida vieja de `ataques.js`, no de esta sesión).
+**Filtro de groserías (2026-11-04, aplicado y subido):** (a) la lista está en `app/groserias.php`; si un vendedor o cliente reporta que una palabra normal se bloquea, quitarla o pasarla de `GROSERIAS_RAICES` a `GROSERIAS_PALABRAS` y volver a correr las pruebas unitarias (132 frases, ver el plan). (b) No se tapan ni se dice qué palabra fue: el texto se rechaza completo. (c) Lo que ya estaba publicado en IONOS se revisó: 0 de 123 textos.
+
+**Casilla de edad, eliminar cuenta y textos legales (2026-11-04, aplicado y subido):** (a) (Resuelto 2026-11-04: subido a IONOS, ver "Cambios hechos".) (b) **Faltan los `[COMPLETAR]`**: nombre del responsable y domicilio (o ciudad y estado) en `public/privacidad.html:101`, y ciudad o estado para controversias en `public/terminos.html`. Las fechas ya dicen 4 de noviembre de 2026. (c) **Frases de la portada por revisar con el usuario** (no se cambiaron): el horario "Lun a sáb, 8:00 a 20:00" del tablero (¿lo cumplen todas las tiendas?) y "las opiniones de otros estudiantes" en "Qué es Necutla" (opina cualquiera con cuenta, sin compra verificada). (d) Los 2 clientes reales verán "Completa tu cuenta" con la casilla la próxima vez que entren. (e) Quedan en la base local 28 clientes `@prueba.local` del 2026-10-31 (de una corrida vieja de `ataques.js`, no de esta sesión).
 
 **Avisos y confirmaciones propios (2026-11-01, aplicado):** (a) el usuario revisa en su navegador (compu y celular) cancelar un pedido, marcarlo pagado, la nota y un error en Necutools, y vaciar el carrito. (b) **Excepción de diseño:** la sombra `--sombra-2` de la ventana `.dialogo` la autorizó el usuario solo para este plan; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) (Resuelto 2026-11-01: ya se desvanece al cerrar.) Subido a IONOS.
 
@@ -145,6 +148,17 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-04: sin groserías en lo que ve todo el mundo (plan `2026-11-04-filtro-groserias.md`, prompts 1 a 3)
+- Pedido del usuario: que comentarios, nombres de usuario, productos y todo lo público no acepten groserías en español ni en inglés.
+- `app/groserias.php` (nuevo, cargado en `app/arranque.php`): `GROSERIAS_PALABRAS` (palabra completa con plural) y `GROSERIAS_RAICES` (dentro de otra palabra); normaliza minúsculas, acentos (la ñ se queda), números y símbolos (`0→o 1→i 3→e 4→a 5→s 7→t @→a $→s`), letras sueltas separadas y letras repetidas (una doble de la lista sigue pidiendo dos: "as" pasa, "ass" no). `tiene_groserias()` y `sin_groserias()`.
+- `app/validar.php`: `v_publico()` (v_texto + sin groserías) y `usuario_valido()` también revisa. Se usa en `app/clientes.php` (nombre), `app/resenas.php` (comentario) y `app/admin.php` (tienda, producto o servicio, color, temporada, oferta, promoción, subcategoría y respuesta). Las notas de pedidos y el usuario de Necutools no (no se publican).
+- Pruebas: 132 frases unitarias (sin falsos positivos como computadora, disputa, película, class, Dickens, Scunthorpe, cono, shiitake; con groserías disfrazadas); `ataques.js` 278 de 278 con 14 pruebas nuevas "GRS"; en vivo, registro con groserías en el nombre, el usuario y en inglés → 400, y uno limpio llega hasta el captcha. Revisión de lo ya publicado: 0 de 123 textos en IONOS (0 de 235 en local).
+- Subido a IONOS por rsync (6 archivos de `app/`, idénticos; respaldo previo en `~/respaldos/2026-11-04-groserias/` del servidor). `README.md`.
+
+### 2026-11-04: subida a IONOS de la casilla de edad y eliminar mi cuenta
+- Con permiso del usuario. Respaldo de `clientes`, `resenas` y `codigos_correo` en `~/respaldos/2026-11-04-antes-legal.sql` del servidor (permisos 600, no se bajó); `db/mariadb/schema.sql` corrido 2 veces sin error (columna `edad_aceptada_en`, `resenas_cliente_fk2`). Respaldo de los 12 archivos en `~/respaldos/2026-11-04-archivos/` y subida por rsync (idénticos).
+- En vivo: `/healthz`, páginas y archivos 200; aviso con la fecha nueva; registro sin casilla → 400; eliminar sin sesión → 401; opiniones 200.
 
 ### 2026-11-04: casilla de edad, eliminar mi cuenta con código y textos legales (plan `2026-11-04-cumplimiento-legal-cuenta-y-edad.md`, prompts 1 a 4, solo en local)
 - **Base** (`db/mariadb/schema.sql`, corrida 2 veces en local): `clientes.edad_aceptada_en`; `resenas.cliente_id` nulo con `resenas_cliente_fk2 ON DELETE SET NULL` (también en el `CREATE TABLE`); propósito `eliminar` con `codigos_correo_proposito_check2`.
