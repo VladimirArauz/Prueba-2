@@ -44,7 +44,7 @@ Cómo se usa:
 
 ## Pendientes
 
-**Logo nuevo (2026-11-05, solo en local):** (a) falta commit y subir a IONOS (esperar el permiso del usuario). (b) El amarillo del logo es `#F2A900`, no `--senal` (`#F5B800`): se dejó como lo dio el usuario. (c) La imagen de vista previa (`recursos/og/og-necutla.svg`, `app/og-imagen.php`) y el correo del código (`app/correo.php`) siguen con la N vieja; al cambiarlas, subir `OG_VERSION` en `app/paginas.php`.
+**Logo nuevo (2026-11-05, aplicado y subido):** (a) (Resuelto 2026-11-05: commit `5e60661`, push y subido a IONOS.) (b) El amarillo del logo es `#F2A900`, no `--senal` (`#F5B800`): se dejó como lo dio el usuario. (c) La imagen de vista previa (`recursos/og/og-necutla.svg`, `app/og-imagen.php`) y el correo del código (`app/correo.php`) siguen con la N vieja; al cambiarlas, subir `OG_VERSION` en `app/paginas.php`.
 
 **Filtro de groserías (2026-11-04, aplicado y subido):** (a) la lista está en `app/groserias.php`; si un vendedor o cliente reporta que una palabra normal se bloquea, quitarla o pasarla de `GROSERIAS_RAICES` a `GROSERIAS_PALABRAS` y volver a correr las pruebas unitarias (132 frases, ver el plan). (b) No se tapan ni se dice qué palabra fue: el texto se rechaza completo. (c) Lo que ya estaba publicado en IONOS se revisó: 0 de 123 textos.
 
@@ -151,11 +151,12 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 
 ## Cambios hechos
 
-### 2026-11-05: logo nuevo y favicon (solo en local)
+### 2026-11-05: logo nuevo y favicon
 - Pedido del usuario: usar `~/Descargas/1000174739.png` como logo, sin el fondo blanco alrededor del recuadro azul, y crear el favicon.
 - `recursos/iconos/logo-original.png` (copia del original) y `recursos/iconos/generar.py` (nuevo, Pillow; reemplaza a `icono.html`, borrado): quita el blanco rellenando desde las orillas (la N blanca no se toca) y recorta. Genera `public/imagenes/logo.png` (256, nuevo), `favicon-32.png`, `icono-192.png`, `icono-512.png` (también el `logo` del JSON-LD), `icono-maskable-512.png`, `public/favicon.ico` (16, 32 y 48) y `public/apple-touch-icon.png` (estos dos últimos iconos de app van sobre cuadrado `--tinta`, sin transparencia).
 - Las 10 páginas: `<img class="brand-emblem" src="/imagenes/logo.png">` en lugar de la N de texto (barra, cajón y pie) y `favicon.ico` en lugar de `favicon.svg` (borrado). `public/style.css`: `.brand-emblem` y `.footer-brand .brand-emblem` sin los estilos de la letra. `README.md`.
 - Revisado con Chrome sin ventana a 1280 y 360 px y el pie aparte: sin halo y sin scroll horizontal nuevo. En el pie, el recuadro azul se funde con el fondo azul y se ven solo la N y la estrella.
+- Commit `5e60661` y push. Subido a IONOS por rsync (18 archivos; respaldo previo en `~/respaldos/2026-11-05-logo/` del servidor) y `favicon.svg` borrado allá. En vivo: `/healthz` 200, 9 páginas con el logo, logo, favicon, iconos y `style.css` idénticos a los locales.
 
 ### 2026-11-04: sin groserías en lo que ve todo el mundo (plan `2026-11-04-filtro-groserias.md`, prompts 1 a 3)
 - Pedido del usuario: que comentarios, nombres de usuario, productos y todo lo público no acepten groserías en español ni en inglés.
