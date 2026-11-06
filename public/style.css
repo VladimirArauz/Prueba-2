@@ -770,15 +770,7 @@ body {
 .brand-emblem {
   width: 40px;
   height: 40px;
-  border-radius: var(--r-panel);
-  background: var(--tinta);
-  color: var(--senal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.375rem;
-  font-variation-settings: 'wdth' 125;
+  display: block;
   flex-shrink: 0;
 }
 
@@ -1705,11 +1697,8 @@ textarea {
 }
 
 .footer-brand .brand-emblem {
-  background: var(--senal);
-  color: var(--tinta);
   width: 36px;
   height: 36px;
-  font-size: 1.125rem;
 }
 
 .footer-col h3,
