@@ -488,11 +488,12 @@ function renderPedidos() {
         <div class="cell-sub">${escapeHTML(fechaPedido(p.creado_en))}</div>
         <div class="cell-sub">${escapeHTML(tiendaPedido(p))}</div>
       </td>
+      <td>${escapeHTML(p.cliente || "Sin cuenta")}</td>
       <td><ul class="pedido-items">${p.items.map(i => `<li>${i.cantidad} × ${escapeHTML(i.nombre)}${p.estado === "en_proceso" ? avisoStock(i) : ""}</li>`).join("")}</ul></td>
       <td class="cell-price">${money(p.total)}<div class="cell-sub">${p.piezas} ${p.piezas === 1 ? "pieza" : "piezas"}</div></td>
       <td>${estadoPedido(p.estado)}${p.nota ? `<div class="pedido-nota">${escapeHTML(p.nota)}</div>` : ""}</td>
       <td class="col-actions"><div class="pedido-acciones">${accionesPedido(p)}</div></td>
-    </tr>`).join("") : filaVacia(5, st.pedidosEstado
+    </tr>`).join("") : filaVacia(6, st.pedidosEstado
       ? "No hay pedidos con este estado."
       : "Aún no hay pedidos. Cuando un cliente envíe su carrito por WhatsApp, aparecerá aquí.");
   $("pedidos-paginas").innerHTML = paginas > 1 ? `
@@ -866,6 +867,7 @@ function actualizarFormProducto() {
   const editando = st.editando.producto && st.productos.find(x => x.id === st.editando.producto.id);
   const conColores = Boolean(editando && editando.colores.length);
   $("prod-stock-group").hidden = servicio || conColores;
+  $("prod-minimo-group").hidden = servicio;
   campo(form, "stock").required = !servicio && !conColores;
 }
 
@@ -874,7 +876,10 @@ function textoStock(p) {
   if (p.tipo !== "producto") return "";
   if (p.falta_stock) return `<span class="status-badge">Falta stock</span>`;
   const piezas = p.colores.length ? p.colores.reduce((s, c) => s + (c.stock || 0), 0) : p.stock;
-  return piezas ? `<div class="cell-sub">${piezas} ${piezas === 1 ? "pieza" : "piezas"}</div>` : `<span class="status-badge is-off">Agotado</span>`;
+  const faltan = p.colores_por_resurtir.map(c => `${escapeHTML(c.nombre)}: ${c.stock}`).join(", ");
+  return `${piezas ? `<div class="cell-sub">${piezas} ${piezas === 1 ? "pieza" : "piezas"}</div>` : `<span class="status-badge is-off">Agotado</span>`}
+    <div class="cell-sub">Mínimo: ${p.stock_minimo}</div>
+    ${faltan ? `<div class="cell-sub">Por resurtir: ${faltan}</div>` : ""}`;
 }
 
 function stockDe(p) {
@@ -892,6 +897,7 @@ function renderProductos() {
   const filtro = Number($("prod-filtro").value) || null;
   const filtroStock = $("prod-stock-filtro").value;
   const lista = st.productos.filter(p => (!filtro || p.stand_id === filtro)
+    && (filtroStock !== "resurtir" || p.por_resurtir)
     && (filtroStock !== "falta" || p.falta_stock)
     && (filtroStock !== "agotado" || (!p.falta_stock && stockDe(p) === 0)));
   $("productos-tbody").innerHTML = lista.length ? lista.map(p => `
@@ -902,7 +908,8 @@ function renderProductos() {
       <td class="cell-price">${escapeHTML(textoPrecio(p))}</td>
       <td>${estadoBadge(p.visible)}${p.disponibilidad !== "Disponible" ? ` <span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""}${textoStock(p)}</td>
       <td class="col-actions">${botonesFila("producto", p.id, p.nombre)}</td>
-    </tr>`).join("") : filaVacia(6, filtroStock ? "No hay productos con ese stock en esta tienda." : "Todavía no hay productos aquí. Agrega el primero con el formulario de arriba.");
+    </tr>`).join("") : filaVacia(6, filtroStock === "resurtir" ? "Nada por resurtir en esta tienda. Elige Todos en Stock para ver el catálogo completo."
+    : filtroStock ? "No hay productos con ese stock en esta tienda." : "Todavía no hay productos aquí. Agrega el primero con el formulario de arriba.");
   renderColores();
 }
 
@@ -1017,6 +1024,7 @@ function editarProducto(id) {
   campo(form, "precio").value = p.precio ?? "";
   campo(form, "disponibilidad").value = p.disponibilidad;
   campo(form, "stock").value = p.stock ?? "";
+  campo(form, "stock_minimo").value = p.stock_minimo;
   campo(form, "orden").value = p.orden;
   campo(form, "descripcion").value = p.descripcion;
   campo(form, "visible").checked = p.visible;
@@ -1051,6 +1059,7 @@ async function guardarProducto(event) {
       precio: campo(form, "precio").value,
       disponibilidad: campo(form, "disponibilidad").value,
       stock: campo(form, "stock").value,
+      stock_minimo: campo(form, "stock_minimo").value,
       orden: campo(form, "orden").value,
       descripcion: campo(form, "descripcion").value,
       visible: campo(form, "visible").checked,
@@ -1066,7 +1075,9 @@ async function guardarProducto(event) {
     // El stock guardado se muestra en el aviso para que se vea si es el que se escribió
     const guardadoP = st.productos.find(x => x.id === guardado.id);
     const piezas = guardadoP && guardadoP.tipo === "producto" && !guardadoP.colores.length && guardadoP.stock !== null ? ` · ${guardadoP.stock} en stock` : "";
-    showToast(`${editando ? "Actualizado" : "Guardado"}: ${guardado.nombre}${piezas}`);
+    // La lista abre en "Por resurtir": si no sale ahí, que no parezca que no se guardó
+    const fuera = guardadoP && $("prod-stock-filtro").value === "resurtir" && !guardadoP.por_resurtir ? ". Lo ves eligiendo Todos en Stock" : "";
+    showToast(`${editando ? "Actualizado" : "Guardado"}: ${guardado.nombre}${piezas}${fuera}`);
     // Un producto nuevo se queda abierto para agregarle sus colores
     if (!editando && body.tipo === "producto") {
       editarProducto(guardado.id);

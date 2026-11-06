@@ -116,8 +116,9 @@
 
         <div class="cart-summary-fields">
           <div class="form-group">
-            <label for="order-customer-name">Tu nombre (opcional)</label>
-            <input type="text" id="order-customer-name" maxlength="80" placeholder="Ej. Juan Pérez" autocomplete="name">
+            <label for="order-customer-name">Tu nombre</label>
+            <input type="text" id="order-customer-name" maxlength="80" placeholder="Ej. Juan Pérez" autocomplete="name" required aria-describedby="order-customer-name-estado">
+            <p class="campo-estado" id="order-customer-name-estado" aria-live="polite"></p>
           </div>
 
           <div class="form-group">

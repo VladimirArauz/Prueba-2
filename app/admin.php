@@ -99,6 +99,7 @@ function datos_producto(array $b): array
         'disponibilidad' => in_array($b['disponibilidad'] ?? null, DISPONIBILIDAD, true) ? $b['disponibilidad'] : 'Disponible',
         // Obligatorio en productos sin colores (la ruta lo revisa); los servicios no llevan stock
         'stock' => $tipo === 'producto' ? v_entero($b['stock'] ?? null, 'El stock', 0, MAX_STOCK, null) : null,
+        'stockMinimo' => $tipo === 'producto' ? v_entero($b['stock_minimo'] ?? null, 'El mínimo para resurtir', 0, MAX_STOCK, 0) : 0,
         'descripcion' => v_publico($b['descripcion'] ?? null, 'la descripción', 1000),
         'visible' => v_booleano($b['visible'] ?? null, true),
         'orden' => v_entero($b['orden'] ?? null, 'El orden', 0, 9999, 0),
@@ -492,7 +493,7 @@ function rutas_admin(): void
         requiere_admin();
         [$filtro, $params] = filtro_tiendas('p.stand_id', stand_filtro(consulta('stand')));
         $productos = filas("SELECT p.id, p.stand_id, s.nombre AS stand, p.subcategoria_id, sc.nombre AS subcategoria, p.tipo, p.nombre,
-                                   p.precio, p.precio_modo, p.disponibilidad, p.stock, p.descripcion, p.visible, p.orden,
+                                   p.precio, p.precio_modo, p.disponibilidad, p.stock, p.stock_minimo, p.descripcion, p.visible, p.orden,
                                    (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.creado_en, p.actualizado_en
                             FROM productos p JOIN stands s ON s.id = p.stand_id
                             LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
@@ -504,12 +505,17 @@ function rutas_admin(): void
         return array_map(function ($p) use ($colores) {
             $imagenUrl = a_bool($p['tiene_imagen']) ? url_imagen('productos', $p['id'], $p['actualizado_en']) : $p['imagen_ruta'];
             $suyos = array_values(array_filter($colores, fn($c) => $c['producto_id'] === $p['id']));
+            // Por resurtir: con las piezas del mínimo o menos. Sin stock capturado no cuenta (tiene su propio filtro).
+            $bajos = array_values(array_filter($suyos, fn($c) => $c['stock'] !== null && $c['stock'] <= $p['stock_minimo']));
             return [
                 'id' => $p['id'], 'stand_id' => $p['stand_id'], 'stand' => $p['stand'], 'subcategoria_id' => $p['subcategoria_id'],
                 'subcategoria' => $p['subcategoria'], 'tipo' => $p['tipo'], 'nombre' => $p['nombre'], 'precio' => a_float($p['precio']),
                 'precio_modo' => $p['precio_modo'], 'disponibilidad' => $p['disponibilidad'], 'stock' => $p['stock'],
                 // Producto sin stock capturado (o, con colores, algún color sin stock): no se puede vender
                 'falta_stock' => $p['tipo'] === 'producto' && ($suyos ? (bool) array_filter($suyos, fn($c) => $c['stock'] === null) : $p['stock'] === null),
+                'stock_minimo' => $p['stock_minimo'],
+                'por_resurtir' => $p['tipo'] === 'producto' && a_bool($p['visible']) && ($suyos ? (bool) $bajos : ($p['stock'] !== null && $p['stock'] <= $p['stock_minimo'])),
+                'colores_por_resurtir' => array_map(fn($c) => ['nombre' => $c['nombre'], 'stock' => $c['stock']], $bajos),
                 'descripcion' => $p['descripcion'],
                 'visible' => a_bool($p['visible']), 'orden' => $p['orden'], 'creado_en' => fecha_iso($p['creado_en']),
                 'actualizado_en' => fecha_iso($p['actualizado_en']),
@@ -526,10 +532,10 @@ function rutas_admin(): void
         $admin = requiere_admin();
         $d = datos_producto(cuerpo());
         if ($d['tipo'] === 'producto' && $d['stock'] === null) throw dato_invalido(FALTA_STOCK);
-        q("INSERT INTO productos (stand_id, subcategoria_id, tipo, nombre, precio_modo, precio, disponibilidad, stock, descripcion,
+        q("INSERT INTO productos (stand_id, subcategoria_id, tipo, nombre, precio_modo, precio, disponibilidad, stock, stock_minimo, descripcion,
                                   visible, orden, imagen, imagen_tipo, categoria)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT nombre FROM subcategorias WHERE id = ?), 'General'))",
-          [$d['standId'], $d['subcategoriaId'], $d['tipo'], $d['nombre'], $d['precioModo'], $d['precio'], $d['disponibilidad'], $d['stock'], $d['descripcion'],
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT nombre FROM subcategorias WHERE id = ?), 'General'))",
+          [$d['standId'], $d['subcategoriaId'], $d['tipo'], $d['nombre'], $d['precioModo'], $d['precio'], $d['disponibilidad'], $d['stock'], $d['stockMinimo'], $d['descripcion'],
            $d['visible'], $d['orden'], $d['imagen']['bytes'] ?? null, $d['imagen']['tipo'] ?? null, $d['subcategoriaId']]);
         $id = ultimo_id();
         ajuste_stock($admin, $id, null, null, $d['stock']);
@@ -547,7 +553,7 @@ function rutas_admin(): void
         $stockPropio = $d['tipo'] === 'producto' && !a_bool($antes['con_colores']);
         if ($stockPropio && $d['stock'] === null) throw dato_invalido(FALTA_STOCK);
         q("UPDATE productos SET stand_id = ?, subcategoria_id = ?, tipo = ?, nombre = ?, precio_modo = ?, precio = ?,
-             disponibilidad = ?, stock = IF(?, ?, IF(? = 'servicio', NULL, stock)), descripcion = ?, visible = ?, orden = ?,
+             disponibilidad = ?, stock = IF(?, ?, IF(? = 'servicio', NULL, stock)), stock_minimo = ?, descripcion = ?, visible = ?, orden = ?,
              imagen = CASE WHEN ? THEN ? WHEN ? THEN NULL ELSE imagen END,
              imagen_tipo = CASE WHEN ? THEN ? WHEN ? THEN NULL ELSE imagen_tipo END,
              imagen_ruta = CASE WHEN ? THEN NULL ELSE imagen_ruta END,
@@ -555,7 +561,7 @@ function rutas_admin(): void
              actualizado_en = UTC_TIMESTAMP(6)
            WHERE id = ?",
           [$d['standId'], $d['subcategoriaId'], $d['tipo'], $d['nombre'], $d['precioModo'], $d['precio'],
-           $d['disponibilidad'], $stockPropio, $d['stock'], $d['tipo'], $d['descripcion'], $d['visible'], $d['orden'],
+           $d['disponibilidad'], $stockPropio, $d['stock'], $d['tipo'], $d['stockMinimo'], $d['descripcion'], $d['visible'], $d['orden'],
            (bool) $img, $img['bytes'] ?? null, $d['quitarImagen'],
            (bool) $img, $img['tipo'] ?? null, $d['quitarImagen'],
            $d['quitarImagen'], $d['subcategoriaId'], $producto['id']]);

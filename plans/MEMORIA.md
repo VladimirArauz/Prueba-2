@@ -39,10 +39,13 @@ Cómo se usa:
 | `2026-11-01-avisos-y-confirmaciones-propios.md` | Aplicado (prompts 0 a 4) y subido a IONOS. Falta que el usuario lo revise en su navegador | 2026-11-01 |
 | `2026-11-04-cumplimiento-legal-cuenta-y-edad.md` | Aplicado y subido a IONOS (2026-11-04). Faltan los `[COMPLETAR]` y revisar 2 frases de la portada | 2026-11-04 |
 | `2026-11-04-filtro-groserias.md` | Aplicado (prompts 1 a 3) y subido a IONOS | 2026-11-04 |
+| `2026-11-05-resurtir-y-compra-con-cuenta.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-06). Falta que el usuario pruebe un pedido real con su cuenta | 2026-11-05 |
 
 ---
 
 ## Pendientes
+
+**Por resurtir y compra con cuenta (2026-11-06, aplicado y subido):** (a) el usuario prueba en su navegador un pedido real con cuenta y pedir un servicio: Turnstile rechaza a Chrome automatizado, así que con sesión solo se probó en local. (b) Capturar el mínimo de cada producto en Necutools → Productos: con 0, solo salen los agotados. (c) 2 de los 3 clientes de IONOS tienen la cuenta incompleta y verán "Completa tu cuenta" antes de pedir. (d) Revisar el texto nuevo de `public/privacidad.html` y `public/terminos.html` (ligar pedidos a la cuenta cambia lo que se avisa); siguen faltando los `[COMPLETAR]`. (e) El respaldo previo de la base está en `~/respaldos/2026-11-06-antes-resurtir.sql` del servidor (permisos 600, lleva datos personales): borrarlo cuando ya no haga falta. (f) `/api/carrito/precios` sigue público, pero sin números.
 
 **Logo nuevo (2026-11-05, aplicado y subido):** (a) (Resuelto 2026-11-05: commit `5e60661`, push y subido a IONOS.) (b) El amarillo del logo es `#F2A900`, no `--senal` (`#F5B800`): se dejó como lo dio el usuario. (c) La imagen de vista previa (`recursos/og/og-necutla.svg`, `app/og-imagen.php`) y el correo del código (`app/correo.php`) siguen con la N vieja; al cambiarlas, subir `OG_VERSION` en `app/paginas.php`.
 
@@ -150,6 +153,23 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-06: productos por resurtir y compra con cuenta (plan `2026-11-05-resurtir-y-compra-con-cuenta.md`, prompts 1 a 5)
+- **Base** (`db/mariadb/schema.sql`): `productos.stock_minimo` (0 por omisión) y `pedidos.cliente_id` (`ON DELETE SET NULL`).
+- **Por resurtir**: `app/admin.php` (`stock_minimo`, `por_resurtir`, `colores_por_resurtir`); `public/necutools.html` y `public/js/necutools.js` (campo "Mínimo para resurtir", filtro "Por resurtir" por omisión, aviso si lo guardado no sale en la lista).
+- **Compra con cuenta**: `app/clientes.php` (`requiere_comprador()`, `puede_pedir()`); `app/pedidos.php` (cuenta obligatoria, `cliente_id`, huella por cuenta, 20 pedidos por hora por cuenta, nombre del cliente en Necutools); `app/api.php` (`numeros_de` y `/api/config` sin números sin cuenta); `app/arranque.php` (`no-store` en lo que trae números). Con `cuentas_clientes` en false todo funciona como antes.
+- **Front**: `public/js/comun.js` (`sesionCompra`, `puedePedir`, `rutaACuenta`), `public/js/carrito.js` y `public/carrito.html` (tarjeta para iniciar sesión, nombre autorrellenado y obligatorio), `public/js/tienda.js` y `public/js/producto.js` (servicios con cuenta), `public/js/cuenta.js` (regresa a `/carrito.html`).
+- **Textos**: `public/index.html`, `public/privacidad.html`, `public/terminos.html` (fecha 6 de noviembre), `public/necutools.html`, `README.md`.
+- **Desviación del plan**: `numeros_para_cliente()` no se creó; el filtro quedó dentro de `numeros_de()` con `puede_pedir()`, que cubre todos los lugares de un solo golpe.
+- **Pruebas locales**: `ataques.js` 290 de 290 (12 nuevas "CTA" y "RES"; las pruebas de pedidos usan un comprador y cantidades distintas porque la huella ya es por cuenta), con el Node del driver de Playwright de `~/estudio/tests/.venv`; navegador 102 de 102 a 1280, 360 y movimiento reducido (Playwright de ese venv con `channel="chrome"`); 5 de cuenta incompleta y 5 con cuentas en pausa. Datos de prueba borrados (también sesiones, límites e intentos locales).
+- **IONOS**: respaldo completo `~/respaldos/2026-11-06-antes-resurtir.sql` y de archivos en `~/respaldos/2026-11-06-resurtir/`; `schema.sql` corrido una vez sin error, conteos iguales (39 productos, 4 pedidos, 3 clientes); 16 archivos subidos por rsync. Las credenciales se leyeron a variables y un archivo temporal 600 que se borró; no se imprimió ninguna.
+- **En vivo**, sin sesión: `/healthz` 200, páginas 200, JS idénticos, `/api/config` y tienda sin números con `no-store`, pedido 401, Necutools 401, carrito con la tarjeta y lo agregado guardado, sin errores de consola ni scroll horizontal a 1280 y 360.
+
+### 2026-11-05: plan de productos por resurtir y compra con cuenta
+- Nuevo plan `plans/planes/2026-11-05-resurtir-y-compra-con-cuenta.md` y sus 5 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Pedido del usuario: mínimo de stock por producto, lista solo con lo que está por agotarse, cuenta obligatoria para comprar y nombre autorrellenado y obligatorio en el carrito.
+- La pestaña Bitácora no tiene lista de productos: el usuario eligió la lista de Productos, con filtro "Por resurtir" por omisión.
+- Decisiones del usuario: sin cuenta se agrega al carrito, pero abrirlo pide iniciar sesión; números de WhatsApp solo con sesión; servicios también con cuenta; nombre editable; pedido ligado a la cuenta (hay que actualizar el aviso de privacidad).
 
 ### 2026-11-05: logo nuevo y favicon
 - Pedido del usuario: usar `~/Descargas/1000174739.png` como logo, sin el fondo blanco alrededor del recuadro azul, y crear el favicon.

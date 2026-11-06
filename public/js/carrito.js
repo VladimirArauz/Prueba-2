@@ -69,7 +69,7 @@ function grupoHTML(grupo) {
           ${icon("message-circle")}Enviar pedido a ${escapeHTML(grupo.nombre)} por WhatsApp
         </button>
       </div>
-      <p class="cart-privacidad">Guardamos el pedido sin tus datos para que la tienda le dé seguimiento.</p>
+      <p class="cart-privacidad">Guardamos el pedido con tu cuenta y la tienda ve tu nombre para darle seguimiento.</p>
       <div class="captcha" data-captcha="${escapeHTML(grupo.clave)}"></div>
       <div data-enviado="${escapeHTML(grupo.clave)}"></div>
     </section>`;
@@ -84,6 +84,20 @@ function renderVacio() {
         <h3>Tu carrito está vacío</h3>
         <p>Entra a una tienda y agrega lo que quieras pedir.</p>
         <a class="btn" href="/">Ver tiendas</a>
+      </div>
+    </div>`;
+}
+
+// Lo agregado se queda guardado en el navegador: al entrar, regresa al carrito y sigue ahí
+function renderSinCuenta() {
+  const incompleta = Boolean(compra && compra.autenticado);
+  document.getElementById("cart-groups").innerHTML = `
+    <div class="cart-items-card">
+      <div class="cart-empty">
+        ${icon("user", "icon-lg")}
+        <h3>${incompleta ? "Completa tu cuenta para ver tu carrito" : "Inicia sesión para ver tu carrito"}</h3>
+        <p>Necesitas una cuenta para mandar pedidos. Lo que agregaste se queda guardado.</p>
+        <a class="btn" href="${escapeHTML(rutaACuenta("/carrito.html"))}">${incompleta ? "Completar mi cuenta" : "Iniciar sesión"}</a>
       </div>
     </div>`;
 }
@@ -178,7 +192,7 @@ function mensajeDe(grupo) {
   return lineas.join("\n");
 }
 
-// Guarda el pedido para el resumen de Necutools. No bloquea ni avisa si falla: WhatsApp ya se abrió.
+// Guarda el pedido para el resumen de Necutools. No bloquea: WhatsApp ya se abrió. Solo avisa si venció la sesión.
 // El captcha casi nunca se ve; si Cloudflare duda, su recuadro aparece arriba del aviso "Ya lo envié".
 async function registrarPedido(grupo) {
   const items = grupo.items.map(i => ({ tipo: i.tipo, id: i.id, ...(i.color ? { color: i.color.id } : {}), cantidad: i.cantidad }));
@@ -190,12 +204,24 @@ async function registrarPedido(grupo) {
     await api("/pedidos", { method: "POST", body: { clave: grupo.clave, items, captcha } });
   } catch (e) {
     registrados.delete(firma);
+    if (e.status === 401 || e.status === 403) avisarError(e.message);
   }
+}
+
+function nombreListo() {
+  const input = document.getElementById("order-customer-name");
+  const vacio = !input.value.trim();
+  input.closest(".form-group").classList.toggle("is-invalido", vacio);
+  input.setAttribute("aria-invalid", String(vacio));
+  const estado = document.getElementById("order-customer-name-estado");
+  estado.innerHTML = vacio ? `${icon("circle-alert")}Escribe tu nombre para que la tienda sepa quién pide.` : "";
+  if (vacio) input.focus();
+  return !vacio;
 }
 
 function enviar(clave) {
   const grupo = grupos.find(g => g.clave === clave);
-  if (!grupo) return;
+  if (!grupo || !nombreListo()) return;
   const contenedor = document.querySelector(`[data-enviado="${CSS.escape(clave)}"]`);
   if (!abrirWhatsApp(grupo.whatsapp, mensajeDe(grupo), contenedor)) return;
   registrarPedido(grupo);
@@ -227,7 +253,13 @@ Object.assign(ACCIONES, {
   enviar: el => enviar(el.dataset.clave)
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (leerCarrito().length) pintarEsqueletos(document.getElementById("cart-groups"), 2, "grupo");
+document.addEventListener("DOMContentLoaded", async () => {
+  const conItems = leerCarrito().length > 0;
+  if (conItems) pintarEsqueletos(document.getElementById("cart-groups"), 2, "grupo");
+  await sesionCompra();
+  if (conItems && !puedePedir()) return renderSinCuenta();
+  const nombre = document.getElementById("order-customer-name");
+  if (compra && compra.nombre) nombre.value = compra.nombre;
+  nombre.addEventListener("input", () => { if (nombre.value.trim()) nombreListo(); });
   cargar();
 });

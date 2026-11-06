@@ -768,6 +768,28 @@ Object.assign(ACCIONES, {
   "menu-cerrar": () => abrirCajon(false)
 });
 
+// ================= Pedir con cuenta =================
+// Para pedir hace falta una cuenta completa; sin ella el servidor no entrega los números de WhatsApp.
+// Se pregunta una vez al cargar: abrir WhatsApp después de esperar a la red lo bloquea el navegador.
+let compra = null;
+
+async function sesionCompra() {
+  try {
+    compra = await api("/clientes/sesion");
+  } catch (e) {
+    compra = null; // Sin conexión: las llamadas de después dirán qué pasó
+  }
+  return compra;
+}
+
+function puedePedir() {
+  return !compra || Boolean(compra.pausa) || (compra.autenticado === true && !compra.incompleta);
+}
+
+function rutaACuenta(volver = location.pathname + location.search) {
+  return `/cuenta.html?volver=${encodeURIComponent(volver)}`;
+}
+
 // Cuentas de cliente en pausa (app/config.php): sin enlaces a "Mi cuenta"
 async function revisarCuentas() {
   try {

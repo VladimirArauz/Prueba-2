@@ -20,9 +20,11 @@ function imagen_tienda(array $f): ?string
     return $f['imagen_ruta'] ?: null;
 }
 
-// Si la tienda no tiene números propios, se usan los de respaldo de la configuración
+// Si la tienda no tiene números propios, se usan los de respaldo de la configuración.
+// Sin cuenta no hay números: si no, el pedido se podría mandar directo por WhatsApp saltándose la cuenta.
 function numeros_de(array $stand): array
 {
+    if (!puede_pedir()) return [];
     $propios = is_array($stand['whatsapp']) ? $stand['whatsapp'] : a_lista($stand['whatsapp']);
     return $propios ?: numeros_respaldo();
 }
@@ -251,7 +253,7 @@ function calcular_carrito(array $items): array
 function rutas_api(): void
 {
     // captcha: llave pública de Turnstile ("" = apagado, ver app/captcha.php)
-    get('/api/config', fn() => ['whatsapp' => numeros_respaldo(), 'cuentas' => cuentas_clientes(), 'captcha' => captcha_site_key()]);
+    get('/api/config', fn() => ['whatsapp' => puede_pedir() ? numeros_respaldo() : [], 'cuentas' => cuentas_clientes(), 'captcha' => captcha_site_key()]);
 
     // ================= Tiendas =================
     get('/api/stands', function () {

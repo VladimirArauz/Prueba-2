@@ -91,7 +91,8 @@ require __DIR__ . '/sitemap.php';
 
 // Respuestas con datos privados: que no se guarden en caché
 // Sin importar mayúsculas, igual que el router: /API/ADMIN/… también es privado
-const PRIVADAS = '#^/(admin|auth|clientes)(/|$)#i';
+// También lo que trae números de WhatsApp: cambia según la sesión y no se puede guardar en una caché compartida
+const PRIVADAS = '#^/(admin|auth|clientes|config|carrito|pedidos)(/|$)|^/stands/[^/]+/?$|^/productos/[0-9]+/?$#i';
 
 // Convierte cualquier error en la respuesta que daba Node
 function respuesta_de_error(Throwable $e): Respuesta

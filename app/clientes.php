@@ -29,11 +29,31 @@ function cargar_cliente(): ?array
     return $c;
 }
 
-function requiere_cliente(): array
+function requiere_cliente(string $mensaje = 'Inicia sesión con tu cuenta para opinar.'): array
 {
     $cliente = cargar_cliente();
-    if (!$cliente) throw new ErrorHttp(401, 'Inicia sesión con tu cuenta para opinar.');
+    if (!$cliente) throw new ErrorHttp(401, $mensaje);
     return Actual::$cliente = $cliente;
+}
+
+// Para pedir hace falta una cuenta completa. Con las cuentas en pausa nadie podría entrar: se pide como antes.
+function requiere_comprador(): ?array
+{
+    if (!cuentas_clientes()) return null;
+    $cliente = requiere_cliente('Inicia sesión con tu cuenta para mandar tu pedido.');
+    if (datos_sesion_cliente($cliente)['incompleta']) throw new ErrorHttp(403, 'Completa tu cuenta en Mi cuenta para mandar tu pedido.');
+    return $cliente;
+}
+
+// Los números de WhatsApp solo se entregan a quien puede pedir (se revisa una vez por petición)
+function puede_pedir(): bool
+{
+    static $puede = null;
+    if ($puede === null) {
+        $cliente = cuentas_clientes() ? cargar_cliente() : null;
+        $puede = !cuentas_clientes() || ($cliente && !datos_sesion_cliente($cliente)['incompleta']);
+    }
+    return $puede;
 }
 
 function password_cliente($valor, $confirmar, array $contiene, string $campo = 'La contraseña'): string

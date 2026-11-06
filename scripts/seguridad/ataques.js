@@ -35,7 +35,11 @@ const nuevaIp = () => { ipSeq += 1; return `10.${(ipSeq >> 16) & 255}.${(ipSeq >
 const TOKEN_PRUEBA = "XXXX.DUMMY.TOKEN.XXXX";
 const CON_CAPTCHA = /^\/api\/(clientes\/(login|registro|restablecer|codigo\/reenviar)|pedidos|productos\/\d+\/resena)$/;
 
-async function pedir(metodo, ruta, { body, sesion, origin = BASE, ip = nuevaIp(), headers = {}, crudo, sinCaptcha = false } = {}) {
+// Para pedir hace falta cuenta: las pruebas de pedidos usan esta, salvo las que piden sinSesion
+let comprador = null;
+
+async function pedir(metodo, ruta, { body, sesion, origin = BASE, ip = nuevaIp(), headers = {}, crudo, sinCaptcha = false, sinSesion = false } = {}) {
+  if (!sesion && !sinSesion && metodo === "POST" && ruta === "/api/pedidos") sesion = comprador;
   // Las pruebas de siempre mandan el token de prueba; las del captcha lo quitan con sinCaptcha
   if (!sinCaptcha && (metodo === "POST" || metodo === "PUT") && CON_CAPTCHA.test(ruta)) {
     body = body && typeof body === "object" && !Array.isArray(body) ? { captcha: TOKEN_PRUEBA, ...body } : body === undefined ? { captcha: TOKEN_PRUEBA } : body;
@@ -177,6 +181,7 @@ async function preparar() {
   const prodB = await producto(B);
   const cli1 = await registrarCliente("cliente1");
   const cli2 = await registrarCliente("cliente2");
+  comprador = (await registrarCliente("comprador")).sesion;
   return { dueno, encA, encB, A, B, prodA, prodB, cli1, cli2, pass, producto };
 }
 
@@ -314,18 +319,18 @@ async function main() {
     return espera(r.status === 200 && r.json.pedidos.every(p => p.stand_id === A.id), r.status);
   });
   await prueba("—", "encargado B no cambia el estado de un pedido de A", async () => {
-    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
+    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 3 }] } });
     const r = await pedir("PUT", `/api/admin/pedidos/${p.json.id}`, { body: { estado: "pagado" }, sesion: encB });
     return espera(r.status === 403, r.status);
   });
   await prueba("—", "encargado A no agrega un producto de B a su pedido", async () => {
-    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
+    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 4 }] } });
     const r = await pedir("PUT", `/api/admin/pedidos/${p.json.id}/items`, {
       body: { items: [{ tipo: "producto", id: prodA, cantidad: 1 }, { tipo: "producto", id: prodB, cantidad: 1 }] }, sesion: encA });
     return espera(r.status === 403, r.status);
   });
   await prueba("—", "pagar más piezas de las que hay en stock → 409 y el stock no cambia", async () => {
-    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
+    const p = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 5 }] } });
     await pedir("PUT", `/api/admin/pedidos/${p.json.id}/items`, { body: { items: [{ tipo: "producto", id: prodA, cantidad: 30 }] }, sesion: encA });
     const antes = (await pedir("GET", "/api/admin/productos", { sesion: dueno })).json.find(x => x.id === prodA).stock;
     await pedir("PUT", `/api/admin/productos/${prodA}`, { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, stock: 5 } });
@@ -577,10 +582,10 @@ async function main() {
 
   // ---------- Pedidos falsos ----------
   await prueba("—", "el pedido ignora el precio que manda el navegador", async () => {
-    const r = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 1, precio: 0.01 }], total: 0.01 } });
+    const r = await pedir("POST", "/api/pedidos", { body: { clave: `tienda-${A.id}`, items: [{ tipo: "producto", id: prodA, cantidad: 6, precio: 0.01 }], total: 0.01 } });
     const l = await pedir("GET", `/api/admin/pedidos?tienda=${A.id}`, { sesion: dueno });
     const p = l.json.pedidos.find(x => x.id === r.json.id);
-    return espera(p && p.total === 50, JSON.stringify(p));
+    return espera(p && p.total === 300, JSON.stringify(p));
   });
   await prueba("—", "pedidos: 429 tras 40 en una hora desde la misma IP", async () => {
     const ip = nuevaIp();
@@ -599,6 +604,88 @@ async function main() {
     const a = await pedir("POST", "/api/pedidos", { ip, body });
     const b = await pedir("POST", "/api/pedidos", { ip, body });
     return espera(a.json && b.json && a.json.id === b.json.id, `${a.json && a.json.id} y ${b.json && b.json.id}`);
+  });
+
+  // ---------- Compra con cuenta y números de WhatsApp (plan 2026-11-05-resurtir-y-compra-con-cuenta) ----------
+  const pedidoDe = (tienda, id, cantidad) => ({ clave: `tienda-${tienda.id}`, items: [{ tipo: "producto", id, cantidad }] });
+  const conNumeros = o => JSON.stringify(o).match(/"whatsapp":\[("|\d)/) !== null;
+  await prueba("CTA", "pedido sin cuenta → 401 y no se guarda", async () => {
+    const antes = (await pedir("GET", `/api/admin/pedidos?tienda=${A.id}`, { sesion: dueno })).json.total;
+    const r = await pedir("POST", "/api/pedidos", { body: pedidoDe(A, prodA, 7), sinSesion: true });
+    const despues = (await pedir("GET", `/api/admin/pedidos?tienda=${A.id}`, { sesion: dueno })).json.total;
+    return espera(r.status === 401 && antes === despues, `${r.status}, ${antes} → ${despues}`);
+  });
+  await prueba("CTA", "sin cuenta, ninguna ruta pública entrega números de WhatsApp", async () => {
+    const servicio = await ctx.producto(A, { tipo: "servicio", precio_modo: "fijo", stock: undefined });
+    const rutas = [["GET", "/api/config"], ["GET", `/api/stands/${A.slug}`], ["GET", `/api/productos/${servicio}`]];
+    const respuestas = [];
+    for (const [m, ruta] of rutas) respuestas.push(await pedir(m, ruta));
+    respuestas.push(await pedir("POST", "/api/carrito/precios", { body: { items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } }));
+    return espera(respuestas.every(r => r.status === 200 && !conNumeros(r.json) && !/52\d{10}/.test(r.texto)), respuestas.map(r => r.status).join());
+  });
+  await prueba("CTA", "con cuenta sí llegan los números", async () => {
+    const r = await pedir("POST", "/api/carrito/precios", { sesion: comprador, body: { items: [{ tipo: "producto", id: prodA, cantidad: 1 }] } });
+    return espera(conNumeros(r.json), r.texto.slice(0, 200));
+  });
+  await prueba("CTA", "lo que trae números no se guarda en caché", async () => {
+    const respuestas = [await pedir("GET", "/api/config"), await pedir("GET", `/api/stands/${A.slug}`), await pedir("GET", `/api/productos/${prodA}`)];
+    return espera(respuestas.every(r => r.headers.get("cache-control") === "no-store"), respuestas.map(r => r.headers.get("cache-control")).join());
+  });
+  await prueba("CTA", "la tienda ve el nombre del cliente, no su correo ni su teléfono", async () => {
+    const c = datosCliente("privado");
+    const sesion = {};
+    await registrarConDatos(c, sesion);
+    const p = await pedir("POST", "/api/pedidos", { sesion, body: pedidoDe(A, prodA, 8) });
+    const r = await pedir("GET", `/api/admin/pedidos?tienda=${A.id}`, { sesion: encA });
+    const fila = r.json.pedidos.find(x => x.id === p.json.id);
+    return espera(fila && fila.cliente === c.nombre && !r.texto.includes(c.correo) && !r.texto.includes(c.telefono), r.texto.slice(0, 200));
+  });
+  await prueba("CTA", "dos cuentas en la misma red con el mismo carrito son 2 pedidos", async () => {
+    const ip = nuevaIp();
+    const otro = (await registrarCliente("vecino")).sesion;
+    const a = await pedir("POST", "/api/pedidos", { ip, sesion: comprador, body: pedidoDe(A, prodA, 9) });
+    const b = await pedir("POST", "/api/pedidos", { ip, sesion: otro, body: pedidoDe(A, prodA, 9) });
+    return espera(a.json.id && b.json.id && a.json.id !== b.json.id, `${a.json.id} y ${b.json.id}`);
+  });
+  await prueba("CTA", "pedidos: 429 tras 20 en una hora con la misma cuenta", async () => {
+    const sesion = (await registrarCliente("muchos")).sesion;
+    const estados = [];
+    for (let i = 1; i <= 21; i++) estados.push((await pedir("POST", "/api/pedidos", { sesion, body: pedidoDe(A, prodA, i) })).status);
+    return espera(estados.slice(0, 20).every(x => x === 201) && estados[20] === 429, estados.join());
+  });
+  await prueba("CTA", "al eliminar la cuenta, sus pedidos se quedan sin cliente", async () => {
+    const c = await registrarCliente("adios");
+    const p = await pedir("POST", "/api/pedidos", { sesion: c.sesion, body: pedidoDe(A, prodA, 11) });
+    await pedir("POST", "/api/clientes/eliminar", { sesion: c.sesion });
+    const fin = await pedir("POST", "/api/clientes/eliminar/codigo", { sesion: c.sesion, body: { codigo: await codigoDe(c.correo) } });
+    const r = await pedir("GET", `/api/admin/pedidos?tienda=${A.id}`, { sesion: dueno });
+    const fila = r.json.pedidos.find(x => x.id === p.json.id);
+    return espera(fin.status === 200 && fila && fila.cliente === null, `${fin.status} ${JSON.stringify(fila)}`);
+  });
+
+  // ---------- Por resurtir ----------
+  const deCatalogo = async id => (await pedir("GET", "/api/admin/productos", { sesion: dueno })).json.find(x => x.id === id);
+  await prueba("RES", "stock igual al mínimo sale; con una pieza más, no", async () => {
+    const igual = await ctx.producto(A, { stock: 5, stock_minimo: 5 });
+    const arriba = await ctx.producto(A, { stock: 6, stock_minimo: 5 });
+    return espera((await deCatalogo(igual)).por_resurtir === true && (await deCatalogo(arriba)).por_resurtir === false, "por_resurtir mal");
+  });
+  await prueba("RES", "agotado sin mínimo sale; oculto no", async () => {
+    const agotado = await ctx.producto(A, { stock: 0 });
+    const oculto = await ctx.producto(A, { stock: 0, visible: false });
+    return espera((await deCatalogo(agotado)).por_resurtir === true && (await deCatalogo(oculto)).por_resurtir === false, "por_resurtir mal");
+  });
+  await prueba("RES", "con colores se compara cada color y dice cuál falta", async () => {
+    const id = await ctx.producto(A, { stock: 50, stock_minimo: 3 });
+    for (const [nombre, stock] of [["Rojo", 2], ["Azul", 40]]) {
+      await pedir("POST", `/api/admin/productos/${id}/colores`, { sesion: dueno, body: { nombre, hex: "#112233", stock, imagen: dataUrl("image/png", PNG_1x1) } });
+    }
+    const p = await deCatalogo(id);
+    return espera(p.por_resurtir === true && JSON.stringify(p.colores_por_resurtir) === '[{"nombre":"Rojo","stock":2}]', JSON.stringify(p.colores_por_resurtir));
+  });
+  await prueba("RES", "mínimo inválido → 400", async () => {
+    const r = await pedir("POST", "/api/admin/productos", { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: "m", precio: 1, stock: 1, stock_minimo: -1 } });
+    return espera(r.status === 400, r.status);
   });
 
   // ---------- Imágenes ----------

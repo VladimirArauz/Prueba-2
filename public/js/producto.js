@@ -83,6 +83,7 @@ function elegirColor(color) {
 }
 
 function pedirServicio() {
+  if (!puedePedir()) return void (location.href = rutaACuenta());
   const p = est.producto;
   const mensaje = [
     "🛠️ *Solicitud de servicio desde Necutla*",
@@ -284,6 +285,7 @@ Object.assign(ACCIONES, {
 
 document.addEventListener("DOMContentLoaded", async () => {
   est.id = idDeLaUrl();
+  sesionCompra();
   try {
     est.producto = await api(`/productos/${est.id}`);
   } catch (error) {

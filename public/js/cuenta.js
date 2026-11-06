@@ -124,7 +124,7 @@ function volverDelCodigo() {
 // Solo rutas de este sitio ("/p/12"), nunca otra página ("//otro.com")
 function destinoDeVuelta() {
   const volver = new URLSearchParams(location.search).get("volver") || "";
-  return /^\/[a-z0-9/?=&_-]*$/i.test(volver) && !volver.startsWith("//") ? volver : "";
+  return /^\/[a-z0-9/?=&_.-]*$/i.test(volver) && !volver.startsWith("//") ? volver : "";
 }
 
 // La tarjeta mide lo del formulario visible (en celular, más el panel de arriba); CSS anima el cambio
@@ -188,7 +188,8 @@ function render(sesion) {
   $("completar-edad-grupo").hidden = !falta.edad;
   const volver = destinoDeVuelta();
   $("dentro-seguir").href = volver || "/";
-  $("dentro-seguir").textContent = volver ? "Volver al producto" : "Ver tiendas";
+  $("dentro-seguir").textContent = !volver ? "Ver tiendas" : volver.startsWith("/carrito") ? "Volver al carrito"
+    : volver.startsWith("/t/") ? "Volver a la tienda" : "Volver al producto";
   // Al recargar a medio paso de eliminar la cuenta, se retoma el código
   if (sesion.codigoPendiente && sesion.codigoPendiente.proposito === "eliminar") mostrarCodigo({ ...sesion.codigoPendiente, espera: 0 });
 }
@@ -206,7 +207,7 @@ function siguientePaso(respuesta, mensaje) {
   else entrar(respuesta, mensaje);
 }
 
-// Después de entrar o crear la cuenta: de regreso al producto, o se muestra la cuenta
+// Después de entrar o crear la cuenta: de regreso a donde estaba, o se muestra la cuenta
 function entrar(sesion, mensaje) {
   const volver = destinoDeVuelta();
   if (volver) {

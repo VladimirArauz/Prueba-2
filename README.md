@@ -282,7 +282,7 @@ versión en PHP pasa las mismas pruebas) y la revisión de versiones y parches d
 | Permisos | Revisados en el servidor en cada petición: un encargado no toca tiendas ajenas ni paquetes |
 | Datos | Consultas con parámetros; validación de cada campo; los precios los pone el servidor; todo texto se escapa al mostrarlo |
 | Imágenes | Tipo real por sus bytes, máximo 1 MB, sin SVG; sin metadatos (GPS, modelo del celular); las de algo oculto solo las ve quien puede editarlo |
-| Pedidos | Precios del servidor, hasta 30 piezas y 15 productos, sin duplicados en 10 minutos, 40 por hora por IP y 500 por hora en total |
+| Pedidos | Con cuenta completa (`requiere_comprador()`; sin cuentas en pausa, como antes), precios del servidor, hasta 30 piezas y 15 productos, sin duplicados en 10 minutos, 40 por hora por IP, 20 por hora por cuenta y 500 por hora en total. Sin cuenta, la API no entrega números de WhatsApp (`puede_pedir()`) |
 | Límites | 300 peticiones a la API cada 15 minutos por IP (tabla `limites`, con la IP cifrada con HMAC) |
 | PHP | 8.5 con parches al día; en producción, 8.5.12 o más nuevo (si no, la API da 503). `public/.user.ini` apaga el progreso de subidas y los errores en pantalla. Necutools → Mi cuenta → Servidor (solo dueños) muestra las versiones que atienden la página. En local: pool propio con `open_basedir` y sin funciones para correr comandos |
 | Reportes | `/.well-known/security.txt` dice cómo reportar una falla en privado |

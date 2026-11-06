@@ -1,8 +1,8 @@
 <?php
 /**
  * Pedidos enviados por WhatsApp.
- * Público: guardar el pedido de un grupo del carrito al tocar "Enviar pedido por WhatsApp"
- * (precios del servidor, sin datos del cliente).
+ * Clientes con cuenta: guardar el pedido de un grupo del carrito al tocar "Enviar pedido por WhatsApp"
+ * (precios del servidor; de la cuenta solo se guarda su id y la tienda ve el nombre).
  * Necutools (/api/admin): lista de pedidos, estado (en proceso, pagado, cancelado), edición de los artículos
  * mientras está en proceso, stock que se descuenta al pagar y resumen del dashboard.
  */
@@ -21,6 +21,7 @@ const MAX_PIEZAS = 30;
 const MAX_PRODUCTOS = 15;
 // Más pedidos que esto en una hora (todas las IP juntas) ya no se guardan; WhatsApp se abre igual
 const MAX_PEDIDOS_POR_HORA = 500;
+const MAX_PEDIDOS_POR_CUENTA = 20;
 // México no tiene horario de verano desde 2022: Ciudad de México es siempre UTC-6
 const DESFASE_MX = '-06:00';
 
@@ -57,17 +58,18 @@ function en_alcance(string $alias, ?int $tienda, ?array $tiendas): array
 }
 
 const COLUMNAS_PEDIDO = '
-  pe.id, pe.stand_id, s.nombre AS tienda, pe.promocion_id, pr.titulo AS paquete, pe.items, pe.total,
+  pe.id, pe.stand_id, s.nombre AS tienda, pe.promocion_id, pr.titulo AS paquete, cl.nombre AS cliente, pe.items, pe.total,
   pe.piezas, pe.estado, pe.nota, pe.creado_en';
 const UNIR_PEDIDO = '
   FROM pedidos pe
   LEFT JOIN stands s ON s.id = pe.stand_id
-  LEFT JOIN promociones pr ON pr.id = pe.promocion_id';
+  LEFT JOIN promociones pr ON pr.id = pe.promocion_id
+  LEFT JOIN clientes cl ON cl.id = pe.cliente_id';
 
 function pedido_admin(array $f, ?array $lineas = null): array
 {
     return [
-        'id' => $f['id'], 'stand_id' => $f['stand_id'], 'tienda' => $f['tienda'], 'promocion_id' => $f['promocion_id'], 'paquete' => $f['paquete'],
+        'id' => $f['id'], 'stand_id' => $f['stand_id'], 'tienda' => $f['tienda'], 'promocion_id' => $f['promocion_id'], 'paquete' => $f['paquete'], 'cliente' => $f['cliente'],
         'items' => $lineas ?? a_lista($f['items']), 'total' => (float) $f['total'], 'piezas' => $f['piezas'], 'estado' => $f['estado'], 'nota' => $f['nota'],
         'creado_en' => fecha_iso($f['creado_en']),
     ];
@@ -319,12 +321,13 @@ function dia_local(string $utc): string
 
 function rutas_pedidos(): void
 {
-    // ================= Guardar un pedido (público) =================
+    // ================= Guardar un pedido (con cuenta) =================
     post('/api/pedidos', function () {
         // Holgado porque muchos estudiantes entran desde la misma IP de la escuela
         limitar('pedidos', 40, UNA_HORA, 'Enviaste muchos pedidos seguidos. Espera un rato y vuelve a intentar.');
         $clave = is_string(campo('clave')) ? campo('clave') : '';
         if (!preg_match('/^(tienda|paquete)-([1-9][0-9]{0,9})$/', $clave, $m)) throw dato_invalido('El pedido no es válido.');
+        $cliente = requiere_comprador();
         exigir_captcha('pedido');
 
         $grupo = null;
@@ -341,20 +344,24 @@ function rutas_pedidos(): void
             throw dato_invalido('Un pedido puede tener hasta ' . MAX_PIEZAS . ' piezas y ' . MAX_PRODUCTOS . ' productos. Para más, escríbele a la tienda.');
         }
 
-        // El mismo pedido desde la misma conexión en 10 minutos es el mismo (se tocó dos veces el botón).
-        // Se guarda una huella con HMAC, no la IP.
-        $huella = hash_hmac('sha256', json_encode([ip_cliente(), $clave,
+        // El mismo pedido de la misma cuenta en 10 minutos es el mismo (se tocó dos veces el botón).
+        // Se guarda una huella con HMAC. La IP solo se usa con las cuentas en pausa.
+        $huella = hash_hmac('sha256', json_encode([$cliente ? "cliente:{$cliente['id']}" : ip_cliente(), $clave,
             array_map(fn($i) => [$i['tipo'], $i['id'], $i['color'] ?? null, $i['cantidad']], $items)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), config('secreto'));
         $previo = valor('SELECT id FROM pedidos WHERE huella = ? AND creado_en > UTC_TIMESTAMP(6) - INTERVAL 10 MINUTE ORDER BY id DESC LIMIT 1', [$huella]);
         if ($previo) return ['id' => (int) $previo, 'repetido' => true];
+
+        if ($cliente && (int) valor('SELECT COUNT(*) FROM pedidos WHERE cliente_id = ? AND creado_en > UTC_TIMESTAMP(6) - INTERVAL 1 HOUR', [$cliente['id']]) >= MAX_PEDIDOS_POR_CUENTA) {
+            throw new ErrorHttp(429, 'Mandaste muchos pedidos seguidos. Espera un rato y vuelve a intentar.');
+        }
 
         $ultimaHora = (int) valor('SELECT COUNT(*) FROM pedidos WHERE creado_en > UTC_TIMESTAMP(6) - INTERVAL 1 HOUR');
         if ($ultimaHora >= MAX_PEDIDOS_POR_HORA) throw new ErrorHttp(429, 'Hay demasiados pedidos en este momento. Tu pedido se manda igual por WhatsApp.');
 
         $id = (int) $m[2];
-        $nuevo = en_transaccion(function () use ($m, $id, $items, $grupo, $piezas, $huella) {
-            q('INSERT INTO pedidos (stand_id, promocion_id, items, total, piezas, huella) VALUES (?, ?, ?, ?, ?, ?)',
-              [$m[1] === 'tienda' ? $id : null, $m[1] === 'paquete' ? $id : null,
+        $nuevo = en_transaccion(function () use ($m, $id, $items, $grupo, $piezas, $huella, $cliente) {
+            q('INSERT INTO pedidos (stand_id, promocion_id, cliente_id, items, total, piezas, huella) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              [$m[1] === 'tienda' ? $id : null, $m[1] === 'paquete' ? $id : null, $cliente['id'] ?? null,
                json_encode($items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $grupo['total'], $piezas, $huella]);
             $pedidoId = ultimo_id();
             foreach ($grupo['items'] as $orden => $i) {

@@ -173,6 +173,7 @@ function cambiarTab(tab) {
 }
 
 function pedirServicio(id) {
+  if (!puedePedir()) return void (location.href = rutaACuenta());
   const servicio = estado.datos.servicios.find(s => s.id === id);
   if (!servicio) return;
   const mensaje = `¡Hola! Vi en Necutla el servicio *${servicio.nombre}* de ${estado.datos.tienda.nombre} ` +
@@ -202,6 +203,7 @@ Object.assign(ACCIONES, {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const slug = slugDeLaUrl();
+  sesionCompra();
   pintarEsqueletos(document.getElementById("store-grid"), POR_PAGINA);
   try {
     estado.datos = await api(`/stands/${encodeURIComponent(slug)}`);

@@ -471,3 +471,14 @@ ALTER TABLE resenas ADD CONSTRAINT resenas_cliente_fk2 FOREIGN KEY IF NOT EXISTS
 -- Código por correo para eliminar la cuenta
 ALTER TABLE codigos_correo DROP CONSTRAINT IF EXISTS codigos_correo_proposito_check;
 ALTER TABLE codigos_correo ADD CONSTRAINT IF NOT EXISTS codigos_correo_proposito_check2 CHECK (proposito IN ('login', 'registro', 'restablecer', 'eliminar'));
+
+-- ---------- 2026-11-05: productos por resurtir y compra con cuenta (plan 2026-11-05-resurtir-y-compra-con-cuenta.md) ----------
+
+-- Con estas piezas o menos, el producto sale en "Por resurtir". Con colores, se compara contra cada color.
+ALTER TABLE productos ADD COLUMN IF NOT EXISTS stock_minimo INT NOT NULL DEFAULT 0 AFTER stock;
+ALTER TABLE productos ADD CONSTRAINT IF NOT EXISTS productos_stock_minimo_check CHECK (stock_minimo >= 0);
+
+-- Quién hizo el pedido. NULL = pedido de antes de exigir cuenta, o cuenta eliminada.
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_id INT UNSIGNED NULL AFTER promocion_id;
+ALTER TABLE pedidos ADD INDEX IF NOT EXISTS pedidos_cliente_fecha_idx (cliente_id, creado_en);
+ALTER TABLE pedidos ADD CONSTRAINT pedidos_cliente_fk FOREIGN KEY IF NOT EXISTS (cliente_id) REFERENCES clientes (id) ON DELETE SET NULL;
