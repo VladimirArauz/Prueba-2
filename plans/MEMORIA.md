@@ -41,13 +41,13 @@ Cómo se usa:
 | `2026-11-04-filtro-groserias.md` | Aplicado (prompts 1 a 3) y subido a IONOS | 2026-11-04 |
 | `2026-11-05-resurtir-y-compra-con-cuenta.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-06). Falta que el usuario pruebe un pedido real con su cuenta | 2026-11-05 |
 | `2026-11-06-conectar-google-analytics.md` | Aplicado: propiedad 563128736, `G-VPH0MC28FN`, versión 2 del contenedor publicada y comprobada en vivo | 2026-11-06 |
-| `2026-11-06-medir-carrito-y-pedidos.md` | En curso: código listo y probado en local, sin subir a IONOS. Falta correr el prompt de Tag Manager | 2026-11-06 |
+| `2026-11-06-medir-carrito-y-pedidos.md` | Aplicado y subido a IONOS; contenedor en versión 3. Falta marcar `begin_checkout` como evento clave | 2026-11-06 |
 
 ---
 
 ## Pendientes
 
-**Medir carrito y pedidos (2026-11-06, en local):** (a) falta que el usuario autorice subir a IONOS los archivos del commit. (b) Falta correr `plans/prompts/2026-11-06-medir-carrito-y-pedidos.md` en la extensión. (c) Después, Claude revisa `/g/collect` con `en=add_to_cart` y `en=begin_checkout` en vivo.
+**Medir carrito y pedidos (2026-11-06, aplicado y subido):** (a) El usuario hace un pedido real desde Chrome o el celular (no Brave), con cuenta y cookies aceptadas; Turnstile rechaza navegadores automatizados. (b) Cuando `begin_checkout` salga en Eventos recientes, marcar la estrella: "+ Crear evento" no sirve (fabrica un evento a partir de otro y lo duplicaría). (c) Si se edita una etiqueta de GA4 en GTM, Tag Manager puede agregar una etiqueta "Google Analytics" y los ajustes "detección automática de eventos" y "datos proporcionados por los usuarios": revertirlos antes de publicar. La extensión de Brave no puede pulsar Publicar: lo hace el usuario.
 
 **Google Tag Manager y aviso de cookies (2026-11-06, aplicado y subido):** (a) (Resuelto 2026-11-06: ya mide, propiedad 563128736, `G-VPH0MC28FN`, contenedor versión 2.) Brave Shields puede bloquear Analytics: comprobar con otro navegador. (b) La CSP solo permite GTM, Analytics sin Ads y Vista previa; Google Ads, HTML personalizado y JavaScript personalizado requieren cambiarla. Si en GA4 se activan los indicadores de Google o funciones de publicidad, también pide dominios nuevos y hay que revisar el aviso. (c) Vista previa de GTM (Tag Assistant) sin probar: `Cross-Origin-Opener-Policy: same-origin` podría estorbarle; lo demás se comprueba en GA4 → Tiempo real. (d) Solo se miden páginas: el carrito y el envío por WhatsApp requieren eventos aparte. (e) Quien rechaza o no decide no se cuenta, así que los números de GA serán menores que los de Cloudflare Web Analytics. (f) El respaldo del servidor está en `~/respaldos/2026-11-06-gtm/` y `app/config.php.antes-gtm`.
 
@@ -160,10 +160,12 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 
 ## Cambios hechos
 
-### 2026-11-06: medición de carrito y pedidos (plan `2026-11-06-medir-carrito-y-pedidos.md`, solo en local)
+### 2026-11-06: medición de carrito y pedidos (plan `2026-11-06-medir-carrito-y-pedidos.md`)
 - `public/js/comun.js`: `itemMedido`, `medirCompra` (solo si existe `window.dataLayer`, es decir, con cookies aceptadas), `medirServicio`, `tiendaDeLaPagina`; botones con `data-precio` y `data-tienda`. `public/js/carrito.js` (`medirPedido`, uno por tienda y sin duplicar), `public/js/producto.js` y `public/js/tienda.js` (servicios).
 - `public/js/etiquetas.js` y `public/privacidad.html`: el aviso ya dice que se miden productos y pedidos. `README.md`.
 - Probado con Chrome y Playwright, con Google y la API simulados para no ensuciar la propiedad: 11 de 11 (sin aceptar no hay nada, tienda, detalle, paquete, 2 tiendas sin duplicar, descuento real, servicio, sin nombre del cliente). La prueba encontró que en `/t/<slug>` los productos no traen su tienda; se corrigió con `tiendaDeLaPagina`.
+- Tag Manager: versión 3 "Eventos de compra" (etiquetas `__googtag` y `__gaawe`, con comercio electrónico desde la capa de datos), comprobada en el `gtm.js` publicado.
+- IONOS: respaldo en `~/respaldos/2026-11-06-medir/`, 6 archivos por rsync. En vivo con el contenedor real, capturando `/g/collect` y simulando sesión, carrito y pedido para no ensuciar los datos ni crear pedidos: `add_to_cart` a 1280; `begin_checkout` a 1280 y 360 con MXN, `value` 150, tienda y precio 75 por el descuento; sin nombre del cliente; sin aceptar, 0 envíos. GA agrupa eventos unos segundos: las pruebas deben esperar unos 9 s antes de cambiar de página.
 
 ### 2026-11-06: Google Analytics conectado y comprobado en vivo
 - El usuario corrió el prompt con la extensión de Claude en Brave: propiedad 563128736, `G-VPH0MC28FN`, versión 2 "GA4 Necutla" con 1 etiqueta. No se cambió código.

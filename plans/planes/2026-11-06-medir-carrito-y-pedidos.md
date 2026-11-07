@@ -1,7 +1,7 @@
 # Medir carrito y pedidos en Google Analytics
 
 - **Fecha:** 2026-11-06
-- **Estado:** en curso
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-06-medir-carrito-y-pedidos.md`
 - **Alcance:** mandar a GA4 lo que se agrega al carrito y los pedidos y servicios enviados por WhatsApp, por tienda, solo con cookies aceptadas.
 
