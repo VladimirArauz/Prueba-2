@@ -4318,3 +4318,50 @@ a.card-img-wrap {
 .creditos-fotos a {
   color: var(--texto-2);
 }
+
+/* =========================================================
+   AVISO DE COOKIES (public/js/etiquetas.js)
+   Sticky al final del body: se queda abajo de la pantalla, pero nunca tapa el pie de página.
+   ========================================================= */
+
+.aviso-cookies {
+  position: sticky;
+  bottom: 0;
+  z-index: 900;
+  background: var(--hoja);
+  border-top: 2px solid var(--tinta);
+}
+
+.aviso-cookies-interior {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding-block: 16px;
+}
+
+.aviso-cookies p {
+  margin: 0;
+  max-width: 68ch;
+}
+
+.aviso-cookies-botones {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.cookies-decision {
+  margin-top: 16px;
+}
+
+@media (max-width: 860px) {
+  .aviso-cookies-interior {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .aviso-cookies-botones .btn {
+    flex: 1;
+  }
+}

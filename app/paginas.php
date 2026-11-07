@@ -253,6 +253,19 @@ function con_web_analytics(string $html): string
     return $fin === false ? $html : substr($html, 0, $fin) . "  $script\n" . substr($html, $fin);
 }
 
+// Aviso de cookies y Google Tag Manager, solo si hay id en app/config.php. Google carga hasta que la persona acepta.
+// Mi cuenta no lo lleva (contraseñas, teléfono y códigos) y Necutools tampoco (no pasa por aquí).
+function con_tag_manager(string $html, string $archivo): string
+{
+    $id = config('google_tag_manager');
+    if ($archivo === 'cuenta.html' || !is_string($id) || !preg_match('/^GTM-[A-Z0-9]{4,12}$/', $id)) return $html;
+    $charset = '<meta charset="utf-8">';
+    $pos = strpos($html, $charset);
+    if ($pos === false) return $html;
+    $pos += strlen($charset);
+    return substr($html, 0, $pos) . "\n  <script defer src=\"/js/etiquetas.js\" data-gtm=\"$id\"></script>" . substr($html, $pos);
+}
+
 // Devuelve la respuesta de la página, o null si la ruta no es una página (la atiende la API)
 function pagina_publica(string $ruta): ?Respuesta
 {
@@ -284,6 +297,7 @@ function pagina_publica(string $ruta): ?Respuesta
         $html = preg_replace_callback('#<meta name="description" content="[^"]*">#', fn() => '<meta name="description" content="' . $e($og['meta']) . '">', $html, 1);
     }
     $html = con_web_analytics($html);
+    $html = con_tag_manager($html, $archivo);
     // Igual que el HTML estático (public/.htaccess): se revalida siempre
     $respuesta = binaria($html, 'text/html; charset=utf-8', ['Cache-Control' => 'no-cache']);
     if (!empty($og['no_existe'])) $respuesta->status = 404; // la página se ve igual ("no encontrada"), pero no cuenta como página

@@ -45,6 +45,8 @@ Cómo se usa:
 
 ## Pendientes
 
+**Google Tag Manager y aviso de cookies (2026-11-06, aplicado y subido):** (a) **Todavía no mide nada:** el contenedor `GTM-MPJ9PMLR` está publicado pero vacío (versión 1); falta crear en GTM la etiqueta "Google Tag" con el ID `G-…` de GA4 y publicarla. (b) La CSP solo permite GTM, Analytics sin Ads y Vista previa; Google Ads, HTML personalizado y JavaScript personalizado requieren cambiarla. Si en GA4 se activan los indicadores de Google o funciones de publicidad, también pide dominios nuevos y hay que revisar el aviso. (c) Vista previa de GTM (Tag Assistant) sin probar: `Cross-Origin-Opener-Policy: same-origin` podría estorbarle; lo demás se comprueba en GA4 → Tiempo real. (d) Solo se miden páginas: el carrito y el envío por WhatsApp requieren eventos aparte. (e) Quien rechaza o no decide no se cuenta, así que los números de GA serán menores que los de Cloudflare Web Analytics. (f) El respaldo del servidor está en `~/respaldos/2026-11-06-gtm/` y `app/config.php.antes-gtm`.
+
 **Por resurtir y compra con cuenta (2026-11-06, aplicado y subido):** (a) el usuario prueba en su navegador un pedido real con cuenta y pedir un servicio: Turnstile rechaza a Chrome automatizado, así que con sesión solo se probó en local. (b) Capturar el mínimo de cada producto en Necutools → Productos: con 0, solo salen los agotados. (c) 2 de los 3 clientes de IONOS tienen la cuenta incompleta y verán "Completa tu cuenta" antes de pedir. (d) Revisar el texto nuevo de `public/privacidad.html` y `public/terminos.html` (ligar pedidos a la cuenta cambia lo que se avisa); siguen faltando los `[COMPLETAR]`. (e) El respaldo previo de la base está en `~/respaldos/2026-11-06-antes-resurtir.sql` del servidor (permisos 600, lleva datos personales): borrarlo cuando ya no haga falta. (f) `/api/carrito/precios` sigue público, pero sin números.
 
 **Logo nuevo (2026-11-05, aplicado y subido):** (a) (Resuelto 2026-11-05: commit `5e60661`, push y subido a IONOS.) (b) El amarillo del logo es `#F2A900`, no `--senal` (`#F5B800`): se dejó como lo dio el usuario. (c) La imagen de vista previa (`recursos/og/og-necutla.svg`, `app/og-imagen.php`) y el correo del código (`app/correo.php`) siguen con la N vieja; al cambiarlas, subir `OG_VERSION` en `app/paginas.php`.
@@ -153,6 +155,15 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-06: Google Tag Manager con aviso de cookies (sin plan aparte; decisión del usuario: pedir permiso antes de medir)
+- Pedido del usuario: integrar el contenedor `GTM-MPJ9PMLR`. El fragmento que dio Google trae JS en línea, que la CSP bloquea, y no usa el arranque `gtm.start` de la documentación oficial; tampoco se puso el `<noscript>` (lleva `style` en línea y el sitio no funciona sin JS).
+- `public/js/etiquetas.js` (nuevo): aviso de cookies (`.aviso-cookies`, sticky al final del `body`), decisión en `localStorage` (`necutla_cookies`), arranque oficial solo tras aceptar; al retirar el permiso borra `_ga*` y recarga. Nada llega a Google antes de aceptar. Botón "Cambiar mi decisión" en `#cookies-decision`.
+- `app/paginas.php` (`con_tag_manager`, con `defer`): solo si hay `google_tag_manager` en `app/config.php`; no en `cuenta.html`, y Necutools no pasa por ahí. `public/.htaccess`: CSP con la lista oficial de Google para GTM, Analytics sin Ads y Vista previa, sin `unsafe-inline` ni `unsafe-eval`.
+- `public/style.css`, enlace "Cookies" en el pie de las páginas, `public/privacidad.html` (Google como tercero y sección `#cookies`), `app/config.ejemplo.php`, `README.md`.
+- Pruebas locales con Chrome y Playwright a 1280 y 360: 38 de 38 (nada a Google antes de decidir, rechazar, reabrir, aceptar, retirar y borrar `_ga`, teclado, sin tapar el pie, sin scroll horizontal ni errores). El id se puso en el `config.php` local solo para probar y se restauró.
+- IONOS: respaldo en `~/respaldos/2026-11-06-gtm/`, 15 archivos por rsync, `google_tag_manager` en el `config.php` del servidor (copia `app/config.php.antes-gtm`, permisos 600), sin imprimir credenciales.
+- En vivo a 1280 y 360: `/healthz` 200, archivos idénticos, CSP nueva, nada a Google antes de decidir, Mi cuenta sin aviso, al aceptar el contenedor responde 200 y queda activo también en la página siguiente, sin errores de consola ni CSP. Dos fallas de la primera corrida eran de la prueba (no esperaba la descarga).
 
 ### 2026-11-06: productos por resurtir y compra con cuenta (plan `2026-11-05-resurtir-y-compra-con-cuenta.md`, prompts 1 a 5)
 - **Base** (`db/mariadb/schema.sql`): `productos.stock_minimo` (0 por omisión) y `pedidos.cliente_id` (`ON DELETE SET NULL`).

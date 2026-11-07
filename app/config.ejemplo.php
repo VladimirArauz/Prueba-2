@@ -62,6 +62,10 @@ return [
     // Es público. Vacío = no se cuentan visitas. No hace falta pasar el dominio a Cloudflare.
     'cloudflare_analytics' => '',
 
+    // Id del contenedor de Google Tag Manager (GTM-XXXXXXX). Es público. Vacío = no se carga: déjalo vacío en local
+    // para que las pruebas no se cuenten como visitas. Muestra el aviso de cookies y carga Google si la persona acepta; no va en Mi cuenta ni Necutools.
+    'google_tag_manager' => '',
+
     // Solo si IONOS pusiera un proxy delante y REMOTE_ADDR no fuera la IP del visitante. En hosting
     // compartido de IONOS se deja en false: si fuera true, cualquiera podría inventarse una IP.
     'confiar_x_forwarded_for' => false,

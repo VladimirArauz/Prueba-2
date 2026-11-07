@@ -197,6 +197,7 @@ sección "VENTANAS DE CONFIRMACIÓN" de `style.css`).
 | `correo` | Buzón que manda los códigos de las cuentas de cliente: `modo` (`smtp`, o `archivo` solo en local: guarda los correos en `/tmp/necutla-correos/`), `host` (`smtp.ionos.mx`), `puerto` (465), `usuario` y `password` del buzón, `remitente` y `nombre` |
 | `turnstile` | Captcha de Cloudflare: `site_key` (pública) y `secret`. Vacías = sin captcha. En local, las llaves de prueba de Cloudflare (ver `app/config.ejemplo.php`) |
 | `cloudflare_analytics` | Token de Cloudflare Web Analytics (público). Vacío = no se cuentan visitas |
+| `google_tag_manager` | Id del contenedor de Google Tag Manager (`GTM-…`, público). Vacío = no se carga. `public/js/etiquetas.js` muestra el aviso de cookies y carga Google solo si la persona acepta, en todas las páginas menos Mi cuenta y Necutools. La CSP solo permite Analytics: Google Ads, HTML personalizado y variables de JavaScript personalizado requieren cambiarla |
 | `hoy_prueba` | Solo en local: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones |
 
 `app/config.php` **nunca** se sube a git (está en `.gitignore`).
@@ -278,7 +279,7 @@ versión en PHP pasa las mismas pruebas) y la revisión de versiones y parches d
 | Cuentas | Correo y usuario se guardan en minúsculas y se comparan exactos (`josé` y `jose` son cuentas distintas); Argon2id (64 MiB, 4 pasadas; OWASP lo recomienda y pide al menos 19 MiB y 2; las de bcrypt de antes siguen sirviendo y se cambian solas al entrar); 10 fallos seguidos frenan la cuenta 15 minutos, venga de la IP que venga; además, 10 por IP |
 | Dos pasos | Opcional en Necutools ("Mi cuenta"); 8 códigos de respaldo de un solo uso; la clave se guarda cifrada (sodium) con una llave que sale del `secreto` (si cambias el `secreto`, hay que volver a activarla) |
 | Captcha | Cloudflare Turnstile en registro, entrar, olvidé mi contraseña, reenviar código, opiniones y pedidos (`app/captcha.php`, `public/js/captcha.js`). Casi nunca pide nada: solo aparece si Cloudflare duda. Si Cloudflare no responde, se deja pasar y se anota en el log |
-| Terceros | Solo Cloudflare (captcha y Web Analytics, sin cookies). La fuente Archivo está en `public/fuentes/` (antes venía de Google Fonts) |
+| Terceros | Cloudflare (captcha y Web Analytics, sin cookies) y Google Tag Manager (solo si la persona acepta las cookies; lo que se publique en el contenedor puede usar cookies: si se agrega una etiqueta nueva, revisar la CSP y `public/privacidad.html`). La fuente Archivo está en `public/fuentes/` (antes venía de Google Fonts) |
 | Permisos | Revisados en el servidor en cada petición: un encargado no toca tiendas ajenas ni paquetes |
 | Datos | Consultas con parámetros; validación de cada campo; los precios los pone el servidor; todo texto se escapa al mostrarlo |
 | Imágenes | Tipo real por sus bytes, máximo 1 MB, sin SVG; sin metadatos (GPS, modelo del celular); las de algo oculto solo las ve quien puede editarlo |
