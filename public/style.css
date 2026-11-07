@@ -920,6 +920,11 @@ body {
   list-style: none;
 }
 
+/* Mientras carga portada.js, el lugar de las 7 filas de esqueleto: así el hero no salta */
+.board-list:empty {
+  min-height: calc(57px * 7);
+}
+
 .board-row {
   display: flex;
   align-items: center;
