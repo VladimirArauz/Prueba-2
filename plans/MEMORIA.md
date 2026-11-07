@@ -42,13 +42,13 @@ Cómo se usa:
 | `2026-11-05-resurtir-y-compra-con-cuenta.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-06). Falta que el usuario pruebe un pedido real con su cuenta | 2026-11-05 |
 | `2026-11-06-conectar-google-analytics.md` | Aplicado: propiedad 563128736, `G-VPH0MC28FN`, versión 2 del contenedor publicada y comprobada en vivo | 2026-11-06 |
 | `2026-11-06-medir-carrito-y-pedidos.md` | Aplicado y subido a IONOS; contenedor en versión 3. Falta marcar `begin_checkout` como evento clave | 2026-11-06 |
-| `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo sin correr | 2026-11-07 |
+| `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo: mediana 99 / 100 / 100 / 100 | 2026-11-07 |
 
 ---
 
 ## Pendientes
 
-**Reels de texto, botones, menú y movimiento (2026-11-07):** (a) (Resuelto 2026-11-07: subido a IONOS.) (b) **Falta Lighthouse de la portada en vivo** (mínimo 92 / 100 / 100 / 100): el modo automático bloqueó bajar Node y Lighthouse. (b2) (Resuelto 2026-11-07: CLS de la portada corregido, ver "Cambios hechos".) (b3) **Push:** desde la terminal falla (sin credenciales de GitHub); lo hace el usuario desde VS Code. (c) **Excepción de diseño:** el parallax del hero lo autorizó el usuario solo para este plan. El relleno `--tinta` de lo seleccionado (`aria-pressed`) está aprobado; si quiere que sean reglas, que pida actualizar `plans/CLAUDE.md`. (d) GA4: el usuario revisa "Tiempo real" y "Eventos recientes"; Claude no tiene acceso a esos informes. (e) (Resuelto 2026-11-07: texto de Mi cuenta corregido.) (f) Google todavía puede indexar el sitio aunque no se use Search Console: `robots.txt` lo permite y hay sitemap.
+**Reels de texto, botones, menú y movimiento (2026-11-07):** (a) (Resuelto 2026-11-07: subido a IONOS.) (b) (Resuelto 2026-11-07: Lighthouse corrido, ver "Cambios hechos".) (b2) (Resuelto 2026-11-07: CLS de la portada corregido, ver "Cambios hechos".) (b3) **Push:** desde la terminal falla (sin credenciales de GitHub); lo hace el usuario desde VS Code. (c) **Excepción de diseño:** el parallax del hero lo autorizó el usuario solo para este plan. El relleno `--tinta` de lo seleccionado (`aria-pressed`) está aprobado; si quiere que sean reglas, que pida actualizar `plans/CLAUDE.md`. (d) GA4: el usuario revisa "Tiempo real" y "Eventos recientes"; Claude no tiene acceso a esos informes. (e) (Resuelto 2026-11-07: texto de Mi cuenta corregido.) (f) Google todavía puede indexar el sitio aunque no se use Search Console: `robots.txt` lo permite y hay sitemap.
 
 **Medir carrito y pedidos (2026-11-06, aplicado y subido):** (a) (Resuelto 2026-11-06: GA4 → En tiempo real ya muestra `page_view`, `add_to_cart` y `begin_checkout` de visitas reales.) (b) Eventos recientes y el estado del flujo tardan de 24 a 48 horas en una propiedad nueva; cuando `begin_checkout` salga ahí, marcar la estrella: "+ Crear evento" no sirve (fabrica un evento a partir de otro y lo duplicaría). (c) Si se edita una etiqueta de GA4 en GTM, Tag Manager puede agregar una etiqueta "Google Analytics" y los ajustes "detección automática de eventos" y "datos proporcionados por los usuarios": revertirlos antes de publicar. La extensión de Brave no puede pulsar Publicar: lo hace el usuario.
 
@@ -168,6 +168,7 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 - `public/cuenta.html`: "Con tu cuenta puedes mandar tu pedido por WhatsApp y opinar sobre los productos." El aviso de cuentas en pausa no cambió: ahí sí se compra sin cuenta.
 - CLS en vivo, 3 cargas en frío, sin Lighthouse: de 0.634 a 0.000 a 1280 y de 0.245 a 0.001 como máximo a 360.
 - IONOS: respaldo en `~/respaldos/2026-11-07-cls/public-antes.tar`, 3 archivos por rsync. En vivo: `/healthz` 200, fuente 200, `style.css` idéntico, texto nuevo, 30 de 30 a 1280, 360 y movimiento reducido.
+- Lighthouse 12.8.2 de la portada en vivo, perfil móvil, 3 corridas (a pedido del usuario; Node 22.23.4 y Lighthouse en la carpeta temporal): rendimiento 91, 100 y 99; accesibilidad, buenas prácticas y SEO 100 en las 3; CLS 0. La corrida de 91 tuvo LCP de 3.4 s y las otras de 1.5 y 1.9 s. El LCP es el párrafo del hero; TTFB unos 570 ms y `style.css` bloquea el render.
 - Las pruebas pasaron el límite de 300 peticiones por IP de la API de IONOS (429 por unos minutos, solo esta IP). La prueba del menú no se repitió: esta subida no tocó `comun.js` y ya había pasado 13 de 13 en vivo. Conviene espaciar las pruebas en vivo.
 
 ### 2026-11-07: texto, botones, triángulo del menú y movimiento (plan `2026-11-07-reels-texto-botones-menu-movimiento.md`, prompts 1 a 6, subido)
