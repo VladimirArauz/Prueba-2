@@ -1,7 +1,7 @@
 # Conectar necutla.com con Google Analytics 4
 
 - **Fecha:** 2026-11-06
-- **Estado:** propuesto
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-06-conectar-google-analytics.md`
 - **Alcance:** crear la propiedad de GA4 y publicar la etiqueta en el contenedor `GTM-MPJ9PMLR`, desde los paneles de Google. No se cambia código del sitio.
 
