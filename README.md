@@ -157,11 +157,12 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
 
 | Clase | Para qué | Ejemplo |
 |---|---|---|
-| `.btn` (amarillo) | La acción principal del grupo. Solo uno por grupo | "Guardar producto", "Ver tienda" |
-| `.btn.secondary` | Acciones de apoyo o para salir de una edición | "Cancelar edición", "Mostrar más" |
+| `.btn` (amarillo) | La acción principal del grupo. Solo uno por grupo | "Guardar producto", "Agregar al carrito" |
+| `.btn.secondary` | Acciones de apoyo o para salir de una edición | "Cancelar edición", "Ver tienda" |
 | `.btn.ghost` | Acciones discretas de navegación, sin borde visible | "Volver", "Cerrar menú" |
 | `.btn.danger` | Solo borrar, quitar o vaciar | "Vaciar carrito", icono de borrar |
 | `.btn.wa` | Solo el envío por WhatsApp | "Enviar pedido por WhatsApp" |
+| `.btn.secondary` o `.btn.ghost` con `aria-pressed="true"` | Filtro, pestaña o sección seleccionada. Marca un estado, no una acción: nunca amarillo | "Todos", "Productos (12)" |
 | `.btn-sm`, `.btn-icon`, `.btn-block` | Tamaño (36px), solo icono (con `aria-label`) y ancho completo | |
 
 Estados: hover y presionado los da `style.css`. `disabled` lo pone gris en cualquier variante

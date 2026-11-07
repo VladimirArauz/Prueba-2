@@ -205,7 +205,6 @@ function mostrarPanel(panel) {
   document.querySelectorAll(".admin-panel").forEach(sec => { sec.hidden = sec.id !== `panel-${panel}`; });
   document.querySelectorAll('#admin-tabs [data-action="panel"]').forEach(btn => {
     const activo = btn.dataset.panel === panel;
-    btn.classList.toggle("ghost", !activo);
     btn.setAttribute("aria-pressed", String(activo));
     // En celular el menú es una fila con scroll: la sección elegida queda a la vista
     if (activo) btn.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -477,7 +476,6 @@ async function cambiarFiltrosDash() {
 function renderPedidos() {
   document.querySelectorAll('#pedidos-estados [data-action="pedidos-estado"]').forEach(btn => {
     const activo = btn.dataset.estado === st.pedidosEstado;
-    btn.classList.toggle("secondary", !activo);
     btn.setAttribute("aria-pressed", String(activo));
   });
   const { pedidos, pagina, paginas, total } = st.pedidos;

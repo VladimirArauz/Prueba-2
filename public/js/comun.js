@@ -664,7 +664,44 @@ if (ANIMAR) {
 // ≤ 860px: cajón que abre el botón "Abrir menú"; "Tiendas" entra como segundo panel.
 const CON_MOUSE = window.matchMedia("(hover: hover) and (min-width: 861px)");
 const ES_CAJON = window.matchMedia("(max-width: 860px)");
+const CIERRE_NORMAL = 150;
+const CIERRE_RUMBO = 300; // ms de gracia mientras el cursor va en diagonal hacia el panel
 let cierreTiendas = null;
+let puntoPrevio = null;
+
+function programarCierreTiendas(espera) {
+  clearTimeout(cierreTiendas);
+  cierreTiendas = setTimeout(() => abrirTiendas(false), espera);
+}
+
+// Triángulo seguro: actual cae entre el punto anterior y las dos esquinas izquierdas del panel
+function vaHaciaPanel(anterior, actual, rect) {
+  if (!anterior || actual.x <= anterior.x) return false;
+  const lado = (a, b) => (b.x - a.x) * (actual.y - a.y) - (b.y - a.y) * (actual.x - a.x);
+  const arriba = { x: rect.left, y: rect.top };
+  const abajo = { x: rect.left, y: rect.bottom };
+  const signos = [lado(anterior, arriba), lado(arriba, abajo), lado(abajo, anterior)];
+  return signos.every(n => n >= 0) || signos.every(n => n <= 0);
+}
+
+function seguirCursor(event) {
+  if (event.pointerType !== "mouse") return;
+  const actual = { x: event.clientX, y: event.clientY };
+  // Movimientos de menos de 4 px son ruido: no dicen hacia dónde va el cursor
+  if (puntoPrevio && Math.hypot(actual.x - puntoPrevio.x, actual.y - puntoPrevio.y) < 4) return;
+  const nav = document.getElementById("main-navbar");
+  const panel = nav.querySelector(".side-flyout");
+  if (event.target.closest?.(".side-tiendas, .side-flyout")) {
+    nav.classList.remove("is-rumbo");
+  } else if (vaHaciaPanel(puntoPrevio, actual, panel.getBoundingClientRect())) {
+    nav.classList.add("is-rumbo");
+    programarCierreTiendas(CIERRE_RUMBO);
+  } else if (nav.classList.contains("is-rumbo")) {
+    nav.classList.remove("is-rumbo");
+    programarCierreTiendas(CIERRE_NORMAL);
+  }
+  puntoPrevio = actual;
+}
 
 function abrirTiendas(abrir, enfocar = false) {
   const nav = document.getElementById("main-navbar");
@@ -673,6 +710,13 @@ function abrirTiendas(abrir, enfocar = false) {
   clearTimeout(cierreTiendas);
   nav.classList.toggle("is-open", abrir);
   boton.setAttribute("aria-expanded", String(abrir));
+  if (abrir && CON_MOUSE.matches) {
+    document.addEventListener("pointermove", seguirCursor, { passive: true });
+  } else {
+    document.removeEventListener("pointermove", seguirCursor);
+    nav.classList.remove("is-rumbo");
+    puntoPrevio = null;
+  }
   if (abrir && enfocar) {
     const primero = document.querySelector(ES_CAJON.matches ? ".side-volver" : ".side-tienda");
     if (primero) primero.focus();
@@ -725,20 +769,21 @@ function initBarraLateral() {
   if (!nav) return;
   const boton = document.getElementById("side-tiendas-btn");
 
-  // Hover: abre al entrar a "Tiendas" o al panel; cierra con una pequeña tolerancia al salir
+  const esperaCierre = () => (nav.classList.contains("is-rumbo") ? CIERRE_RUMBO : CIERRE_NORMAL);
+
+  // Hover: abre al entrar a "Tiendas" o al panel; cierra con una pequeña tolerancia al salir,
+  // mayor si el cursor va rumbo al panel (seguirCursor)
   nav.addEventListener("mouseover", event => {
     if (!CON_MOUSE.matches) return;
     if (event.target.closest(".side-tiendas, .side-flyout")) {
       abrirTiendas(true);
     } else if (nav.classList.contains("is-open")) {
-      clearTimeout(cierreTiendas);
-      cierreTiendas = setTimeout(() => abrirTiendas(false), 150);
+      programarCierreTiendas(esperaCierre());
     }
   });
   nav.addEventListener("mouseleave", () => {
     if (!CON_MOUSE.matches || !nav.classList.contains("is-open")) return;
-    clearTimeout(cierreTiendas);
-    cierreTiendas = setTimeout(() => abrirTiendas(false), 150);
+    programarCierreTiendas(esperaCierre());
   });
 
   // Teclado fuera del cajón: al salir de la barra con Tab se cierra el panel

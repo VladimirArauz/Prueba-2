@@ -62,7 +62,7 @@ function tarjetaTienda(t) {
       ${t.ofertas_hoy ? `<span class="tag-oferta">${icon("tag")}${t.ofertas_hoy === 1 ? "1 oferta hoy" : `${t.ofertas_hoy} ofertas hoy`}</span>` : ""}
       <p>${escapeHTML(t.descripcion || "Catálogo de la tienda.")}</p>
       ${partes.length ? `<div class="card-sub">${partes.join(" · ")}</div>` : ""}
-      <a class="btn" href="/t/${escapeHTML(t.slug)}">Ver tienda</a>
+      <a class="btn secondary" href="/t/${escapeHTML(t.slug)}">Ver tienda</a>
     </article>`;
 }
 

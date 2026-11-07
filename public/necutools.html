@@ -112,7 +112,7 @@
     <div id="admin-workspace" class="dash" hidden>
       <nav class="dash-nav" id="admin-tabs" aria-label="Secciones de Necutools">
         <ul class="dash-nav-list">
-          <li><button type="button" class="btn btn-sm dash-link" data-action="panel" data-panel="resumen" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"></use></svg><span>Resumen</span></button></li>
+          <li><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="resumen" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"></use></svg><span>Resumen</span></button></li>
           <li><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="pedidos" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-receipt"></use></svg><span>Pedidos</span><span class="cart-pill is-cero" id="nav-pedidos" aria-label="pedidos pendientes">0</span></button></li>
           <li><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="tiendas" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg><span>Tiendas</span></button></li>
           <li><button type="button" class="btn ghost btn-sm dash-link" data-action="panel" data-panel="productos" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-package"></use></svg><span>Productos y servicios</span></button></li>
@@ -210,7 +210,7 @@
             <h3>Pedidos enviados por WhatsApp</h3>
             <p>Cada vez que un cliente toca "Enviar pedido por WhatsApp" se guarda aquí en proceso, con el nombre de su cuenta. Mientras está en proceso puedes cambiar las piezas o los artículos. Al marcarlo como pagado, el stock baja solo; si lo regresas a en proceso o lo cancelas, el stock vuelve.</p>
             <div class="tabs dash-estados" id="pedidos-estados" role="group" aria-label="Filtrar pedidos por estado">
-              <button type="button" class="btn btn-sm" data-action="pedidos-estado" data-estado="" aria-pressed="true">Todos</button>
+              <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="" aria-pressed="true">Todos</button>
               <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="en_proceso" aria-pressed="false">En proceso</button>
               <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="pagado" aria-pressed="false">Pagados</button>
               <button type="button" class="btn secondary btn-sm" data-action="pedidos-estado" data-estado="cancelado" aria-pressed="false">Cancelados</button>

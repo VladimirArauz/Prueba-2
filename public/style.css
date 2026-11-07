@@ -53,12 +53,16 @@
   --r-card: 10px;
   --r-panel: 4px;
 
-  /* Movimiento */
-  --t-fast: 0.15s ease;
+  /* Movimiento (plan 2026-11-07): lo que aparece frena al llegar, lo que se va acelera al salir
+     y lo que cambia de lugar acelera y frena */
+  --curva-entra: cubic-bezier(.2, .7, .2, 1);
+  --curva-sale: cubic-bezier(.42, 0, 1, 1);
+  --curva-mueve: cubic-bezier(.65, 0, .35, 1);
+  --t-fast: 0.15s var(--curva-entra);
   /* Plan 2026-10-20 (excepción autorizada por el usuario): movimiento suave y dos sombras de --tinta */
-  --t-media: 0.25s cubic-bezier(.2, .7, .2, 1);  /* hover y menús */
-  --t-lenta: 0.45s cubic-bezier(.2, .7, .2, 1);  /* barra lateral y entradas */
-  --t-panel: 0.65s cubic-bezier(.65, 0, .35, 1); /* panel del login */
+  --t-media: 0.25s var(--curva-entra);  /* hover y menús */
+  --t-lenta: 0.45s var(--curva-entra);  /* barra lateral y entradas */
+  --t-panel: 0.65s var(--curva-mueve); /* panel del login */
   --sombra-1: 0 6px 18px rgba(23, 41, 92, .10);  /* hover de tarjetas */
   --sombra-2: 0 24px 60px rgba(23, 41, 92, .16); /* barra abierta, submenú, tarjeta de login */
   --velo: rgba(23, 41, 92, .4);                  /* fondo detrás del cajón del menú */
@@ -250,6 +254,21 @@ small, .text-sm {
 .btn.ghost:hover {
   border-color: var(--linea);
   background: transparent;
+}
+
+/* Filtro, pestaña o sección seleccionada: es un estado, no una acción, por eso nunca va en amarillo
+   (plan 2026-11-07, estilo aprobado por el usuario) */
+.btn.secondary[aria-pressed="true"],
+.btn.ghost[aria-pressed="true"] {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--hoja);
+}
+
+.btn.secondary[aria-pressed="true"]:hover,
+.btn.ghost[aria-pressed="true"]:hover {
+  background: var(--tinta-2);
+  border-color: var(--tinta-2);
 }
 
 /* Deshabilitado: gris plano en cualquier variante; ocupado (esperando al servidor): se ve igual
@@ -484,6 +503,15 @@ body {
   transform: translateX(2px);
 }
 
+/* Rumbo al panel de Tiendas: las filas que cruza el cursor no se resaltan (plan 2026-11-07) */
+.sidebar.is-rumbo .side-link:hover:not([aria-expanded="true"], [aria-current="page"], .is-current) {
+  background: transparent;
+}
+
+.sidebar.is-rumbo .side-link:hover .side-ico {
+  transform: none;
+}
+
 /* Opción activa: rellena de tinta con una marca señal a la izquierda */
 .side-link[aria-current="page"],
 .side-link.is-current {
@@ -659,7 +687,7 @@ body {
 /* Las tiendas entran escalonadas al abrir el panel */
 @media (prefers-reduced-motion: no-preference) {
   .sidebar.is-open .side-tiendas-list li {
-    animation: entrar-lado 0.35s cubic-bezier(.2, .7, .2, 1) both;
+    animation: entrar-lado 0.35s var(--curva-entra) both;
   }
   .sidebar.is-open .side-tiendas-list li:nth-child(2) { animation-delay: 30ms; }
   .sidebar.is-open .side-tiendas-list li:nth-child(3) { animation-delay: 60ms; }
@@ -808,7 +836,7 @@ body {
 }
 
 .cart-pill.pulse {
-  animation: pill-pulse 0.3s ease;
+  animation: pill-pulse 0.3s var(--curva-mueve);
 }
 
 @keyframes pill-pulse {
@@ -816,6 +844,32 @@ body {
 }
 
 /* ================= 2. HERO: tablero directorio ================= */
+/* Parallax (plan 2026-11-07, excepción autorizada por el usuario solo para ese plan): al bajar, el texto y
+   el tablero se separan un poco. Va con translate porque transform lo usa la entrada .revelar.
+   Sin soporte de animation-timeline, el hero se queda quieto. */
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .hero-copy {
+      animation: parallax-copia linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 480px;
+    }
+    .board {
+      animation: parallax-tablero linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 480px;
+    }
+  }
+}
+
+@keyframes parallax-copia {
+  to { translate: 0 -12px; }
+}
+
+@keyframes parallax-tablero {
+  to { translate: 0 24px; }
+}
+
 .hero {
   padding: 56px 0 48px;
   border-bottom: 1px solid var(--linea);
@@ -1274,11 +1328,10 @@ textarea {
 }
 
 .cart-empty {
-  text-align: center;
   padding: 48px 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -1405,7 +1458,6 @@ textarea {
 }
 
 .admin-table .cell-empty {
-  text-align: center;
   padding: 28px;
   color: var(--texto-2);
 }
@@ -1440,7 +1492,7 @@ textarea {
   z-index: 2000;
   opacity: 0;
   transform: translateY(12px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.15s var(--curva-sale), transform 0.15s var(--curva-sale);
   pointer-events: none;
 }
 
@@ -1452,6 +1504,7 @@ textarea {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+  transition: opacity 0.2s var(--curva-entra), transform 0.2s var(--curva-entra);
 }
 
 /* Toast de error: admiración en rojo, temblor corto y botón para cerrarlo */
@@ -1506,7 +1559,7 @@ textarea {
 }
 
 .toast-notice.is-error.show {
-  animation: toast-tiembla 0.3s ease;
+  animation: toast-tiembla 0.3s var(--curva-mueve);
 }
 
 @keyframes toast-tiembla {
@@ -1545,11 +1598,11 @@ textarea {
 
 /* Al cerrar: fundido corto antes del close() (comun.js, cerrar) */
 .dialogo[open].is-cerrando {
-  animation: dialogo-sale 0.18s ease-in both;
+  animation: dialogo-sale 0.18s var(--curva-sale) both;
 }
 
 .dialogo[open].is-cerrando::backdrop {
-  animation: dialogo-fondo-sale 0.18s ease-in both;
+  animation: dialogo-fondo-sale 0.18s var(--curva-sale) both;
 }
 
 .dialogo-caja {
@@ -1582,7 +1635,7 @@ textarea {
 }
 
 .dialogo[open] .dialogo-insignia {
-  animation: insignia-pop 0.35s 0.08s cubic-bezier(.2, .7, .2, 1) both;
+  animation: insignia-pop 0.35s 0.08s var(--curva-entra) both;
 }
 
 .dialogo-insignia .icon {
@@ -2923,7 +2976,7 @@ a.card-img-wrap {
 }
 
 .anim .revelar-grid.visible > * {
-  animation: subir 0.5s cubic-bezier(.2, .7, .2, 1) backwards;
+  animation: subir 0.5s var(--curva-entra) backwards;
 }
 
 .anim .revelar-grid.visible > :nth-child(2) { animation-delay: 60ms; }
@@ -2966,7 +3019,7 @@ a.card-img-wrap {
   justify-content: center;
   gap: 4px;
   padding: 32px 36px;
-  transition: opacity 0.35s ease 0.25s, transform var(--t-panel);
+  transition: opacity 0.35s var(--curva-entra) 0.25s, transform var(--t-panel);
 }
 
 .auth-entrar {
@@ -2993,7 +3046,7 @@ a.card-img-wrap {
 .auth.is-registro .auth-entrar,
 .auth:not(.is-registro) .auth-registro {
   opacity: 0;
-  transition: opacity 0.25s ease, transform var(--t-panel);
+  transition: opacity 0.25s var(--curva-sale), transform var(--t-panel);
 }
 
 .auth.is-registro .auth-entrar {
@@ -3093,7 +3146,7 @@ a.card-img-wrap {
 
 .auth-ciudad .ve {
   fill: var(--senal);
-  transition: fill 0.2s ease;
+  transition: fill 0.2s var(--curva-entra);
 }
 
 /* Contraseña equivocada: las ventanas se ponen rojas (error) mientras dura .is-alarma */
@@ -3133,14 +3186,13 @@ a.card-img-wrap {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   align-self: start;
   gap: 12px;
-  /* Centrado en el espacio que deja libre la ciudad (40 % de abajo) */
+  /* A media altura en el espacio que deja libre la ciudad (40 % de abajo) */
   height: 60%;
   padding: 32px 40px 8px;
-  text-align: center;
-  transition: opacity 0.3s ease 0.3s, transform 0.3s ease 0.3s;
+  transition: opacity 0.3s var(--curva-entra) 0.3s, transform 0.3s var(--curva-entra) 0.3s;
 }
 
 .auth-panel-titulo {
@@ -3165,7 +3217,7 @@ a.card-img-wrap {
   opacity: 0;
   visibility: hidden;
   transform: translateY(8px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  transition: opacity 0.2s var(--curva-sale), transform 0.2s var(--curva-sale), visibility 0s linear 0.2s;
 }
 
 /* Celular: el panel queda arriba como franja y los formularios se cambian de lado a lado */
@@ -4143,15 +4195,15 @@ a.card-img-wrap {
 
 @media (prefers-reduced-motion: no-preference) {
   .codigo-digito.is-pop {
-    animation: codigo-pop 0.18s ease-out;
+    animation: codigo-pop 0.18s var(--curva-entra);
   }
 
   .codigo-campo.is-temblor .codigo-cajas {
-    animation: codigo-temblor 0.4s ease-in-out;
+    animation: codigo-temblor 0.4s var(--curva-mueve);
   }
 
   .codigo-campo.is-ok .codigo-digito {
-    animation: codigo-brillo 0.6s ease-out;
+    animation: codigo-brillo 0.6s var(--curva-entra);
   }
 }
 

@@ -50,7 +50,7 @@ function renderPestanas() {
       : tab === "servicios" ? estado.datos.servicios.length
       : estado.datos.ofertas.length;
     const activa = tab === estado.tab;
-    return `<button type="button" class="btn btn-sm${activa ? "" : " secondary"}" data-action="tab" data-tab="${tab}" aria-pressed="${activa}">${PESTANAS[tab]} (${total})</button>`;
+    return `<button type="button" class="btn secondary btn-sm" data-action="tab" data-tab="${tab}" aria-pressed="${activa}">${PESTANAS[tab]} (${total})</button>`;
   }).join("");
 }
 
@@ -61,7 +61,7 @@ function renderFiltros() {
   if (contenedor.hidden) return;
   const boton = (slug, nombre) => {
     const activo = estado.sub === slug;
-    return `<button type="button" class="btn btn-sm${activo ? "" : " secondary"}" data-action="filtrar" data-sub="${escapeHTML(slug)}" aria-pressed="${activo}">${escapeHTML(nombre)}</button>`;
+    return `<button type="button" class="btn secondary btn-sm" data-action="filtrar" data-sub="${escapeHTML(slug)}" aria-pressed="${activo}">${escapeHTML(nombre)}</button>`;
   };
   contenedor.innerHTML = boton("", "Todo") + subs.map(s => boton(s.slug, s.nombre)).join("");
 }
