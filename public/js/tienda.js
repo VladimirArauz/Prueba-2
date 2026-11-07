@@ -178,7 +178,9 @@ function pedirServicio(id) {
   if (!servicio) return;
   const mensaje = `¡Hola! Vi en Necutla el servicio *${servicio.nombre}* de ${estado.datos.tienda.nombre} ` +
     `(${textoPrecio(servicio)}). Quisiera más información, por favor.`;
-  abrirWhatsApp(estado.datos.tienda.whatsapp, mensaje, document.querySelector(`[data-wa-for="${id}"]`));
+  if (abrirWhatsApp(estado.datos.tienda.whatsapp, mensaje, document.querySelector(`[data-wa-for="${id}"]`))) {
+    medirServicio(servicio, estado.datos.tienda.nombre);
+  }
 }
 
 Object.assign(ACCIONES, {
@@ -207,6 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   pintarEsqueletos(document.getElementById("store-grid"), POR_PAGINA);
   try {
     estado.datos = await api(`/stands/${encodeURIComponent(slug)}`);
+    tiendaDeLaPagina = estado.datos.tienda.nombre;
   } catch (error) {
     document.title = "Tienda no encontrada | Necutla";
     document.getElementById("store-title").textContent = error.status === 404 ? "Tienda no encontrada" : "No se pudo cargar la tienda";

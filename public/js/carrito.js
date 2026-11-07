@@ -192,6 +192,13 @@ function mensajeDe(grupo) {
   return lineas.join("\n");
 }
 
+// Un evento por tienda. value es lo que el servidor calculó: con 2x1 el precio por pieza sale del subtotal.
+function medirPedido(grupo) {
+  const items = grupo.items.map(i => itemMedido(i.tipo === "paquete" ? "Paquete" : "Producto", i.id, i.nombre, grupo.nombre,
+    Math.round(i.subtotal / i.cantidad * 100) / 100, i.cantidad));
+  medirCompra("begin_checkout", items, `pedido-${grupo.clave}-${grupo.items.map(i => `${claveDe(i)}x${i.cantidad}`).join(",")}`);
+}
+
 // Guarda el pedido para el resumen de Necutools. No bloquea: WhatsApp ya se abrió. Solo avisa si venció la sesión.
 // El captcha casi nunca se ve; si Cloudflare duda, su recuadro aparece arriba del aviso "Ya lo envié".
 async function registrarPedido(grupo) {
@@ -225,6 +232,7 @@ function enviar(clave) {
   const contenedor = document.querySelector(`[data-enviado="${CSS.escape(clave)}"]`);
   if (!abrirWhatsApp(grupo.whatsapp, mensajeDe(grupo), contenedor)) return;
   registrarPedido(grupo);
+  medirPedido(grupo);
   const claves = grupo.items.map(claveDe).join(",");
   contenedor.insertAdjacentHTML("beforeend", `
     <div class="form-actions">

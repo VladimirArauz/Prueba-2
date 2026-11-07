@@ -98,7 +98,7 @@ function pedirServicio() {
     "",
     "¿Me pueden decir la disponibilidad y cómo lo agendamos? ¡Gracias! 🙌"
   ].join("\n");
-  abrirWhatsApp(p.whatsapp, mensaje, $("producto-wa"));
+  if (abrirWhatsApp(p.whatsapp, mensaje, $("producto-wa"))) medirServicio(p, p.tienda);
 }
 
 // ================= Opiniones =================

@@ -197,7 +197,7 @@ sección "VENTANAS DE CONFIRMACIÓN" de `style.css`).
 | `correo` | Buzón que manda los códigos de las cuentas de cliente: `modo` (`smtp`, o `archivo` solo en local: guarda los correos en `/tmp/necutla-correos/`), `host` (`smtp.ionos.mx`), `puerto` (465), `usuario` y `password` del buzón, `remitente` y `nombre` |
 | `turnstile` | Captcha de Cloudflare: `site_key` (pública) y `secret`. Vacías = sin captcha. En local, las llaves de prueba de Cloudflare (ver `app/config.ejemplo.php`) |
 | `cloudflare_analytics` | Token de Cloudflare Web Analytics (público). Vacío = no se cuentan visitas |
-| `google_tag_manager` | Id del contenedor de Google Tag Manager (`GTM-…`, público). Vacío = no se carga. `public/js/etiquetas.js` muestra el aviso de cookies y carga Google solo si la persona acepta, en todas las páginas menos Mi cuenta y Necutools. La CSP solo permite Analytics: Google Ads, HTML personalizado y variables de JavaScript personalizado requieren cambiarla |
+| `google_tag_manager` | Id del contenedor de Google Tag Manager (`GTM-…`, público). Vacío = no se carga. `public/js/etiquetas.js` muestra el aviso de cookies y carga Google solo si la persona acepta, en todas las páginas menos Mi cuenta y Necutools. Con cookies aceptadas, `medirCompra()` de `public/js/comun.js` manda `add_to_cart` y `begin_checkout` (pedido o servicio enviado, uno por tienda) en MXN, sin datos del cliente. La CSP solo permite Analytics: Google Ads, HTML personalizado y variables de JavaScript personalizado requieren cambiarla |
 | `hoy_prueba` | Solo en local: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones |
 
 `app/config.php` **nunca** se sube a git (está en `.gitignore`).

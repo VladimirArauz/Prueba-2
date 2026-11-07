@@ -187,6 +187,37 @@ function pedirTexto({ etiqueta, valor = "", max = 200, tipo = "nota", ...resto }
   return abrirDialogo({ ...resto, tipo, campo: { etiqueta, valor, max } });
 }
 
+// ================= Medición (Google Analytics por Tag Manager) =================
+// window.dataLayer solo existe si la persona aceptó las cookies (public/js/etiquetas.js): sin él no se mide nada.
+// Nunca se manda el nombre, el correo ni el teléfono del cliente: solo datos del producto.
+const compraMedida = new Set();
+let tiendaDeLaPagina = ""; // En /t/<slug> los productos no traen su tienda: la pone tienda.js
+
+// Un artículo como lo pide GA4. La tienda va en item_category para ver los reportes por tienda sin dimensiones extra.
+function itemMedido(tipo, id, nombre, tienda, precio, cantidad = 1) {
+  const item = { item_id: `${tipo.toLowerCase()}-${id}`, item_name: nombre, item_category: tienda, item_category2: tipo, quantity: cantidad };
+  if (Number.isFinite(precio)) item.price = precio;
+  return item;
+}
+
+// firma: evita contar dos veces lo mismo si se vuelve a tocar el botón en esta visita
+function medirCompra(evento, items, firma = null) {
+  if (!window.dataLayer) return;
+  if (firma) {
+    if (compraMedida.has(firma)) return;
+    compraMedida.add(firma);
+  }
+  const value = Math.round(items.reduce((suma, i) => suma + (i.price || 0) * i.quantity, 0) * 100) / 100;
+  window.dataLayer.push({ ecommerce: null }); // Limpia el evento anterior para que no se mezclen sus artículos
+  window.dataLayer.push({ event: evento, ecommerce: { currency: "MXN", value, items } });
+}
+
+// Pedir información de un servicio cuenta como pedido enviado. Con "desde" o "a cotizar" no hay precio que sumar.
+function medirServicio(servicio, tienda) {
+  const precio = servicio.precio_modo === "fijo" ? servicio.precio : null;
+  medirCompra("begin_checkout", [itemMedido("Servicio", servicio.id, servicio.nombre, tienda, precio)], `servicio-${servicio.id}`);
+}
+
 // ================= Carrito =================
 function leerCarrito() {
   try {
@@ -375,7 +406,7 @@ function accionProducto(p, opciones = {}) {
   if (p.colores_total > 0 && !opciones.enDetalle) {
     return `<a class="btn secondary" href="/p/${Number(p.id)}">${icon("palette")}Elegir color</a>`;
   }
-  return `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}">${icon("shopping-cart")}Agregar al carrito</button>`;
+  return `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}" data-precio="${Number(p.oferta?.precio_oferta ?? p.precio)}" data-tienda="${escapeHTML(p.tienda || "")}">${icon("shopping-cart")}Agregar al carrito</button>`;
 }
 
 // opciones.conTienda: muestra la tienda (búsqueda y vitrina)
@@ -531,7 +562,7 @@ function tarjetaPromocion(promo) {
       <div class="letrero-dates">${escapeHTML(vigencia)}</div>
       ${promo.agotado
         ? `<button type="button" class="btn secondary" disabled>${icon("shopping-cart")}Paquete agotado</button>`
-        : `<button type="button" class="btn" data-action="agregar" data-tipo="paquete" data-id="${Number(promo.id)}" data-nombre="${escapeHTML(promo.titulo)}">
+        : `<button type="button" class="btn" data-action="agregar" data-tipo="paquete" data-id="${Number(promo.id)}" data-nombre="${escapeHTML(promo.titulo)}" data-precio="${Number(promo.precio)}" data-tienda="Paquetes">
         ${icon("shopping-cart")}Agregar paquete al carrito
       </button>`}
     </article>`;
@@ -539,7 +570,11 @@ function tarjetaPromocion(promo) {
 
 // ================= Eventos (delegados, sin onclick en el HTML) =================
 const ACCIONES = {
-  agregar: el => agregarAlCarrito(el.dataset.tipo, Number(el.dataset.id), el.dataset.nombre, Number(el.dataset.color) || null),
+  agregar: el => {
+    const { tipo, id, nombre, precio, tienda } = el.dataset;
+    agregarAlCarrito(tipo, Number(id), nombre, Number(el.dataset.color) || null);
+    medirCompra("add_to_cart", [itemMedido(tipo === "paquete" ? "Paquete" : "Producto", id, nombre, tienda || tiendaDeLaPagina, Number(precio))]);
+  },
   "vitrina-mas": el => {
     const bloque = el.closest(".vitrina-bloque");
     bloque.querySelectorAll(".card[hidden]").forEach(card => { card.hidden = false; });

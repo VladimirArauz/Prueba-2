@@ -63,7 +63,7 @@
     aviso.setAttribute("aria-label", "Aviso de cookies");
     aviso.innerHTML = `
       <div class="container aviso-cookies-interior">
-        <p>Usamos cookies de Google Analytics para saber qué páginas se visitan y mejorar Necutla. Solo se activan si las aceptas. Lee el <a href="/privacidad.html#cookies">Aviso de privacidad</a>.</p>
+        <p>Usamos cookies de Google Analytics para saber qué páginas se visitan y qué productos se piden, y así mejorar Necutla. Solo se activan si las aceptas. Lee el <a href="/privacidad.html#cookies">Aviso de privacidad</a>.</p>
         <div class="aviso-cookies-botones">
           <button type="button" class="btn btn-sm" data-cookies="si">Aceptar cookies</button>
           <button type="button" class="btn secondary btn-sm" data-cookies="no">Rechazar cookies</button>
