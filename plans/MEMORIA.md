@@ -40,12 +40,13 @@ Cómo se usa:
 | `2026-11-04-cumplimiento-legal-cuenta-y-edad.md` | Aplicado y subido a IONOS (2026-11-04). Faltan los `[COMPLETAR]` y revisar 2 frases de la portada | 2026-11-04 |
 | `2026-11-04-filtro-groserias.md` | Aplicado (prompts 1 a 3) y subido a IONOS | 2026-11-04 |
 | `2026-11-05-resurtir-y-compra-con-cuenta.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-06). Falta que el usuario pruebe un pedido real con su cuenta | 2026-11-05 |
+| `2026-11-06-conectar-google-analytics.md` | Propuesto: prompt listo para la extensión de Claude en Brave. Falta correrlo y que Claude revise el resultado | 2026-11-06 |
 
 ---
 
 ## Pendientes
 
-**Google Tag Manager y aviso de cookies (2026-11-06, aplicado y subido):** (a) **Todavía no mide nada:** el contenedor `GTM-MPJ9PMLR` está publicado pero vacío (versión 1); falta crear en GTM la etiqueta "Google Tag" con el ID `G-…` de GA4 y publicarla. (b) La CSP solo permite GTM, Analytics sin Ads y Vista previa; Google Ads, HTML personalizado y JavaScript personalizado requieren cambiarla. Si en GA4 se activan los indicadores de Google o funciones de publicidad, también pide dominios nuevos y hay que revisar el aviso. (c) Vista previa de GTM (Tag Assistant) sin probar: `Cross-Origin-Opener-Policy: same-origin` podría estorbarle; lo demás se comprueba en GA4 → Tiempo real. (d) Solo se miden páginas: el carrito y el envío por WhatsApp requieren eventos aparte. (e) Quien rechaza o no decide no se cuenta, así que los números de GA serán menores que los de Cloudflare Web Analytics. (f) El respaldo del servidor está en `~/respaldos/2026-11-06-gtm/` y `app/config.php.antes-gtm`.
+**Google Tag Manager y aviso de cookies (2026-11-06, aplicado y subido):** (a) **Todavía no mide nada:** el contenedor `GTM-MPJ9PMLR` está publicado pero vacío (versión 1); falta correr el prompt de `plans/prompts/2026-11-06-conectar-google-analytics.md`. Brave Shields puede bloquear Analytics: comprobar con otro navegador. (b) La CSP solo permite GTM, Analytics sin Ads y Vista previa; Google Ads, HTML personalizado y JavaScript personalizado requieren cambiarla. Si en GA4 se activan los indicadores de Google o funciones de publicidad, también pide dominios nuevos y hay que revisar el aviso. (c) Vista previa de GTM (Tag Assistant) sin probar: `Cross-Origin-Opener-Policy: same-origin` podría estorbarle; lo demás se comprueba en GA4 → Tiempo real. (d) Solo se miden páginas: el carrito y el envío por WhatsApp requieren eventos aparte. (e) Quien rechaza o no decide no se cuenta, así que los números de GA serán menores que los de Cloudflare Web Analytics. (f) El respaldo del servidor está en `~/respaldos/2026-11-06-gtm/` y `app/config.php.antes-gtm`.
 
 **Por resurtir y compra con cuenta (2026-11-06, aplicado y subido):** (a) el usuario prueba en su navegador un pedido real con cuenta y pedir un servicio: Turnstile rechaza a Chrome automatizado, así que con sesión solo se probó en local. (b) Capturar el mínimo de cada producto en Necutools → Productos: con 0, solo salen los agotados. (c) 2 de los 3 clientes de IONOS tienen la cuenta incompleta y verán "Completa tu cuenta" antes de pedir. (d) Revisar el texto nuevo de `public/privacidad.html` y `public/terminos.html` (ligar pedidos a la cuenta cambia lo que se avisa); siguen faltando los `[COMPLETAR]`. (e) El respaldo previo de la base está en `~/respaldos/2026-11-06-antes-resurtir.sql` del servidor (permisos 600, lleva datos personales): borrarlo cuando ya no haga falta. (f) `/api/carrito/precios` sigue público, pero sin números.
 
@@ -155,6 +156,10 @@ Marcar cada paso con `[x]` cuando el usuario confirme que lo hizo.
 ---
 
 ## Cambios hechos
+
+### 2026-11-06: plan y prompt para conectar Google Analytics
+- Nuevo plan `plans/planes/2026-11-06-conectar-google-analytics.md` y su prompt en `plans/prompts/` (mismo nombre), para pegarlo en la extensión de Claude en Brave. No se cambió código.
+- Corrección: el activador que indica Google es "Inicialización: Todos los eventos de inicialización", no el de todas las páginas.
 
 ### 2026-11-06: Google Tag Manager con aviso de cookies (sin plan aparte; decisión del usuario: pedir permiso antes de medir)
 - Pedido del usuario: integrar el contenedor `GTM-MPJ9PMLR`. El fragmento que dio Google trae JS en línea, que la CSP bloquea, y no usa el arranque `gtm.start` de la documentación oficial; tampoco se puso el `<noscript>` (lleva `style` en línea y el sitio no funciona sin JS).
