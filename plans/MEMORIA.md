@@ -47,11 +47,14 @@ Cómo se usa:
 | `2026-11-06-conectar-google-analytics.md` | Aplicado: propiedad 563128736, `G-VPH0MC28FN`, versión 2 del contenedor publicada y comprobada en vivo | 2026-11-06 |
 | `2026-11-06-medir-carrito-y-pedidos.md` | Aplicado y subido a IONOS; contenedor en versión 3. Falta marcar `begin_checkout` como evento clave | 2026-11-06 |
 | `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo: mediana 99 / 100 / 100 / 100 | 2026-11-07 |
+| `2026-11-08-letrero-giratorio-hero.md` | Aplicado en local, con commit. Falta subirlo a IONOS (con permiso del usuario) | 2026-11-08 |
 | `2026-11-08-reels-botones-debounce-texto-y-portada.md` | Aplicado (prompts 1 a 5) y subido a IONOS. En IONOS aún no hay opiniones: la sección de opiniones no se ve | 2026-11-08 |
 
 ---
 
 ## Pendientes
+
+**Letrero que cambia de palabra (2026-11-08):** (a) Subirlo a IONOS cuando el usuario lo autorice (`public/index.html`, `public/style.css`, `public/js/portada.js`). (b) **Excepción de diseño:** el movimiento que no responde a una acción lo autorizó el usuario solo para el plan `2026-11-08-letrero-giratorio-hero.md`; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) Las palabras están fijas en `PALABRAS_GIRO` (`portada.js`); si cambian las tiendas, actualizarlas.
 
 **Prueba social, encabezado, WhatsApp, debounce y texto mínimo (2026-11-08, aplicado y subido):** (a) En IONOS hay 0 opiniones, así que "Lo que dicen otros estudiantes" no se ve: aparece sola cuando haya una de 4 o 5 estrellas con comentario. Los pedidos salen hasta que haya 20 pagados. (b) (Resuelto 2026-11-08: el usuario confirmó lunes a viernes; ya dice "Lun a vie, 9:00 a 22:00".) (c) **Push** desde VS Code. (d) Respaldo de los 22 archivos en `~/respaldos/2026-11-08-portada/antes.tar` del servidor (permisos 600). (e) La reseña externa también pedía fotos reales de las tiendas y SEO: siguen los pendientes de octubre (fotos de productos) y Search Console sigue pospuesto. (f) En IONOS ya hay 8 tiendas (antes 7); por eso el tablero ahora lo pinta el servidor.
 
@@ -101,6 +104,11 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-08: letrero "Encuentra ___" en el encabezado (plan `2026-11-08-letrero-giratorio-hero.md`, solo en local)
+- Pedido del usuario: llenar el hueco de la columna izquierda del encabezado a 1280 px (unos 100 px arriba del título y 100 abajo de los botones, desde que el tablero lleva el letrero de Necutla). Se le dieron 4 opciones y eligió el letrero que cambia de palabra.
+- `public/index.html`: `.hero-giro` debajo de los botones (no encima del h1, por la regla de las etiquetas). `public/style.css`: "Encuentra" en `--tinta`, palabra en `--senal` sobre `--tinta` con radio de panel; la palabra más larga reserva el ancho en una celda de grid oculta; `giro-sale` y `giro-entra` con las curvas de movimiento existentes. `public/js/portada.js`: `iniciarGiro()` con `PALABRAS_GIRO` (playeras, audífonos, dulces, volantes, cuadernos, regalos, engargolados y "lo que necesitas"), una sola vuelta cada 2.5 s, pausa con el mouse encima y con la pestaña oculta; con movimiento reducido queda fijo en "lo que necesitas". El lector de pantalla lee una frase fija.
+- Pruebas locales (Chrome a 1280, 360 y movimiento reducido): 23 de 23 (orden de las palabras, se detiene, la caja no cambia de tamaño ni de lugar, CLS 0, sin scroll horizontal ni errores, pausa con el mouse).
 
 ### 2026-11-08: Lighthouse de la portada en vivo (después del letrero)
 - Pedido del usuario. Lighthouse 12.8.2 con Node 22.23.4 (bajado de nodejs.org a la carpeta temporal, SHA-256 revisado). No se cambió código.

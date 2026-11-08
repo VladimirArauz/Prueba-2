@@ -97,6 +97,39 @@ async function cargarPromociones() {
   } catch (e) { /* sin promociones, la portada sigue igual */ }
 }
 
+// ================= Letrero "Encuentra ___" (plan 2026-11-08-letrero-giratorio-hero) =================
+// Una sola vuelta por las tiendas y se queda en "lo que necesitas". Se pausa con el mouse encima, con el foco o si
+// la pestaña no se ve. Con movimiento reducido no gira. El lector de pantalla lee la frase fija del HTML.
+const PALABRAS_GIRO = ["playeras", "audífonos", "dulces", "volantes", "cuadernos", "regalos", "engargolados", "lo que necesitas"];
+const PAUSA_GIRO = 2500;
+
+function iniciarGiro() {
+  const palabra = document.getElementById("hero-giro-palabra");
+  if (!palabra) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    palabra.textContent = PALABRAS_GIRO.at(-1);
+    return;
+  }
+  const letrero = palabra.closest(".hero-giro");
+  let indice = 0;
+  let pausado = false;
+  letrero.addEventListener("mouseenter", () => { pausado = true; });
+  letrero.addEventListener("mouseleave", () => { pausado = false; });
+  const siguiente = () => {
+    if (pausado || document.hidden) return void setTimeout(siguiente, PAUSA_GIRO);
+    indice += 1;
+    palabra.classList.remove("is-entrando");
+    palabra.classList.add("is-saliendo");
+    palabra.addEventListener("animationend", () => {
+      palabra.textContent = PALABRAS_GIRO[indice];
+      palabra.classList.remove("is-saliendo");
+      palabra.classList.add("is-entrando");
+      if (indice < PALABRAS_GIRO.length - 1) setTimeout(siguiente, PAUSA_GIRO);
+    }, { once: true });
+  };
+  setTimeout(siguiente, PAUSA_GIRO);
+}
+
 // ================= Lo que dicen otros estudiantes (plan 2026-11-08) =================
 // Cifras y opiniones reales de /api/portada/resumen. Sin opiniones, la sección se queda oculta: no se inventa nada.
 function cifra(valor, uno, varios) {
@@ -211,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const q = (new URLSearchParams(location.search).get("q") || "").trim();
   if (q) buscarDesdeBarra(q);
+  iniciarGiro();
   cargarTiendas();
   cargarPromociones();
   cargarPruebaSocial();

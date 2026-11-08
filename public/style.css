@@ -912,6 +912,68 @@ body {
 }
 
 
+/* Letrero "Encuentra ___" (plan 2026-11-08-letrero-giratorio-hero): la palabra cambia sola, como las letras de un
+   tablero de aeropuerto. Excepción de movimiento autorizada por el usuario solo para ese plan. Una sola vuelta;
+   se pausa con el mouse encima o con el foco; con movimiento reducido no gira (portada.js). */
+.hero-giro {
+  margin-top: 28px;
+}
+
+.hero-giro-texto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  color: var(--tinta);
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 112;
+  line-height: 1.3;
+}
+
+/* La palabra más larga, invisible, reserva el ancho: la caja no cambia de tamaño al girar */
+.hero-giro-caja {
+  display: inline-grid;
+  padding: 4px 14px;
+  background: var(--tinta);
+  color: var(--senal);
+  border-radius: var(--r-panel);
+  overflow: hidden;
+}
+
+.hero-giro-medida,
+.hero-giro-palabra {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.hero-giro-medida {
+  visibility: hidden;
+}
+
+.hero-giro-palabra.is-saliendo {
+  animation: giro-sale 0.22s var(--curva-sale) both;
+}
+
+.hero-giro-palabra.is-entrando {
+  animation: giro-entra 0.32s var(--curva-entra) both;
+}
+
+@keyframes giro-sale {
+  to { transform: translateY(-100%); opacity: 0; }
+}
+
+@keyframes giro-entra {
+  from { transform: translateY(100%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-giro-palabra.is-saliendo,
+  .hero-giro-palabra.is-entrando {
+    animation: none;
+  }
+}
+
 .board {
   background: var(--tinta);
   border-radius: var(--r-panel);
