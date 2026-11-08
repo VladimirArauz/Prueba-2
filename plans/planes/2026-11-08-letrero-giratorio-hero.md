@@ -1,7 +1,7 @@
 # Letrero que cambia de palabra en el encabezado
 
 - **Fecha:** 2026-11-08
-- **Estado:** aplicado en local (falta subir a IONOS)
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-08-letrero-giratorio-hero.md`
 - **Alcance:** llenar el hueco de la columna izquierda del encabezado (en computadora) con un letrero "Encuentra ___" cuya palabra cambia sola. Solo la portada; sin cambios en la API ni en el carrito.
 

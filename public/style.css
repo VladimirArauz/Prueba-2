@@ -959,6 +959,15 @@ body {
   animation: giro-entra 0.32s var(--curva-entra) both;
 }
 
+/* En celular siempre en dos líneas: si dependiera de si cabe, el cambio a la fuente Archivo (más ancha) lo partiría
+   después de cargar y la página saltaría */
+@media (max-width: 640px) {
+  .hero-giro-texto {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 @keyframes giro-sale {
   to { transform: translateY(-100%); opacity: 0; }
 }
