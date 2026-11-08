@@ -102,6 +102,11 @@ Cómo se usa:
 
 ## Cambios hechos
 
+### 2026-11-08: Lighthouse de la portada en vivo (después del letrero)
+- Pedido del usuario. Lighthouse 12.8.2 con Node 22.23.4 (bajado de nodejs.org a la carpeta temporal, SHA-256 revisado). No se cambió código.
+- Móvil, 3 corridas: rendimiento 97, 99 y 99 (el 2026-11-07 fue 91, 100 y 99); accesibilidad, buenas prácticas y SEO 100 en las 3. FCP 1.2 a 1.4 s, LCP 2.0 a 2.5 s (el h1 o el párrafo del hero), TBT 0 a 40 ms, CLS 0, TTFB 80 a 130 ms. Escritorio: 99 / 100 / 100 / 100, LCP 0.8 s, CLS 0.002.
+- Lo que sugiere ahorra poco: `style.css` sin minificar (6 KB) y 14 KB de reglas que no usa la portada (comparte archivo con todas las páginas), `comun.js` sin minificar (3.8 KB), el JS de Cloudflare Web Analytics, y las fotos de 1280 px en celulares de pantalla densa (es lo que pide el `srcset`). No vale la pena agregar una herramienta de compilación por eso.
+
 ### 2026-11-08: Necutla en el letrero del tablero y horario de lunes a viernes (sin plan aparte; seguimiento del plan `2026-11-08-reels-botones-debounce-texto-y-portada.md`)
 - Pedido del usuario: los stands abren de lunes a viernes, y "Necutla" debe verse en el encabezado, en una zona que resalte. Las 11 páginas dicen "Lun a vie, 9:00 a 22:00".
 - `public/index.html` y `public/style.css`: letrero `.board-marca` arriba del tablero (logo de 48 px, "Necutla" en `--senal`, 800, `wdth` 125, y "La ciudad del estudiante" en `--tinta-suave`). Va dentro del tablero, no encima del h1, para no ser una "etiqueta encima del título". Se quitó `.hero-marca` (la línea gris bajo los botones).
