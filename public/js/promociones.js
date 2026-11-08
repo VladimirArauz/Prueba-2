@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     grid.innerHTML = promos.map(tarjetaPromocion).join("");
     if (!promos.length) {
       vacio.innerHTML = `<p>Por ahora no hay promociones de temporada. Mientras, revisa las ofertas de cada tienda.</p>
-        <div class="form-actions"><a class="btn" href="/">Ver tiendas</a></div>`;
+        <div class="form-actions"><a class="btn" href="/">Explorar las tiendas</a></div>`;
     }
   } catch (error) {
     grid.innerHTML = "";

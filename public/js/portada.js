@@ -62,17 +62,23 @@ function tarjetaTienda(t) {
       ${t.ofertas_hoy ? `<span class="tag-oferta">${icon("tag")}${t.ofertas_hoy === 1 ? "1 oferta hoy" : `${t.ofertas_hoy} ofertas hoy`}</span>` : ""}
       <p>${escapeHTML(t.descripcion || "Catálogo de la tienda.")}</p>
       ${partes.length ? `<div class="card-sub">${partes.join(" · ")}</div>` : ""}
-      <a class="btn secondary" href="/t/${escapeHTML(t.slug)}">Ver tienda</a>
+      <a class="btn secondary" href="/t/${escapeHTML(t.slug)}">Entrar a ${escapeHTML(t.nombre)}</a>
     </article>`;
 }
 
 async function cargarTiendas() {
   const grid = document.getElementById("stores-grid");
-  pintarEsqueletos(document.getElementById("board-list"), 7, "fila");
+  // El servidor ya manda el tablero pintado (app/paginas.php, con_tablero); los esqueletos solo si no llegó
+  if (!document.querySelector("#board-list .board-row")) pintarEsqueletos(document.getElementById("board-list"), 7, "fila");
   pintarEsqueletos(grid, 6);
   try {
     const tiendas = await obtenerTiendas();
-    document.getElementById("board-list").innerHTML = tiendas.map(filaTablero).join("");
+    // Si el servidor ya lo pintó igual, no se toca: así las filas no repiten su entrada
+    const tablero = document.getElementById("board-list");
+    const nuevo = document.createElement("ul");
+    nuevo.innerHTML = tiendas.map(filaTablero).join("");
+    if (nuevo.innerHTML !== tablero.innerHTML) tablero.innerHTML = nuevo.innerHTML;
+    if (tiendas.length > 1) document.getElementById("hero-explorar").textContent = `Explorar las ${tiendas.length} tiendas`;
     grid.innerHTML = tiendas.map(tarjetaTienda).join("");
     pintarCreditos(tiendas);
     if (!tiendas.length) grid.outerHTML = `<p>Todavía no hay tiendas abiertas. Vuelve pronto.</p>`;
@@ -127,16 +133,22 @@ async function cargarPruebaSocial() {
   } catch (e) { /* sin resumen, la portada sigue igual */ }
 }
 
-async function buscar(event) {
-  event.preventDefault();
+// Cada búsqueda lleva su turno: si llega tarde la respuesta de una vieja, no se pinta encima de la nueva
+let turnoBusqueda = 0;
+
+// alEscribir: la busca el debounce mientras escribes; no mueve la página ni avisa si faltan letras
+async function buscar(event, alEscribir = false) {
+  if (event) event.preventDefault();
+  buscarConEspera.cancelar();
   const q = document.getElementById("search-input").value.trim();
   const bloque = document.getElementById("search-results");
   const grid = document.getElementById("search-grid");
   const vacio = document.getElementById("search-empty");
   if (q.length < 2) {
-    showToast("Escribe al menos 2 letras para buscar.", "info");
+    if (!alEscribir) showToast("Escribe al menos 2 letras para buscar.", "info");
     return;
   }
+  const turno = ++turnoBusqueda;
   bloque.hidden = false;
   document.getElementById("search-title").textContent = `Resultados para “${q}”`;
   document.getElementById("search-desc").textContent = "Buscando en todas las tiendas.";
@@ -144,16 +156,32 @@ async function buscar(event) {
   pintarEsqueletos(grid, 3);
   try {
     const resultados = await api(`/buscar?q=${encodeURIComponent(q)}`);
+    if (turno !== turnoBusqueda) return;
     document.getElementById("search-desc").textContent = resultados.length === 20
       ? "Mostramos los primeros 20. Escribe algo más específico para afinar."
       : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"} en todas las tiendas.`;
     grid.innerHTML = resultados.map(p => tarjetaProducto(p, { conTienda: true })).join("");
     vacio.innerHTML = resultados.length ? "" : `<p>No encontramos nada con “${escapeHTML(q)}”. Prueba con otra palabra o entra a una tienda.</p>`;
   } catch (error) {
+    if (turno !== turnoBusqueda) return;
     grid.innerHTML = "";
     vacio.innerHTML = `<p>${escapeHTML(error.message)}</p>`;
   }
-  bloque.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!alEscribir) bloque.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Mientras escribes: busca 400 ms después de la última tecla. Al borrar todo, se quitan los resultados.
+const buscarConEspera = conEspera(() => buscar(null, true), 400);
+
+function alEscribirBusqueda() {
+  const q = document.getElementById("search-input").value.trim();
+  if (!q) {
+    buscarConEspera.cancelar();
+    turnoBusqueda++;
+    document.getElementById("search-results").hidden = true;
+    return;
+  }
+  if (q.length >= 2) buscarConEspera();
 }
 
 Object.assign(ACCIONES, {
@@ -167,11 +195,12 @@ Object.assign(ACCIONES, {
 // El buscador de la barra lateral manda a /?q=…; en la portada busca sin recargar
 function buscarDesdeBarra(q) {
   document.getElementById("search-input").value = q;
-  buscar(new Event("submit"));
+  buscar(null);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("search-form").addEventListener("submit", buscar);
+  document.getElementById("search-input").addEventListener("input", alEscribirBusqueda);
   const barra = document.querySelector(".side-search");
   if (barra) {
     barra.addEventListener("submit", event => {

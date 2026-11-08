@@ -1122,6 +1122,32 @@ async function main() {
     // app/config.php el secret 2x0000000000000000000000000000000AA (siempre falla) o 3x… (token repetido): 400.
   }
 
+  // ---------- Portada: cifras y opiniones reales (plan 2026-11-08-reels-botones-debounce-texto-y-portada) ----------
+  await prueba("PRT", "el resumen de la portada no trae correos, teléfonos, usuarios ni contraseñas", async () => {
+    const r = await pedir("GET", "/api/portada/resumen");
+    const llaves = JSON.stringify(r.json).match(/"(correo|telefono|usuario|password|password_hash|cliente_id|email)"/);
+    return espera(r.status === 200 && !llaves && !/@/.test(r.texto) && !/\d{10}/.test(r.texto), `${r.status} ${llaves} ${r.texto.slice(0, 200)}`);
+  });
+  await prueba("PRT", "el resumen solo se guarda en el navegador, por poco tiempo", async () => {
+    const r = await pedir("GET", "/api/portada/resumen");
+    return espera(/^private, max-age=\d+$/.test(r.headers.get("cache-control") || ""), r.headers.get("cache-control"));
+  });
+  await prueba("PRT", "los pedidos solo salen cuando son 20 o más", async () => {
+    const r = await pedir("GET", "/api/portada/resumen");
+    return espera(r.json.pedidos === null || r.json.pedidos >= 20, r.json.pedidos);
+  });
+  await prueba("PRT", "una opinión de 5 estrellas sale con el nombre (no el usuario); una de 2 no sale", async () => {
+    const buena = `Me encantó la portada ${SUFIJO}`;
+    const mala = `No me gustó nada ${SUFIJO}`;
+    await pedir("PUT", `/api/productos/${prodA}/resena`, { body: { calificacion: 2, comentario: mala }, sesion: cli1.sesion });
+    await pedir("PUT", `/api/productos/${prodA}/resena`, { body: { calificacion: 5, comentario: buena }, sesion: cli2.sesion });
+    const r = await pedir("GET", "/api/portada/resumen");
+    const recientes = r.json.recientes || [];
+    const suya = recientes.find(x => x.comentario === buena);
+    return espera(suya && suya.nombre === "cliente2" && !r.texto.includes(`cliente2-${SUFIJO}`) && !recientes.some(x => x.comentario === mala)
+      && recientes.length <= 3 && suya.producto.id === prodA, r.texto.slice(0, 300));
+  });
+
   // ---------- Errores sin detalles ----------
   await prueba("—", "404 de la API sin detalles internos", async () => {
     const r = await pedir("GET", "/api/no-existe");

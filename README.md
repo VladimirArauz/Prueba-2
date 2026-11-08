@@ -107,6 +107,8 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   las calcula con la fecha de Ciudad de México.
 - **Promociones generales**: paquetes con precio propio y fechas de inicio y fin. Al pedir uno se avisa
   a los vendedores de todas las tiendas incluidas.
+- **Portada**: el servidor (`con_tablero` en `app/paginas.php`) manda el tablero de tiendas y "Explorar las N
+  tiendas" ya pintados, para que la página no salte al cargar; `portada.js` solo los repinta si cambió algo.
 - **Lo que dicen otros estudiantes** (portada): `GET /api/portada/resumen` da cuántas tiendas, productos,
   servicios y opiniones visibles hay, y las 3 opiniones visibles más nuevas de 4 o 5 estrellas con comentario
   (mismo nombre que en la página del producto; sin correos, teléfonos ni usuarios). Los pedidos pagados solo
@@ -172,6 +174,18 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
 Estados: hover y presionado los da `style.css`. `disabled` lo pone gris en cualquier variante
 (agotado, sin datos). Mientras espera al servidor se usa `botonOcupado(boton)` / `botonListo(boton)` de
 `comun.js`: el texto cambia a la acción en curso ("Guardando producto"), sin spinner.
+
+Los botones de WhatsApp (pedido del carrito y servicios) usan `enviarPorWhatsApp(boton, numeros, mensaje,
+contenedor, textoHecho)`, que tiene 3 estados: "Abriendo WhatsApp" al tocarlo, abre el chat y queda en
+`.is-hecho` ("Pedido abierto en WhatsApp", con palomita). Otro toque ya no abre un segundo chat; el aviso de
+abajo trae "Volver a abrir WhatsApp".
+
+Para no mandar una petición por cada tecla o clic se usa `conEspera(fn, ms)` (debounce) de `comun.js`: los
+botones + y − del carrito cambian el número al momento y piden los precios 350 ms después del último toque
+(mientras tanto el botón de WhatsApp dice "Actualizando el total"), y el buscador de la portada busca
+mientras escribes, 400 ms después de la última tecla.
+
+Texto mínimo: 14 px (`0.875rem`). Solo el número del contador del carrito va en 12 px, para caber en su globo.
 
 ### Preguntar y avisar (sin `alert`, `confirm` ni `prompt`)
 

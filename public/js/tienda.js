@@ -172,13 +172,14 @@ function cambiarTab(tab) {
   render();
 }
 
-function pedirServicio(id) {
+function pedirServicio(boton) {
+  const id = Number(boton.dataset.id);
   if (!puedePedir()) return void (location.href = rutaACuenta());
   const servicio = estado.datos.servicios.find(s => s.id === id);
   if (!servicio) return;
   const mensaje = `¡Hola! Vi en Necutla el servicio *${servicio.nombre}* de ${estado.datos.tienda.nombre} ` +
     `(${textoPrecio(servicio)}). Quisiera más información, por favor.`;
-  if (abrirWhatsApp(estado.datos.tienda.whatsapp, mensaje, document.querySelector(`[data-wa-for="${id}"]`))) {
+  if (enviarPorWhatsApp(boton, estado.datos.tienda.whatsapp, mensaje, document.querySelector(`[data-wa-for="${id}"]`), "Chat abierto en WhatsApp")) {
     medirServicio(servicio, estado.datos.tienda.nombre);
   }
 }
@@ -200,7 +201,7 @@ Object.assign(ACCIONES, {
     estado.visiblesServicios += POR_PAGINA;
     renderServicios();
   },
-  "pedir-servicio": el => pedirServicio(Number(el.dataset.id))
+  "pedir-servicio": el => pedirServicio(el)
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -215,7 +216,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("store-title").textContent = error.status === 404 ? "Tienda no encontrada" : "No se pudo cargar la tienda";
     document.getElementById("store-desc").textContent = error.message;
     document.getElementById("store-grid").innerHTML = "";
-    document.getElementById("store-empty").innerHTML = `<a class="btn" href="/">Ver tiendas</a>`;
+    document.getElementById("store-empty").innerHTML = `<a class="btn" href="/">Explorar las tiendas</a>`;
     return;
   }
   const params = new URLSearchParams(location.search);

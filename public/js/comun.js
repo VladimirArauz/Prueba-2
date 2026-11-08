@@ -331,6 +331,8 @@ function abrirWhatsApp(numeros, mensaje, contenedor) {
   }
   window.open(enlaceWhatsApp(numeros[0], mensaje), "_blank", "noopener");
   if (contenedor) {
+    // Por si la pestaña no se abrió o se cerró: el mismo mensaje, sin volver a registrar nada
+    const reabrir = `<a class="btn ghost btn-sm" href="${escapeHTML(enlaceWhatsApp(numeros[0], mensaje))}" target="_blank" rel="noopener">${icon("message-circle")}Volver a abrir WhatsApp</a>`;
     contenedor.innerHTML = numeros.length > 1 ? `
       <div class="notice success">
         ${icon("check")}
@@ -338,12 +340,62 @@ function abrirWhatsApp(numeros, mensaje, contenedor) {
           <span>Se abrió el chat con el vendedor 1. Pulsa "Enviar" en WhatsApp. También puedes escribirle a:</span>
           <div class="wa-more">
             ${numeros.slice(1).map((n, i) => `<a class="btn wa btn-sm" href="${escapeHTML(enlaceWhatsApp(n, mensaje))}" target="_blank" rel="noopener">${icon("message-circle")}Vendedor ${i + 2}</a>`).join("")}
+            ${reabrir}
           </div>
         </div>
       </div>` : `
-      <div class="notice success">${icon("check")}<span>Se abrió WhatsApp con tu mensaje. Solo pulsa "Enviar".</span></div>`;
+      <div class="notice success">
+        ${icon("check")}
+        <div>
+          <span>Se abrió WhatsApp con tu mensaje. Solo pulsa "Enviar".</span>
+          <div class="wa-more">${reabrir}</div>
+        </div>
+      </div>`;
   }
   return true;
+}
+
+// ================= Botón de WhatsApp con 3 estados (plan 2026-11-08) =================
+// 1. Al tocarlo dice "Abriendo WhatsApp" y se deshabilita. 2. Abre WhatsApp. 3. Queda en "hecho" con palomita:
+// otro toque ya no abre otro chat ni repite el pedido. Si no se pudo abrir, regresa como estaba.
+function enviarPorWhatsApp(boton, numeros, mensaje, contenedor, textoHecho) {
+  if (boton && (boton.classList.contains("is-hecho") || boton.getAttribute("aria-busy") === "true")) return false;
+  botonOcupado(boton, "Abriendo WhatsApp");
+  if (!abrirWhatsApp(numeros, mensaje, contenedor)) {
+    botonListo(boton);
+    return false;
+  }
+  const terminar = () => botonHecho(boton, textoHecho);
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) terminar();
+  else setTimeout(terminar, 600);
+  return true;
+}
+
+function botonHecho(boton, texto) {
+  if (!boton || !boton.isConnected) return;
+  const conFoco = document.activeElement === boton || document.activeElement === document.body;
+  TEXTOS_LISTOS.delete(boton);
+  boton.innerHTML = `${icon("check")}${escapeHTML(texto)}`;
+  boton.classList.add("is-hecho");
+  boton.removeAttribute("aria-busy");
+  boton.disabled = false;
+  boton.setAttribute("aria-disabled", "true");
+  if (conFoco) boton.focus();
+}
+
+// ================= Esperar a que paren las llamadas (debounce, plan 2026-11-08) =================
+// fn corre una sola vez, ms después de la última llamada. .ya() la corre en seguida si había una pendiente.
+function conEspera(fn, ms) {
+  let temporizador = null;
+  let ultimos = [];
+  const envuelta = (...args) => {
+    ultimos = args;
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => { temporizador = null; fn(...ultimos); }, ms);
+  };
+  envuelta.pendiente = () => temporizador !== null;
+  envuelta.cancelar = () => { clearTimeout(temporizador); temporizador = null; };
+  return envuelta;
 }
 
 // ================= Calificaciones =================

@@ -76,7 +76,7 @@ function elegirColor(color) {
   }
 }
 
-function pedirServicio() {
+function pedirServicio(boton) {
   if (!puedePedir()) return void (location.href = rutaACuenta());
   const p = est.producto;
   const mensaje = [
@@ -92,7 +92,7 @@ function pedirServicio() {
     "",
     "¿Me pueden decir la disponibilidad y cómo lo agendamos? ¡Gracias! 🙌"
   ].join("\n");
-  if (abrirWhatsApp(p.whatsapp, mensaje, $("producto-wa"))) medirServicio(p, p.tienda);
+  if (enviarPorWhatsApp(boton, p.whatsapp, mensaje, $("producto-wa"), "Chat abierto en WhatsApp")) medirServicio(p, p.tienda);
 }
 
 // ================= Opiniones =================
@@ -260,7 +260,7 @@ async function borrarOpinion() {
 }
 
 Object.assign(ACCIONES, {
-  "pedir-servicio": () => pedirServicio(),
+  "pedir-servicio": el => pedirServicio(el),
   "editar-opinion": () => {
     est.editando = true;
     renderOpinar();
@@ -286,7 +286,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.title = "Producto no encontrado | Necutla";
     $("producto-nombre").textContent = error.status === 404 ? "Producto no encontrado" : "No se pudo cargar el producto";
     $("producto-desc").textContent = error.message;
-    $("producto-accion").innerHTML = `<a class="btn" href="/">Ver tiendas</a>`;
+    $("producto-accion").innerHTML = `<a class="btn" href="/">Explorar las tiendas</a>`;
     return;
   }
   renderProducto();

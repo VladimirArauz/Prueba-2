@@ -188,7 +188,7 @@ function render(sesion) {
   $("completar-edad-grupo").hidden = !falta.edad;
   const volver = destinoDeVuelta();
   $("dentro-seguir").href = volver || "/";
-  $("dentro-seguir").textContent = !volver ? "Ver tiendas" : volver.startsWith("/carrito") ? "Volver al carrito"
+  $("dentro-seguir").textContent = !volver ? "Explorar las tiendas" : volver.startsWith("/carrito") ? "Volver al carrito"
     : volver.startsWith("/t/") ? "Volver a la tienda" : "Volver al producto";
   // Al recargar a medio paso de eliminar la cuenta, se retoma el código
   if (sesion.codigoPendiente && sesion.codigoPendiente.proposito === "eliminar") mostrarCodigo({ ...sesion.codigoPendiente, espera: 0 });

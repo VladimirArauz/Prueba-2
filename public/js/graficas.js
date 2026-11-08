@@ -45,6 +45,7 @@ function lienzo(contenedor, titulo, columnas, filas) {
 function base(animar) {
   Chart.defaults.font.family = token("font") || "Archivo, sans-serif";
   Chart.defaults.color = token("texto-2");
+  Chart.defaults.font.size = 14; // texto mínimo del sitio (plan 2026-11-08); Chart.js trae 12
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -90,7 +91,7 @@ function graficaLinea(contenedor, { titulo, etiquetas, pedidos, ventas }, { anim
     x: { ...ejes(), grid: { display: false }, ticks: { ...ejes().ticks, maxTicksLimit: 8, maxRotation: 0 } },
     y: { ...ejes(), beginAtZero: true, ticks: { ...ejes().ticks, precision: 0 } },
     y1: { ...ejes(), position: "right", beginAtZero: true, grid: { display: false },
-          ticks: { ...ejes().ticks, callback: valor => pesos(valor) } }
+          ticks: { ...ejes().ticks, precision: 0, callback: valor => pesos(valor) } }
   };
   GRAFICAS.set(contenedor.id, new Chart(canvas, {
     type: "line",

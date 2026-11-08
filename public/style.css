@@ -143,7 +143,7 @@ p {
 }
 
 small, .text-sm {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
@@ -243,6 +243,16 @@ small, .text-sm {
 .btn.wa:hover,
 .btn.wa:active {
   background: var(--wa-oscuro);
+}
+
+/* Tercer estado del botón de WhatsApp (plan 2026-11-08): ya se abrió el chat; no vuelve a abrir otro */
+.btn.wa.is-hecho,
+.btn.wa.is-hecho:hover,
+.btn.wa.is-hecho:active {
+  background: var(--hoja);
+  color: var(--wa);
+  border-color: var(--wa);
+  cursor: default;
 }
 
 .btn.ghost {
@@ -568,7 +578,7 @@ body {
   height: 20px;
   padding: 0 5px;
   border: 2px solid var(--hoja);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
 }
 
 .cart-pill.is-cero {
@@ -665,7 +675,7 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--texto-2);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -815,7 +825,7 @@ body {
 }
 
 .brand-badge {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--texto-2);
 }
@@ -884,17 +894,9 @@ body {
 
 .hero-copy h1 {
   margin-bottom: 20px;
-}
-
-/* Eslogan bajo el nombre, dentro del mismo h1 (una página, un h1) */
-.hero-lema {
-  display: block;
-  margin-top: 12px;
-  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
-  font-weight: 700;
-  font-variation-settings: 'wdth' 112;
-  letter-spacing: 0;
-  line-height: 1.15;
+  /* La frase del beneficio es más larga que la marca: un poco más chica para que no queden palabras sueltas */
+  font-size: clamp(2.25rem, 4.6vw, 3.5rem);
+  text-wrap: balance;
 }
 
 .hero-copy p {
@@ -907,6 +909,14 @@ body {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* La marca va en segundo plano, debajo de los botones (plan 2026-11-08): el h1 dice el beneficio */
+.hero-copy .hero-marca {
+  margin: 20px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--texto-2);
 }
 
 .board {
@@ -966,11 +976,17 @@ body {
 
 .board-foot {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 20px;
   padding: 14px 24px 8px;
   color: var(--tinta-suave);
   font-size: 0.875rem;
+}
+
+.board-foot p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ================= 3. CONTENIDO PRINCIPAL ================= */
@@ -1245,7 +1261,7 @@ textarea {
 .cart-table-head {
   padding: 14px 0 10px;
   border-bottom: 1px solid var(--linea);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-2);
 }
@@ -1268,7 +1284,7 @@ textarea {
 }
 
 .cart-item-store {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -1422,7 +1438,7 @@ textarea {
   background: var(--gis);
   padding: 12px 16px;
   color: var(--texto-2);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   border-bottom: 1px solid var(--linea);
   white-space: nowrap;
@@ -1453,7 +1469,7 @@ textarea {
 }
 
 .admin-table .cell-sub {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -1476,7 +1492,7 @@ textarea {
   border-radius: 999px;
   background: var(--gis);
   color: var(--tinta);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -1673,7 +1689,7 @@ textarea {
 
 .dialogo-contador {
   align-self: flex-end;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
   font-variant-numeric: tabular-nums;
 }
@@ -1803,6 +1819,10 @@ textarea {
 
 .footer-hours .icon {
   color: var(--senal);
+}
+
+.footer-hours + .footer-hours {
+  margin-top: 6px;
 }
 
 .footer-bottom {
@@ -1937,7 +1957,7 @@ textarea {
 }
 
 .card-sub {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-2);
 }
@@ -1959,7 +1979,7 @@ textarea {
   border-radius: var(--r-btn);
   background: var(--senal);
   color: var(--tinta);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.5;
 }
@@ -2304,7 +2324,7 @@ legend {
 }
 
 .form-hint {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -2540,7 +2560,7 @@ a.card-img-wrap {
 }
 
 .rating-none {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--texto-2);
 }
@@ -2552,13 +2572,13 @@ a.card-img-wrap {
 }
 
 .offer-detail {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-2);
 }
 
 .price-off {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--tinta);
 }
@@ -2819,7 +2839,7 @@ a.card-img-wrap {
 }
 
 .opinion-fecha {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -2839,7 +2859,7 @@ a.card-img-wrap {
 
 .opinion-respuesta strong {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .paginacion {
@@ -3441,7 +3461,7 @@ a.card-img-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -3512,7 +3532,7 @@ a.card-img-wrap {
   align-items: center;
   gap: 8px 14px;
   margin-top: 4px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -3673,7 +3693,7 @@ a.card-img-wrap {
 
 .pedido-nota {
   margin-top: 4px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -3813,7 +3833,7 @@ a.card-img-wrap {
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.4;
   color: var(--texto-2);
 }
@@ -3911,7 +3931,7 @@ a.card-img-wrap {
 
 .medidor-texto {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--tinta);
 }
@@ -3927,7 +3947,7 @@ a.card-img-wrap {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 
@@ -4423,7 +4443,7 @@ a.card-img-wrap {
 
 .creditos-fotos {
   margin-top: 16px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texto-2);
 }
 

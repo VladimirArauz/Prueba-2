@@ -19,7 +19,7 @@ const OG_VERSION = '2';
 
 const OG_GENERAL = [
     'titulo' => 'Necutla: tiendas de estudiantes con pedidos por WhatsApp',
-    'descripcion' => 'Directorio de tiendas de estudiantes: ropa, tecnología, dulces, papelería, regalos y más. Arma tu carrito y manda tu pedido por WhatsApp directo al vendedor.',
+    'descripcion' => 'Directorio de las tiendas de estudiantes del CECyT 9 Juan de Dios Bátiz: ropa, tecnología, dulces, papelería, regalos y más. Arma tu carrito y manda tu pedido por WhatsApp directo al vendedor.',
     'imagen' => '/imagenes/og-necutla.png',
     'ancho' => 1200,
     'alto' => 630,
@@ -266,6 +266,29 @@ function con_tag_manager(string $html, string $archivo): string
     return substr($html, 0, $pos) . "\n  <script defer src=\"/js/etiquetas.js\" data-gtm=\"$id\"></script>" . substr($html, $pos);
 }
 
+// Portada (plan 2026-11-08): el tablero y "Explorar las N tiendas" llegan ya pintados en el HTML, así la página
+// no salta cuando hay más o menos tiendas que las 7 filas de esqueleto. portada.js los vuelve a pintar igual.
+// Si la base falla, se queda el HTML de siempre (esqueletos y "Explorar las tiendas").
+function con_tablero(string $html): string
+{
+    try {
+        $tiendas = filas('SELECT nombre, slug, icono FROM stands WHERE visible ORDER BY orden, nombre');
+    } catch (Throwable $e) {
+        error_log('Necutla: tablero sin datos: ' . $e->getMessage());
+        return $html;
+    }
+    if (!$tiendas) return $html;
+    $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    $icono = fn($n, $clase = '') => '<svg class="icon' . ($clase ? " $clase" : '') . '" aria-hidden="true"><use href="#i-' . $e($n) . '"></use></svg>';
+    $filas = implode('', array_map(fn($t) => '<li><a class="board-row" href="/t/' . $e($t['slug']) . '">' . $icono($t['icono'] ?: 'store')
+        . '<span class="board-name">' . $e($t['nombre']) . '</span>' . $icono('chevron-right', 'board-go') . '</a></li>', $tiendas));
+    $html = str_replace('<ul class="board-list" id="board-list"></ul>', '<ul class="board-list" id="board-list">' . $filas . '</ul>', $html);
+    if (count($tiendas) > 1) {
+        $html = str_replace('id="hero-explorar">Explorar las tiendas</a>', 'id="hero-explorar">Explorar las ' . count($tiendas) . ' tiendas</a>', $html);
+    }
+    return $html;
+}
+
 // Devuelve la respuesta de la página, o null si la ruta no es una página (la atiende la API)
 function pagina_publica(string $ruta): ?Respuesta
 {
@@ -296,6 +319,7 @@ function pagina_publica(string $ruta): ?Respuesta
     if (isset($og['meta'])) {
         $html = preg_replace_callback('#<meta name="description" content="[^"]*">#', fn() => '<meta name="description" content="' . $e($og['meta']) . '">', $html, 1);
     }
+    if ($archivo === 'index.html') $html = con_tablero($html);
     $html = con_web_analytics($html);
     $html = con_tag_manager($html, $archivo);
     // Igual que el HTML estático (public/.htaccess): se revalida siempre

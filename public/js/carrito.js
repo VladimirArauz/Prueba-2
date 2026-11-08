@@ -83,7 +83,7 @@ function renderVacio() {
         ${icon("shopping-cart", "icon-lg")}
         <h3>Tu carrito está vacío</h3>
         <p>Entra a una tienda y agrega lo que quieras pedir.</p>
-        <a class="btn" href="/">Ver tiendas</a>
+        <a class="btn" href="/">Explorar las tiendas</a>
       </div>
     </div>`;
 }
@@ -111,8 +111,13 @@ function render() {
 }
 
 // ajustados: productos a los que ya se les bajó la cantidad (para avisar de todo junto)
+// Cada carga lleva su turno: si mientras esperaba al servidor empezó otra, su respuesta ya no se pinta
+let turnoCarga = 0;
+
 async function cargar(ajustados) {
   if (typeof ajustados !== "number") ajustados = 0;
+  cargarConEspera.cancelar();
+  const turno = ++turnoCarga;
   const items = leerCarrito();
   if (!items.length) {
     grupos = [];
@@ -120,6 +125,7 @@ async function cargar(ajustados) {
   }
   try {
     const respuesta = await api("/carrito/precios", { method: "POST", body: { items } });
+    if (turno !== turnoCarga) return;
     // Si de algo quedan menos piezas que las pedidas, se baja la cantidad a lo que queda y se vuelve a calcular
     const bajar = respuesta.faltantes.filter(f => f.quedan);
     if (bajar.length) {
@@ -140,9 +146,25 @@ async function cargar(ajustados) {
         <div class="notice">${icon("info")}<span>${escapeHTML(avisos.join(" "))}</span></div>`;
     render();
   } catch (error) {
+    if (turno !== turnoCarga) return;
     document.getElementById("cart-groups").innerHTML = `
       <div class="notice">${icon("info")}<span>${escapeHTML(error.message)}</span></div>`;
   }
+}
+
+// Los botones + y − cambian el número al momento; los precios se piden 350 ms después del último toque
+const cargarConEspera = conEspera(() => cargar(), 350);
+
+function cambiarCantidadEnPantalla(boton) {
+  const clave = boton.dataset.clave;
+  cambiarCantidad(clave, Number(boton.dataset.delta));
+  const item = leerCarrito().find(i => claveItem(i) === clave);
+  if (!item) return cargar(); // llegó a 0: se quita en seguida
+  boton.closest(".qty-control").querySelector(".qty-value").textContent = item.cantidad;
+  // Mientras llega el total nuevo no se puede mandar el pedido con las cantidades de antes
+  document.querySelectorAll('[data-action="enviar"]:not(.is-hecho)').forEach(b => botonOcupado(b, "Actualizando el total"));
+  document.querySelectorAll(".cart-totals").forEach(t => t.setAttribute("aria-busy", "true"));
+  cargarConEspera();
 }
 
 function piezas(n) {
@@ -226,11 +248,12 @@ function nombreListo() {
   return !vacio;
 }
 
-function enviar(clave) {
+function enviar(boton) {
+  const clave = boton.dataset.clave;
   const grupo = grupos.find(g => g.clave === clave);
-  if (!grupo || !nombreListo()) return;
+  if (!grupo || boton.classList.contains("is-hecho") || cargarConEspera.pendiente() || !nombreListo()) return;
   const contenedor = document.querySelector(`[data-enviado="${CSS.escape(clave)}"]`);
-  if (!abrirWhatsApp(grupo.whatsapp, mensajeDe(grupo), contenedor)) return;
+  if (!enviarPorWhatsApp(boton, grupo.whatsapp, mensajeDe(grupo), contenedor, "Pedido abierto en WhatsApp")) return;
   registrarPedido(grupo);
   medirPedido(grupo);
   const claves = grupo.items.map(claveDe).join(",");
@@ -243,10 +266,7 @@ function enviar(clave) {
 }
 
 Object.assign(ACCIONES, {
-  cantidad: el => {
-    cambiarCantidad(el.dataset.clave, Number(el.dataset.delta));
-    cargar();
-  },
+  cantidad: el => cambiarCantidadEnPantalla(el),
   quitar: el => {
     quitarDelCarrito(el.dataset.claves.split(","));
     cargar();
@@ -258,7 +278,7 @@ Object.assign(ACCIONES, {
     cargar();
     showToast("Carrito vaciado.");
   },
-  enviar: el => enviar(el.dataset.clave)
+  enviar: el => enviar(el)
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
