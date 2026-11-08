@@ -6,6 +6,9 @@
 
 const MAX_ITEMS_CARRITO = 60;
 const MAX_POR_BLOQUE_VITRINA = 12;
+// Portada (plan 2026-11-08): los pedidos solo se publican cuando ya son una cifra que da confianza
+const MINIMO_PEDIDOS_PUBLICOS = 20;
+const OPINIONES_PORTADA = 3;
 
 // ================= Formato de salida =================
 function imagen_producto(array $f): ?string
@@ -412,6 +415,46 @@ function rutas_api(): void
         if (!$id) return vacia(404);
         $f = fila('SELECT imagen, imagen_tipo AS tipo, activa AS publica FROM promociones WHERE id = ?', [$id]);
         return servir_imagen($f, fn() => Actual::$admin['rol'] === 'dueno');
+    });
+
+    // ================= Portada: cifras y opiniones reales (plan 2026-11-08) =================
+    // Solo lo que ya es público: conteos de lo visible y opiniones visibles con el mismo nombre que en /p/<id>.
+    // Nada de correos, teléfonos ni usuarios. Caché corta en el navegador (sin caché compartida por la sesión).
+    get('/api/portada/resumen', function () {
+        $c = fila("SELECT
+                (SELECT COUNT(*) FROM stands s WHERE s.visible) AS tiendas,
+                (SELECT COUNT(*) FROM productos p JOIN stands s ON s.id = p.stand_id WHERE p.visible AND s.visible AND p.tipo = 'producto') AS productos,
+                (SELECT COUNT(*) FROM productos p JOIN stands s ON s.id = p.stand_id WHERE p.visible AND s.visible AND p.tipo = 'servicio') AS servicios,
+                (SELECT COUNT(*) FROM resenas r JOIN productos p ON p.id = r.producto_id JOIN stands s ON s.id = p.stand_id
+                  WHERE r.visible AND p.visible AND s.visible) AS opiniones,
+                (SELECT COUNT(*) FROM pedidos WHERE estado = ?) AS pedidos", ['pagado']);
+        $recientes = filas("SELECT r.calificacion, r.comentario, r.creado_en, COALESCE(c.nombre, ?) AS nombre,
+                                   p.id AS producto_id, p.nombre AS producto, s.nombre AS tienda, s.slug AS tienda_slug
+                            FROM resenas r
+                            JOIN productos p ON p.id = r.producto_id
+                            JOIN stands s ON s.id = p.stand_id
+                            LEFT JOIN clientes c ON c.id = r.cliente_id
+                            WHERE r.visible AND p.visible AND s.visible AND r.calificacion >= ?
+                              AND r.comentario IS NOT NULL AND TRIM(r.comentario) <> ''
+                            ORDER BY r.creado_en DESC, r.id DESC LIMIT ?", [CLIENTE_ANONIMO, 4, OPINIONES_PORTADA]);
+        $pedidos = (int) $c['pedidos'];
+        $r = json_respuesta([
+            'tiendas' => (int) $c['tiendas'],
+            'productos' => (int) $c['productos'],
+            'servicios' => (int) $c['servicios'],
+            'opiniones' => (int) $c['opiniones'],
+            'pedidos' => $pedidos >= MINIMO_PEDIDOS_PUBLICOS ? $pedidos : null,
+            'recientes' => array_map(fn($f) => [
+                'nombre' => $f['nombre'],
+                'calificacion' => (int) $f['calificacion'],
+                'comentario' => $f['comentario'],
+                'creado_en' => fecha_iso($f['creado_en']),
+                'producto' => ['id' => $f['producto_id'], 'nombre' => $f['producto']],
+                'tienda' => ['nombre' => $f['tienda'], 'slug' => $f['tienda_slug']],
+            ], $recientes),
+        ]);
+        $r->cabeceras['Cache-Control'] = 'private, max-age=300';
+        return $r;
     });
 
     // ================= Búsqueda =================

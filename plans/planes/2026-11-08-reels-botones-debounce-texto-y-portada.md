@@ -1,7 +1,7 @@
 # Mejoras de 4 reels y de la revisión de la portada: prueba social, encabezado, botones de WhatsApp, debounce y texto mínimo
 
 - **Fecha:** 2026-11-08
-- **Estado:** propuesto
+- **Estado:** en curso
 - **Prompts:** `plans/prompts/2026-11-08-reels-botones-debounce-texto-y-portada.md`
 - **Alcance:** prueba social con datos reales en la portada, h1 con el beneficio, botones con la acción concreta, lugar y horario de los stands, botón de WhatsApp con 3 estados, debounce en el carrito y en el buscador, y texto de 14 px como mínimo. No cambia la base, el mensaje de WhatsApp ni el registro de pedidos.
 

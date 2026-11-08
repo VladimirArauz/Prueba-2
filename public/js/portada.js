@@ -91,6 +91,42 @@ async function cargarPromociones() {
   } catch (e) { /* sin promociones, la portada sigue igual */ }
 }
 
+// ================= Lo que dicen otros estudiantes (plan 2026-11-08) =================
+// Cifras y opiniones reales de /api/portada/resumen. Sin opiniones, la sección se queda oculta: no se inventa nada.
+function cifra(valor, uno, varios) {
+  return `<div class="cifra"><dt>${valor === 1 ? uno : varios}</dt><dd>${valor.toLocaleString("es-MX")}</dd></div>`;
+}
+
+function tarjetaOpinionPortada(r) {
+  return `
+    <li class="card opinion-portada">
+      ${estrellasDe(r.calificacion)}
+      <p class="opinion-portada-texto">${escapeHTML(r.comentario)}</p>
+      <p class="opinion-portada-autor">
+        <span class="opinion-autor">${escapeHTML(r.nombre)}</span>
+        sobre <a href="/p/${encodeURIComponent(r.producto.id)}">${escapeHTML(r.producto.nombre)}</a>,
+        de ${escapeHTML(r.tienda.nombre)}
+      </p>
+    </li>`;
+}
+
+async function cargarPruebaSocial() {
+  try {
+    const d = await api("/portada/resumen");
+    if (!d.recientes || !d.recientes.length) return;
+    const cifras = [
+      cifra(d.tiendas, "tienda", "tiendas"),
+      cifra(d.productos, "producto", "productos"),
+      d.servicios ? cifra(d.servicios, "servicio", "servicios") : "",
+      cifra(d.opiniones, "opinión", "opiniones"),
+      d.pedidos ? cifra(d.pedidos, "pedido pagado", "pedidos pagados") : ""
+    ];
+    document.getElementById("cifras-portada").innerHTML = cifras.join("");
+    document.getElementById("opiniones-portada").innerHTML = d.recientes.map(tarjetaOpinionPortada).join("");
+    document.getElementById("prueba-social").hidden = false;
+  } catch (e) { /* sin resumen, la portada sigue igual */ }
+}
+
 async function buscar(event) {
   event.preventDefault();
   const q = document.getElementById("search-input").value.trim();
@@ -148,5 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (q) buscarDesdeBarra(q);
   cargarTiendas();
   cargarPromociones();
+  cargarPruebaSocial();
   cargarVitrina();
 });

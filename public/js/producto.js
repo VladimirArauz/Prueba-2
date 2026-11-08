@@ -15,12 +15,6 @@ function fechaLarga(iso) {
   return new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
 }
 
-// Estrellas de una sola opinión (sin promedio ni conteo)
-function estrellasDe(n) {
-  const iconos = [1, 2, 3, 4, 5].map(i => (i <= n ? icon("star-fill", "star is-on") : icon("star", "star"))).join("");
-  return `<span class="rating" role="img" aria-label="${n} de 5 estrellas">${iconos}</span>`;
-}
-
 // ================= Producto =================
 function renderProducto() {
   const p = est.producto;

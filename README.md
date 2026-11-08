@@ -107,6 +107,10 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   las calcula con la fecha de Ciudad de México.
 - **Promociones generales**: paquetes con precio propio y fechas de inicio y fin. Al pedir uno se avisa
   a los vendedores de todas las tiendas incluidas.
+- **Lo que dicen otros estudiantes** (portada): `GET /api/portada/resumen` da cuántas tiendas, productos,
+  servicios y opiniones visibles hay, y las 3 opiniones visibles más nuevas de 4 o 5 estrellas con comentario
+  (mismo nombre que en la página del producto; sin correos, teléfonos ni usuarios). Los pedidos pagados solo
+  salen cuando son 20 o más (`MINIMO_PEDIDOS_PUBLICOS` en `app/api.php`). Sin opiniones, la sección no se ve.
 - **Carrito**: guarda solo `{tipo, id, cantidad, color}` en el navegador. Nombres, precios y descuentos
   los calcula siempre el servidor (`POST /api/carrito/precios`).
 - **Pedidos**: al tocar "Enviar pedido por WhatsApp" se guarda el pedido (`POST /api/pedidos`) con los

@@ -47,7 +47,7 @@ Cómo se usa:
 | `2026-11-06-conectar-google-analytics.md` | Aplicado: propiedad 563128736, `G-VPH0MC28FN`, versión 2 del contenedor publicada y comprobada en vivo | 2026-11-06 |
 | `2026-11-06-medir-carrito-y-pedidos.md` | Aplicado y subido a IONOS; contenedor en versión 3. Falta marcar `begin_checkout` como evento clave | 2026-11-06 |
 | `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo: mediana 99 / 100 / 100 / 100 | 2026-11-07 |
-| `2026-11-08-reels-botones-debounce-texto-y-portada.md` | Propuesto (5 prompts, sin aplicar) | 2026-11-08 |
+| `2026-11-08-reels-botones-debounce-texto-y-portada.md` | En curso: prompt 1 aplicado en local (sin subir). Faltan los prompts 2 a 5 | 2026-11-08 |
 
 ---
 
@@ -99,6 +99,13 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-08: lo que dicen otros estudiantes en la portada (plan `2026-11-08-reels-botones-debounce-texto-y-portada.md`, prompt 1, solo en local)
+- `app/api.php`: `GET /api/portada/resumen` con los conteos de tiendas, productos, servicios y opiniones visibles; los pedidos pagados (`null` si son menos de `MINIMO_PEDIDOS_PUBLICOS` = 20); y `recientes`, que son las 3 opiniones visibles más nuevas de 4 o más estrellas con comentario (`COALESCE(c.nombre, CLIENTE_ANONIMO)`, producto y tienda). No publica correos, teléfonos ni usuarios. `Cache-Control: private, max-age=300`. SQL con parámetros.
+- `public/index.html`: sección `#prueba-social`, oculta hasta que hay opiniones, entre el directorio y la vitrina. "Qué es Necutla" ya dice "lo que opinan quienes tienen cuenta en Necutla" en lugar de "las opiniones de otros estudiantes" (pendiente (c) del 2026-11-04, la mitad que toca las opiniones). `public/js/portada.js`: `cargarPruebaSocial`, `cifra` y `tarjetaOpinionPortada`, todo con `escapeHTML`. `estrellasDe` pasó de `producto.js` a `comun.js`. `public/style.css`: `.prueba-social`, `.cifras`, `.cifra`, `.opiniones-portada` y `.opinion-portada-*`. `README.md`.
+- **Desviaciones del plan:** (1) "Pagados o confirmados" quedó solo en `pagado`, porque no hay estado "confirmado" (solo `en_proceso`, `pagado` y `cancelado`). (2) No se reservó alto: la sección queda muy abajo y aparece cuando llega la API. El CLS medido sigue en 0.
+- **Pruebas** (Playwright del venv de `~/estudio/tests` con Chrome, a 1280 y 360, con y sin movimiento reducido): 32 de 32 con los datos locales; 16 de 16 sin opiniones (la sección queda oculta); 32 de 32 con HTML inyectado simulado (se escapa) y 25 pedidos (sí salen). Sin scroll horizontal ni errores de consola, CLS 0. La página de producto sigue pintando las estrellas sin errores. `ataques.js` (pruebas "PRT") queda para el prompt 5.
+- Ojo: en local, las 3 opiniones que salen son de productos "Prueba seguridad…" que dejó `ataques.js` el 2026-10-31. En IONOS saldrán las reales (5 opiniones o menos).
 
 ### 2026-11-08: plan de 4 reels y de la revisión de la portada
 - Nuevo plan `plans/planes/2026-11-08-reels-botones-debounce-texto-y-portada.md` y sus 5 prompts en `plans/prompts/` (mismo nombre). No se cambió código.

@@ -356,6 +356,12 @@ function estrellas(promedio, total) {
   return `<div class="rating" role="img" aria-label="${texto}">${iconos}<span>${Number(promedio).toFixed(1)} (${total})</span></div>`;
 }
 
+// Estrellas de una sola opinión (sin promedio ni conteo)
+function estrellasDe(n) {
+  const iconos = [1, 2, 3, 4, 5].map(i => (i <= n ? icon("star-fill", "star is-on") : icon("star", "star"))).join("");
+  return `<span class="rating" role="img" aria-label="${n} de 5 estrellas">${iconos}</span>`;
+}
+
 // ================= Ofertas en tarjetas =================
 const DIAS_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 

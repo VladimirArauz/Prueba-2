@@ -2603,6 +2603,61 @@ a.card-img-wrap {
   color: var(--texto-2);
 }
 
+/* Portada: lo que dicen otros estudiantes (plan 2026-11-08). Cifras planas, sin conteo animado. */
+.prueba-social {
+  margin-top: 56px;
+}
+
+.cifras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  margin: 0 0 24px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.cifra {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.cifra dd {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 112;
+  line-height: 1.2;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.cifra dt {
+  color: var(--texto-2);
+}
+
+.opiniones-portada {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.opinion-portada-texto {
+  max-width: 68ch;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.opinion-portada-autor {
+  margin-top: auto;
+  color: var(--texto-2);
+  overflow-wrap: anywhere;
+}
+
+.opinion-portada-autor .opinion-autor {
+  color: var(--tinta);
+}
+
 /* Página de producto */
 .producto-volver {
   margin-bottom: 20px;
