@@ -105,6 +105,9 @@ Cómo se usa:
 
 ## Cambios hechos
 
+### 2026-11-08: Lighthouse de la portada en vivo (después del letrero "Encuentra ___")
+- Pedido del usuario. Lighthouse 12.8.2, 3 corridas en perfil de celular: rendimiento 98, 99 y 99; accesibilidad, buenas prácticas y SEO 100 en las 3. FCP 1.2 a 1.4 s, LCP 2.0 s en las 3 (párrafo del encabezado), TBT 0 a 120 ms, CLS 0, servidor 80 a 100 ms. Escritorio: 99 / 100 / 100 / 100, LCP 0.9 s, CLS 0. No se cambió código.
+
 ### 2026-11-08: letrero "Encuentra ___" en el encabezado (plan `2026-11-08-letrero-giratorio-hero.md`, subido)
 - Pedido del usuario: llenar el hueco de la columna izquierda del encabezado a 1280 px (unos 100 px arriba del título y 100 abajo de los botones, desde que el tablero lleva el letrero de Necutla). Se le dieron 4 opciones y eligió el letrero que cambia de palabra.
 - `public/index.html`: `.hero-giro` debajo de los botones (no encima del h1, por la regla de las etiquetas). `public/style.css`: "Encuentra" en `--tinta`, palabra en `--senal` sobre `--tinta` con radio de panel; la palabra más larga reserva el ancho en una celda de grid oculta; `giro-sale` y `giro-entra` con las curvas de movimiento existentes. `public/js/portada.js`: `iniciarGiro()` con `PALABRAS_GIRO` (playeras, audífonos, dulces, volantes, cuadernos, regalos, engargolados y "lo que necesitas"), una sola vuelta cada 2.5 s, pausa con el mouse encima y con la pestaña oculta; con movimiento reducido queda fijo en "lo que necesitas". El lector de pantalla lee una frase fija.
