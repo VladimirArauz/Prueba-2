@@ -47,6 +47,7 @@ Cómo se usa:
 | `2026-11-06-conectar-google-analytics.md` | Aplicado: propiedad 563128736, `G-VPH0MC28FN`, versión 2 del contenedor publicada y comprobada en vivo | 2026-11-06 |
 | `2026-11-06-medir-carrito-y-pedidos.md` | Aplicado y subido a IONOS; contenedor en versión 3. Falta marcar `begin_checkout` como evento clave | 2026-11-06 |
 | `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo: mediana 99 / 100 / 100 / 100 | 2026-11-07 |
+| `2026-11-08-reels-botones-debounce-texto-y-portada.md` | Propuesto (5 prompts, sin aplicar) | 2026-11-08 |
 
 ---
 
@@ -98,6 +99,11 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-08: plan de 4 reels y de la revisión de la portada
+- Nuevo plan `plans/planes/2026-11-08-reels-botones-debounce-texto-y-portada.md` y sus 5 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Reels Desd_coMJ0U y De2zgJsoTcH (@jiron.design), DfawBGahiv3 (@cuaspro1, solo dice "Debounce") y Dfax64IOmfU (@gusxdev_), leídos con `/embed/captioned/`. Dfa-fDlFbry ya no existe. También se usó una revisión externa de la portada que pegó el usuario: falta prueba social, los botones son genéricos y el h1 no dice el beneficio.
+- Decisiones del usuario: cifras reales y opiniones (pedidos solo si son 20 o más); h1 con el beneficio y la marca en segundo plano (debajo de los botones, no encima del h1, por la regla de las etiquetas); el lugar de los stands lo da al aplicar el prompt 2; texto de 14 px como mínimo.
 
 ### 2026-11-08: memoria más corta (aviso de Claude Code de más de 150 000 caracteres)
 - Pedido del usuario: `plans/MEMORIA.md` pesaba 141 800 caracteres y con `plans/CLAUDE.md` pasaba el límite de instrucciones que se cargan al inicio.
