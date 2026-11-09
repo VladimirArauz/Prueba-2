@@ -913,8 +913,8 @@ body {
 
 
 /* Letrero "Encuentra ___" (plan 2026-11-08-letrero-giratorio-hero): la palabra cambia sola, como las letras de un
-   tablero de aeropuerto. Excepción de movimiento autorizada por el usuario solo para ese plan. Una sola vuelta;
-   se pausa con el mouse encima o con el foco; con movimiento reducido no gira (portada.js). */
+   tablero de aeropuerto. Excepción de movimiento autorizada por el usuario solo para ese plan. Gira sin fin;
+   se pausa con el mouse encima; con movimiento reducido no gira (portada.js). */
 .hero-giro {
   margin-top: 28px;
 }
@@ -949,6 +949,10 @@ body {
 
 .hero-giro-medida {
   visibility: hidden;
+}
+
+.hero-giro-palabra {
+  justify-self: center;
 }
 
 .hero-giro-palabra.is-saliendo {

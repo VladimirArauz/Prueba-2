@@ -98,8 +98,7 @@ async function cargarPromociones() {
 }
 
 // ================= Letrero "Encuentra ___" (plan 2026-11-08-letrero-giratorio-hero) =================
-// Una sola vuelta por las tiendas y se queda en "lo que necesitas". Se pausa con el mouse encima, con el foco o si
-// la pestaña no se ve. Con movimiento reducido no gira. El lector de pantalla lee la frase fija del HTML.
+// Pasa por todas las palabras y vuelve a empezar, sin fin. Se pausa con el mouse encima o si la pestaña no se ve. Con movimiento reducido no gira. El lector de pantalla lee la frase fija del HTML.
 const PALABRAS_GIRO = ["playeras", "audífonos", "dulces", "volantes", "cuadernos", "regalos", "engargolados", "lo que necesitas"];
 const PAUSA_GIRO = 2500;
 
@@ -117,14 +116,14 @@ function iniciarGiro() {
   letrero.addEventListener("mouseleave", () => { pausado = false; });
   const siguiente = () => {
     if (pausado || document.hidden) return void setTimeout(siguiente, PAUSA_GIRO);
-    indice += 1;
+    indice = (indice + 1) % PALABRAS_GIRO.length;
     palabra.classList.remove("is-entrando");
     palabra.classList.add("is-saliendo");
     palabra.addEventListener("animationend", () => {
       palabra.textContent = PALABRAS_GIRO[indice];
       palabra.classList.remove("is-saliendo");
       palabra.classList.add("is-entrando");
-      if (indice < PALABRAS_GIRO.length - 1) setTimeout(siguiente, PAUSA_GIRO);
+      setTimeout(siguiente, PAUSA_GIRO);
     }, { once: true });
   };
   setTimeout(siguiente, PAUSA_GIRO);
