@@ -32,7 +32,7 @@ function imagenTarjeta(t) {
     return `<div class="card-img-wrap"><img src="${escapeHTML(t.imagen_url || "/imagenes/otra.svg")}" alt="Tienda ${escapeHTML(t.nombre)}" loading="lazy"></div>`;
   }
   const base = `/imagenes/tiendas/${escapeHTML(t.slug)}`;
-  return `<div class="card-img-wrap is-foto"><img src="${base}-640.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w"
+  return `<div class="card-img-wrap"><img src="${base}-640.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w"
     sizes="${TAMANOS_FOTO}" width="1280" height="800" alt="${escapeHTML(foto.alt)}" loading="lazy" decoding="async"></div>`;
 }
 

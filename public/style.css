@@ -1169,6 +1169,14 @@ body {
 .card > img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+}
+
+/* Las fotos llenan su espacio; los dibujos de relleno (.svg) se ven completos */
+.card-img-wrap img[src$=".svg"],
+.card > img[src$=".svg"],
+.producto-img img[src$=".svg"],
+.admin-thumb[src$=".svg"] {
   object-fit: contain;
 }
 
@@ -2432,7 +2440,7 @@ legend {
   width: 48px;
   height: 48px;
   border-radius: var(--r-btn);
-  object-fit: contain;
+  object-fit: cover;
   background: var(--gis);
 }
 
@@ -2804,7 +2812,7 @@ a.card-img-wrap {
 .producto-img img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* Carrusel de fotos. Excepción de movimiento autorizada por el usuario solo para el plan
@@ -4621,12 +4629,7 @@ a.card-img-wrap {
 
 /* =========================================================
    FOTOS DE LAS TARJETAS DE TIENDAS EN LA PORTADA (plan 2026-10-31-fotos-tiendas-portada)
-   La foto llena la tarjeta (las de relleno se ven completas con contain).
    ========================================================= */
-.card-img-wrap.is-foto img {
-  object-fit: cover;
-}
-
 .creditos-fotos {
   margin-top: 16px;
   font-size: 0.875rem;
