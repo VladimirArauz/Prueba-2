@@ -2,8 +2,11 @@
 User-agent: *
 Allow: /
 # Lo público de la API: el catálogo que pinta la página y sus fotos (plan 2026-11-08-robots-y-search-console)
-Allow: /api/stands/
+Allow: /api/stands
 Allow: /api/productos/
+Allow: /api/promociones
+Allow: /api/vitrina
+Allow: /api/portada/
 Disallow: /api/
 Disallow: /necutools.html
 Disallow: /carrito.html
