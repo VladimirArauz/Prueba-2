@@ -49,13 +49,13 @@ Cómo se usa:
 | `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo: mediana 99 / 100 / 100 / 100 | 2026-11-07 |
 | `2026-11-08-letrero-giratorio-hero.md` | Aplicado y subido a IONOS (2026-11-08) | 2026-11-08 |
 | `2026-11-08-reels-botones-debounce-texto-y-portada.md` | Aplicado (prompts 1 a 5) y subido a IONOS. En IONOS aún no hay opiniones: la sección de opiniones no se ve | 2026-11-08 |
-| `2026-11-08-robots-y-search-console.md` | En curso: cambios subidos a IONOS; falta correr el prompt 1 en la extensión del navegador (Search Console) | 2026-11-08 |
+| `2026-11-08-robots-y-search-console.md` | En curso: subido a IONOS y prompt 1 corrido; falta volver a probar la portada y promociones, y revisar el sitemap cuando Search Console procese los datos | 2026-11-08 |
 
 ---
 
 ## Pendientes
 
-**Robots y Search Console (2026-11-08):** (a) El usuario ya tiene Search Console (antes pospuesto): falta pasar el prompt de `plans/prompts/2026-11-08-robots-y-search-console.md` a la extensión y revisar su informe. La documentación de Google no menciona las peticiones XHR a una API: se confirma con el HTML renderizado de la Inspección de URLs. Si Google sigue sin ver los productos, considerar pintarlos desde el servidor, como el tablero. (b) `carrito.html`, `cuenta.html` y `necutools.html` tienen `noindex` y `Disallow`: según Google, con la URL bloqueada el `noindex` no se lee; decidir con lo que muestre Search Console. (c) Las fotos de `/api/` en caché de IONOS conservan el `X-Robots-Tag` viejo hasta que caduquen (`max-age` de un día); las direcciones nuevas ya salen sin él. (d) Respaldo en `~/respaldos/2026-11-08-robots/antes.tar`.
+**Robots y Search Console (2026-11-08):** (a) Search Console ya está activo: propiedad de dominio `necutla.com`, verificada, sitemap enviado (estado inicial "No se ha podido obtener", 0 páginas; el archivo se sirve bien). La Inspección de URLs confirmó que `robots.txt` también aplica a las peticiones a `/api/`, y que `/t/tecnologia` y `/p/46` ya se renderizan con productos. Falta: volver a probar `/` y `/promociones.html` en Inspección de URLs, y mirar los informes de sitemap, robots.txt y Páginas cuando haya datos. Promociones puede seguir en Soft 404 mientras IONOS tenga 0 promociones. En 80 peticiones desde la máquina local hubo 1 sola sin respuesta (20 s en `/sitemap.xml`), sin saber si fue la red local o IONOS: mirarlo solo si el sitemap sigue sin poder obtenerse. (b) `carrito.html`, `cuenta.html` y `necutools.html` tienen `noindex` y `Disallow`: según Google, con la URL bloqueada el `noindex` no se lee; decidir con lo que muestre Search Console. (c) Las fotos de `/api/` en caché de IONOS conservan el `X-Robots-Tag` viejo hasta que caduquen (`max-age` de un día); las direcciones nuevas ya salen sin él. (d) Respaldo en `~/respaldos/2026-11-08-robots/antes.tar`.
 
 **Letrero que cambia de palabra (2026-11-08):** (a) (Resuelto 2026-11-08: subido a IONOS.) (b) **Excepción de diseño:** el movimiento que no responde a una acción lo autorizó el usuario solo para el plan `2026-11-08-letrero-giratorio-hero.md`; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) Las palabras están fijas en `PALABRAS_GIRO` (`portada.js`); si cambian las tiendas, actualizarlas.
 
@@ -107,6 +107,10 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-08: robots.txt abre tiendas, promociones, vitrina y resumen (plan `2026-11-08-robots-y-search-console.md`, subido)
+- Según el informe de Search Console, la portada y promociones mostraban "No se pudo completar la acción" a Google: `Allow: /api/stands/` no cubría `/api/stands` y faltaban las otras rutas. `public/robots.txt`: `Allow: /api/stands`, `/api/promociones`, `/api/vitrina` y `/api/portada/`. `/api/config` y `/api/clientes/` siguen cerradas: `revisarCuentas` no falla sin `/api/config`.
+- IONOS (con permiso del usuario): servidor igual a `6f78efe`, respaldo en `~/respaldos/2026-11-08-robots-2/antes.tar`, rsync, idéntico. Regla por regla, 19 de 19 con el archivo en vivo.
 
 ### 2026-11-08: robots.txt abre el catálogo y las fotos públicas (plan `2026-11-08-robots-y-search-console.md`, subido)
 - Pedido del usuario. `public/robots.txt`: `Allow: /api/stands/` y `Allow: /api/productos/`. `app/arranque.php`: `FOTOS_INDEXABLES` quita el `X-Robots-Tag` solo a las fotos de producto y las portadas de tienda. `app/paginas.php`: `OG_VERSION` 3. `README.md`. Lo que afirma el plan sale de la documentación de Google, leída ese día.
