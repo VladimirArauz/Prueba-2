@@ -15,7 +15,7 @@ const PAGINAS_FIJAS = [
 ];
 
 // Se sube cuando cambian las cabeceras de las imágenes: la caché de IONOS guarda cada dirección con las de antes
-const OG_VERSION = '2';
+const OG_VERSION = '3';
 
 const OG_GENERAL = [
     'titulo' => 'Necutla: tiendas de estudiantes con pedidos por WhatsApp',

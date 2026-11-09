@@ -270,7 +270,7 @@ Plan `plans/planes/2026-10-31-seo-iconos-contenido-y-legal.md` (recomendaciones 
   `Service` con precio y existencias, y migas de pan) de cada página. Carrito, cuenta y Necutools van con `noindex`;
   una tienda o producto que no existe responde 404.
 - **Mapa del sitio:** `/sitemap.xml` lo arma `app/sitemap.php` con lo visible (portada, promociones, aviso de
-  privacidad, términos, tiendas y productos). `public/robots.txt` lo anuncia y deja fuera la API, Necutools,
+  privacidad, términos, tiendas y productos). `public/robots.txt` lo anuncia y deja fuera la API (salvo `/api/stands/` y `/api/productos/`, que pintan el catálogo), Necutools,
   carrito y cuenta. Después de subir, envíalo en Google Search Console.
 - **Logo e iconos:** `imagenes/logo.png`, `favicon-32.png`, `favicon.ico` (16, 32 y 48), `apple-touch-icon.png` (180) y los de la app (192, 512
   y maskable) en `public/site.webmanifest`. Se generan desde `recursos/iconos/logo-original.png` con `python3 recursos/iconos/generar.py` (Pillow).

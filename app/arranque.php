@@ -94,6 +94,9 @@ require __DIR__ . '/sitemap.php';
 // También lo que trae números de WhatsApp: cambia según la sesión y no se puede guardar en una caché compartida
 const PRIVADAS = '#^/(admin|auth|clientes|config|carrito|pedidos)(/|$)|^/stands/[^/]+/?$|^/productos/[0-9]+/?$#i';
 
+// Fotos públicas de productos y portadas de tienda: son las únicas de la API que Google puede indexar
+const FOTOS_INDEXABLES = '#^/(stands/[0-9]+/portada|productos/[0-9]+/imagen)/?$#i';
+
 // Convierte cualquier error en la respuesta que daba Node
 function respuesta_de_error(Throwable $e): Respuesta
 {
@@ -142,7 +145,7 @@ function atender(): void
     }
 
     $rutaApi = substr($ruta, 4) ?: '/';
-    $cabeceras = ['X-Robots-Tag' => 'noindex, nofollow'];
+    $cabeceras = preg_match(FOTOS_INDEXABLES, $rutaApi) ? [] : ['X-Robots-Tag' => 'noindex, nofollow'];
     if (preg_match(PRIVADAS, $rutaApi)) $cabeceras['Cache-Control'] = 'no-store';
     $conSesion = false;
     try {

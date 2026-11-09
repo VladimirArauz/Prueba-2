@@ -1,6 +1,9 @@
 # Necutla: qué pueden leer los buscadores (plan 2026-10-31-seo-iconos-contenido-y-legal)
 User-agent: *
 Allow: /
+# Lo público de la API: el catálogo que pinta la página y sus fotos (plan 2026-11-08-robots-y-search-console)
+Allow: /api/stands/
+Allow: /api/productos/
 Disallow: /api/
 Disallow: /necutools.html
 Disallow: /carrito.html
