@@ -1,7 +1,7 @@
 # Robots.txt para el catálogo y revisión en Search Console
 
 - **Fecha:** 2026-11-08
-- **Estado:** en curso
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-08-robots-y-search-console.md`
 - **Alcance:** `public/robots.txt`, cabecera `X-Robots-Tag` de las fotos públicas de la API, y revisión de Search Console con la extensión de Claude en el navegador.
 
