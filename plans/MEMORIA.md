@@ -49,10 +49,13 @@ Cómo se usa:
 | `2026-11-07-reels-texto-botones-menu-movimiento.md` | Aplicado (prompts 1 a 6) y subido a IONOS. Lighthouse en vivo: mediana 99 / 100 / 100 / 100 | 2026-11-07 |
 | `2026-11-08-letrero-giratorio-hero.md` | Aplicado y subido a IONOS (2026-11-08) | 2026-11-08 |
 | `2026-11-08-reels-botones-debounce-texto-y-portada.md` | Aplicado (prompts 1 a 5) y subido a IONOS. En IONOS aún no hay opiniones: la sección de opiniones no se ve | 2026-11-08 |
+| `2026-11-08-robots-y-search-console.md` | En curso: cambios subidos a IONOS; falta correr el prompt 1 en la extensión del navegador (Search Console) | 2026-11-08 |
 
 ---
 
 ## Pendientes
+
+**Robots y Search Console (2026-11-08):** (a) El usuario ya tiene Search Console (antes pospuesto): falta pasar el prompt de `plans/prompts/2026-11-08-robots-y-search-console.md` a la extensión y revisar su informe. La documentación de Google no menciona las peticiones XHR a una API: se confirma con el HTML renderizado de la Inspección de URLs. Si Google sigue sin ver los productos, considerar pintarlos desde el servidor, como el tablero. (b) `carrito.html`, `cuenta.html` y `necutools.html` tienen `noindex` y `Disallow`: según Google, con la URL bloqueada el `noindex` no se lee; decidir con lo que muestre Search Console. (c) Las fotos de `/api/` en caché de IONOS conservan el `X-Robots-Tag` viejo hasta que caduquen (`max-age` de un día); las direcciones nuevas ya salen sin él. (d) Respaldo en `~/respaldos/2026-11-08-robots/antes.tar`.
 
 **Letrero que cambia de palabra (2026-11-08):** (a) (Resuelto 2026-11-08: subido a IONOS.) (b) **Excepción de diseño:** el movimiento que no responde a una acción lo autorizó el usuario solo para el plan `2026-11-08-letrero-giratorio-hero.md`; si quiere que sea regla, que pida actualizar `plans/CLAUDE.md`. (c) Las palabras están fijas en `PALABRAS_GIRO` (`portada.js`); si cambian las tiendas, actualizarlas.
 
@@ -105,10 +108,14 @@ Cómo se usa:
 
 ## Cambios hechos
 
-### 2026-11-08: títulos de página con Necutla siempre y lo que se vende (sin plan aparte; solo en local)
+### 2026-11-08: robots.txt abre el catálogo y las fotos públicas (plan `2026-11-08-robots-y-search-console.md`, subido)
+- Pedido del usuario. `public/robots.txt`: `Allow: /api/stands/` y `Allow: /api/productos/`. `app/arranque.php`: `FOTOS_INDEXABLES` quita el `X-Robots-Tag` solo a las fotos de producto y las portadas de tienda. `app/paginas.php`: `OG_VERSION` 3. `README.md`. Lo que afirma el plan sale de la documentación de Google, leída ese día.
+- IONOS (con permiso del usuario, junto con los títulos de abajo): los 4 archivos del servidor eran la versión de `a9cd79b`; respaldo y rsync, idénticos. En vivo con `curl`: `/healthz` 200, `robots.txt` nuevo, 14 títulos de 60 caracteres o menos, JSON y `/api/admin` conservan el `noindex`, sin números de WhatsApp sin sesión. No se corrieron pruebas de navegador: no cambió nada visual.
+
+### 2026-11-08: títulos de página con Necutla siempre y lo que se vende (sin plan aparte; subido)
 - Pedido del usuario. `app/paginas.php`: `titulo_pagina($corto, ...$opciones)` usa la primera opción que quepa en 60 caracteres con " | Necutla" y ya nunca quita la marca (antes se caía en Goat Brothers y `/p/45`, con 61). Las tiendas acortan a "X: productos y servicios | Necutla" si no cabe. Los productos quedan "Nombre en Tienda | Necutla", sin precio ni punto final. `public/index.html`: "Necutla: ropa, tecnología y más de estudiantes del CECyT 9" (58 caracteres).
 - La vista previa de WhatsApp (`og:title`) no cambió: sigue con el precio y con "tiendas de estudiantes con pedidos por WhatsApp".
-- Pruebas: sintaxis con `php8.5`, 4 casos de largo (incluido un nombre de más de 60) y 8 páginas locales con `curl`. Sin subir a IONOS. La tienda "Otra" sigue con ese nombre: se cambia en Necutools.
+- Pruebas: sintaxis con `php8.5`, 4 casos de largo (incluido un nombre de más de 60) y 8 páginas locales con `curl`. La tienda "Otra" sigue con ese nombre: se cambia en Necutools.
 
 ### 2026-11-08: Lighthouse de la portada en vivo (después del letrero "Encuentra ___")
 - Pedido del usuario. Lighthouse 12.8.2, 3 corridas en perfil de celular: rendimiento 98, 99 y 99; accesibilidad, buenas prácticas y SEO 100 en las 3. FCP 1.2 a 1.4 s, LCP 2.0 s en las 3 (párrafo del encabezado), TBT 0 a 120 ms, CLS 0, servidor 80 a 100 ms. Escritorio: 99 / 100 / 100 / 100, LCP 0.9 s, CLS 0. No se cambió código.
