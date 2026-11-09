@@ -105,6 +105,11 @@ Cómo se usa:
 
 ## Cambios hechos
 
+### 2026-11-08: títulos de página con Necutla siempre y lo que se vende (sin plan aparte; solo en local)
+- Pedido del usuario. `app/paginas.php`: `titulo_pagina($corto, ...$opciones)` usa la primera opción que quepa en 60 caracteres con " | Necutla" y ya nunca quita la marca (antes se caía en Goat Brothers y `/p/45`, con 61). Las tiendas acortan a "X: productos y servicios | Necutla" si no cabe. Los productos quedan "Nombre en Tienda | Necutla", sin precio ni punto final. `public/index.html`: "Necutla: ropa, tecnología y más de estudiantes del CECyT 9" (58 caracteres).
+- La vista previa de WhatsApp (`og:title`) no cambió: sigue con el precio y con "tiendas de estudiantes con pedidos por WhatsApp".
+- Pruebas: sintaxis con `php8.5`, 4 casos de largo (incluido un nombre de más de 60) y 8 páginas locales con `curl`. Sin subir a IONOS. La tienda "Otra" sigue con ese nombre: se cambia en Necutools.
+
 ### 2026-11-08: Lighthouse de la portada en vivo (después del letrero "Encuentra ___")
 - Pedido del usuario. Lighthouse 12.8.2, 3 corridas en perfil de celular: rendimiento 98, 99 y 99; accesibilidad, buenas prácticas y SEO 100 en las 3. FCP 1.2 a 1.4 s, LCP 2.0 s en las 3 (párrafo del encabezado), TBT 0 a 120 ms, CLS 0, servidor 80 a 100 ms. Escritorio: 99 / 100 / 100 / 100, LCP 0.9 s, CLS 0. No se cambió código.
 

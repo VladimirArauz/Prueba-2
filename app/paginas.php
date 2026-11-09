@@ -55,7 +55,7 @@ function og_de_tienda(string $slug): ?array
     $og = [
         'titulo' => "{$s['nombre']} en Necutla",
         'descripcion' => recortar($s['descripcion'] ?: "Catálogo de {$s['nombre']}. Arma tu pedido y mándalo por WhatsApp a la tienda.", 150),
-        'pagina' => titulo_pagina("{$s['nombre']}: productos y servicios de estudiantes", $s['nombre']),
+        'pagina' => titulo_pagina($s['nombre'], "{$s['nombre']}: productos y servicios de estudiantes", "{$s['nombre']}: productos y servicios"),
         'meta' => descripcion_meta($s['descripcion'] ?: "Catálogo de {$s['nombre']} en Necutla.",
             'Arma tu carrito y manda tu pedido por WhatsApp directo a la tienda.'),
         'jsonld' => [migas([['Inicio', '/'], [$s['nombre'], '/t/' . $slug]])],
@@ -84,10 +84,11 @@ function og_de_producto(int $id): ?array
     }
     $imagen = imagen_para_vista($p['imagen_url']);
     $nombre = $p['nombre'] . ($precio ? " — $precio" : '');
+    $sin_punto = rtrim($p['nombre'], '. '); // Muchos nombres terminan en punto: en el título se ve raro
     return [
         'titulo' => $nombre . " en {$f['tienda']}",
         'descripcion' => recortar($p['descripcion'] ?: "Pídelo en Necutla y mándale tu pedido por WhatsApp a {$f['tienda']}.", 150),
-        'pagina' => titulo_pagina("$nombre en {$f['tienda']}", $p['nombre']),
+        'pagina' => titulo_pagina($sin_punto, "$sin_punto en {$f['tienda']}"),
         'meta' => descripcion_meta($p['descripcion'] ?: "{$p['nombre']} de {$f['tienda']} en Necutla" . ($precio ? ", $precio" : '') . '.',
             "Pídelo en Necutla y manda tu pedido por WhatsApp a {$f['tienda']}."),
         'jsonld' => [
@@ -97,11 +98,13 @@ function og_de_producto(int $id): ?array
     ] + ($imagen ? ['imagen' => $imagen, 'alt' => $p['nombre'], 'ancho' => null, 'alto' => null] : []);
 }
 
-// "Ropa: productos y servicios de estudiantes | Necutla"; si no cabe en 60, se acorta
-function titulo_pagina(string $largo, string $corto): string
+// "Ropa: productos y servicios de estudiantes | Necutla": usa la primera opción que quepa en 60 con la marca,
+// que nunca se quita; si ninguna cabe, se recorta el nombre
+function titulo_pagina(string $corto, string ...$opciones): string
 {
-    foreach (["$largo | Necutla", $largo, "$corto | Necutla"] as $t) if (mb_strlen($t) <= LARGO_TITULO) return $t;
-    return recortar($corto, LARGO_TITULO);
+    $marca = ' | Necutla';
+    foreach ([...$opciones, $corto] as $t) if (mb_strlen($t . $marca) <= LARGO_TITULO) return $t . $marca;
+    return recortar($corto, LARGO_TITULO - mb_strlen($marca)) . $marca;
 }
 
 // Descripción de 140 a 160 caracteres: la del dato y, si queda corta, frases que expliquen cómo pedir.
