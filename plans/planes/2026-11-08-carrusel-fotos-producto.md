@@ -1,7 +1,7 @@
 # Varias fotos por producto con carrusel
 
 - **Fecha:** 2026-11-08
-- **Estado:** en curso
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-08-carrusel-fotos-producto.md`
 - **Alcance:** hasta 6 fotos por producto (la principal y 5 más), administradas en Necutools; carrusel en la página del producto y en las tarjetas. Solo productos, no servicios. No cambia el carrito, los pedidos ni el envío por WhatsApp.
 
