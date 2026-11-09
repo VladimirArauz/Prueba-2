@@ -386,6 +386,20 @@
             </form>
           </div>
 
+          <div class="admin-card" id="fotos-card" hidden>
+            <h3 id="fotos-title">Más fotos</h3>
+            <p>La imagen del producto siempre sale primero. Agrega hasta 5 fotos más, por ejemplo de otros ángulos o con más datos. Pasan solas en la página del producto y al poner el cursor sobre su tarjeta.</p>
+            <ul class="sub-list" id="foto-list"></ul>
+            <form id="form-foto">
+              <div class="admin-form-grid">
+                <div class="form-group"><label for="foto-imagen">Foto (hasta 1 MB)</label><input id="foto-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif" required></div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn secondary"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Agregar foto</button>
+              </div>
+            </form>
+          </div>
+
           <div class="admin-card">
             <h3>Catálogo</h3>
             <div class="admin-filter">

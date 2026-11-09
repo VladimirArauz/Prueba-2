@@ -89,6 +89,7 @@ function og_de_producto(int $id): ?array
         'titulo' => $nombre . " en {$f['tienda']}",
         'descripcion' => recortar($p['descripcion'] ?: "Pídelo en Necutla y mándale tu pedido por WhatsApp a {$f['tienda']}.", 150),
         'pagina' => titulo_pagina($sin_punto, "$sin_punto en {$f['tienda']}"),
+        'varias_fotos' => count($p['fotos']) > 1,
         'meta' => descripcion_meta($p['descripcion'] ?: "{$p['nombre']} de {$f['tienda']} en Necutla" . ($precio ? ", $precio" : '') . '.',
             "Pídelo en Necutla y manda tu pedido por WhatsApp a {$f['tienda']}."),
         'jsonld' => [
@@ -148,6 +149,8 @@ function jsonld_producto(array $p, string $tienda, ?string $imagen): array
     ];
     if ($p['descripcion']) $d['description'] = recortar($p['descripcion'], 500);
     if ($imagen) $d['image'] = url_completa($imagen);
+    $fotos = array_values(array_filter(array_map('imagen_para_vista', $p['fotos'])));
+    if (count($fotos) > 1) $d['image'] = array_map('url_completa', $fotos);
     if ($p['tipo'] === 'servicio') $d['provider'] = $vendedor;
     if ($p['precio'] !== null && $p['precio_modo'] !== 'cotizar') {
         $monto = number_format((float) ($p['oferta']['precio_oferta'] ?? $p['precio']), 2, '.', '');
@@ -322,6 +325,8 @@ function pagina_publica(string $ruta): ?Respuesta
     if (isset($og['meta'])) {
         $html = preg_replace_callback('#<meta name="description" content="[^"]*">#', fn() => '<meta name="description" content="' . $e($og['meta']) . '">', $html, 1);
     }
+    // Los controles del carrusel llegan visibles: si aparecieran con el JS, en celular empujarían el texto
+    if (!empty($og['varias_fotos'])) $html = str_replace('id="producto-fotos" hidden', 'id="producto-fotos"', $html);
     if ($archivo === 'index.html') $html = con_tablero($html);
     $html = con_web_analytics($html);
     $html = con_tag_manager($html, $archivo);

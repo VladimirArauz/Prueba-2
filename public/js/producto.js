@@ -21,8 +21,10 @@ function renderProducto() {
   const volver = $("producto-volver");
   volver.href = `/t/${encodeURIComponent(p.slug)}${p.tipo === "servicio" ? "#servicios" : ""}`;
   volver.innerHTML = `${icon("arrow-left")}Volver a ${escapeHTML(p.tienda)}`;
-  $("producto-img").src = imagenDe(p);
+  const fotos = fotosDe(p);
+  $("producto-img").src = fotos[0];
   $("producto-img").alt = p.nombre;
+  iniciarGaleria(fotos);
   $("producto-tienda").href = `/t/${encodeURIComponent(p.slug)}`;
   $("producto-tienda").textContent = p.subcategoria ? `${p.tienda} · ${p.subcategoria}` : p.tienda;
   $("producto-nombre").textContent = p.nombre;
@@ -33,7 +35,45 @@ function renderProducto() {
   $("producto-precio").innerHTML = precioProducto(p);
   $("producto-accion").innerHTML = accionProducto(p, { enDetalle: true });
   renderColores();
+  if (est.carrusel) est.carrusel.iniciar();
 }
+
+// ================= Carrusel de fotos =================
+function marcarPunto(i) {
+  $("producto-puntos").querySelectorAll(".carrusel-punto").forEach((punto, n) => {
+    if (n === i) punto.setAttribute("aria-current", "true");
+    else punto.removeAttribute("aria-current");
+  });
+}
+
+function iniciarGaleria(fotos) {
+  $("producto-fotos").hidden = fotos.length < 2;
+  if (fotos.length < 2) return;
+  const marco = $("producto-img").parentElement;
+  marco.classList.add("carrusel-marco");
+  $("producto-puntos").innerHTML = fotos.map((_, i) =>
+    `<button type="button" class="carrusel-punto" data-action="foto-ir" data-i="${i}" aria-label="Ver foto ${i + 1} de ${fotos.length}"${i ? "" : ' aria-current="true"'}></button>`).join("");
+  const carrusel = crearCarrusel(marco, fotos, { espera: 4000, alCambiar: marcarPunto });
+  est.carrusel = carrusel;
+  const galeria = marco.parentElement;
+  galeria.addEventListener("mouseenter", () => { carrusel.pausado = true; });
+  galeria.addEventListener("mouseleave", () => { carrusel.pausado = galeria.matches(":has(:focus-visible)"); });
+  galeria.addEventListener("focusin", event => { if (event.target.matches(":focus-visible")) carrusel.pausado = true; });
+  galeria.addEventListener("focusout", () => { carrusel.pausado = galeria.matches(":hover"); });
+}
+
+function cambiarFotoAMano(accion) {
+  if (!est.carrusel) return;
+  $("producto-img").alt = est.producto.nombre;
+  accion(est.carrusel);
+  est.carrusel.reiniciar();
+}
+
+Object.assign(ACCIONES, {
+  "foto-anterior": () => cambiarFotoAMano(c => c.retroceder()),
+  "foto-siguiente": () => cambiarFotoAMano(c => c.avanzar()),
+  "foto-ir": el => cambiarFotoAMano(c => c.ir(Number(el.dataset.i)))
+});
 
 // ================= Barra de colores =================
 // Al entrar se elige el color de la URL (?color=) o el primero disponible
@@ -50,15 +90,18 @@ function renderColores() {
       <span>${escapeHTML(c.nombre)}${c.disponible ? "" : `<span class="color-agotado"> · Agotado</span>`}</span>
     </label>`).join("");
   pintarMuestras($("producto-color-opciones"));
-  elegirColor(inicial);
+  // El color que se elige solo al cargar no detiene el carrusel; el de un enlace con ?color= sí
+  elegirColor(inicial, !(inicial && inicial.id === pedido));
 }
 
-function elegirColor(color) {
+function elegirColor(color, automatico = false) {
   const p = est.producto;
   est.color = color;
   $("producto-color-texto").textContent = color ? `Color: ${color.nombre}` : "Color";
-  if (color) {
-    $("producto-img").src = color.imagen_url || imagenDe(p);
+  if (color && !(automatico && est.carrusel)) {
+    const foto = color.imagen_url || imagenDe(p);
+    if (est.carrusel) est.carrusel.fijar(foto);
+    else $("producto-img").src = foto;
     $("producto-img").alt = `${p.nombre}, color ${color.nombre.toLowerCase()}`;
     const url = new URL(location.href);
     url.searchParams.set("color", color.id);
@@ -290,7 +333,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   renderProducto();
-  $("producto-color-opciones").addEventListener("change", event => {
+  // Con click y no con change: tocar el color que ya venía marcado también debe mostrar su foto
+  $("producto-color-opciones").addEventListener("click", event => {
+    if (!event.target.matches('input[name="color"]')) return;
     elegirColor(est.producto.colores.find(c => c.id === Number(event.target.value)) || null);
   });
   $("orden").addEventListener("change", event => {

@@ -95,7 +95,7 @@ require __DIR__ . '/sitemap.php';
 const PRIVADAS = '#^/(admin|auth|clientes|config|carrito|pedidos)(/|$)|^/stands/[^/]+/?$|^/productos/[0-9]+/?$#i';
 
 // Fotos públicas de productos y portadas de tienda: son las únicas de la API que Google puede indexar
-const FOTOS_INDEXABLES = '#^/(stands/[0-9]+/portada|productos/[0-9]+/imagen)/?$#i';
+const FOTOS_INDEXABLES = '#^/(stands/[0-9]+/portada|productos/[0-9]+/(imagen|fotos/[0-9]+))/?$#i';
 
 // Convierte cualquier error en la respuesta que daba Node
 function respuesta_de_error(Throwable $e): Respuesta

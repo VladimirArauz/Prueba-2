@@ -2807,6 +2807,92 @@ a.card-img-wrap {
   object-fit: contain;
 }
 
+/* Carrusel de fotos. Excepción de movimiento autorizada por el usuario solo para el plan
+   2026-11-08-carrusel-fotos-producto. Usa translate para no pelear con el transform del hover de las tarjetas. */
+.carrusel-marco {
+  position: relative;
+  overflow: hidden;
+}
+
+.carrusel-marco .carrusel-sale {
+  position: absolute;
+  inset: 0;
+  animation: carrusel-sale 0.55s var(--curva-mueve) both;
+}
+
+.carrusel-marco .carrusel-sale.is-atras {
+  animation-name: carrusel-sale-atras;
+}
+
+.carrusel-marco img.carrusel-entra {
+  animation: carrusel-entra 0.55s var(--curva-mueve) both;
+}
+
+.carrusel-marco img.carrusel-entra.is-atras {
+  animation-name: carrusel-entra-atras;
+}
+
+@keyframes carrusel-sale { to { translate: -100% 0; } }
+@keyframes carrusel-sale-atras { to { translate: 100% 0; } }
+@keyframes carrusel-entra { from { translate: 100% 0; } }
+@keyframes carrusel-entra-atras { from { translate: -100% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .carrusel-marco .carrusel-sale,
+  .carrusel-marco img.carrusel-entra {
+    animation: none;
+  }
+}
+
+.carrusel-controles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.carrusel-controles[hidden] {
+  display: none;
+}
+
+.carrusel-puntos {
+  display: flex;
+  align-items: center;
+}
+
+.carrusel-punto {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 36px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.carrusel-punto::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--tinta);
+  border-radius: 50%;
+}
+
+.carrusel-punto[aria-current="true"]::before {
+  background: var(--tinta);
+}
+
+.carrusel-punto:focus-visible {
+  outline: 3px solid var(--senal);
+  outline-offset: 2px;
+}
+
+.sub-row.foto-row {
+  grid-template-columns: 48px 1fr auto;
+}
+
 .producto-info {
   display: flex;
   flex-direction: column;

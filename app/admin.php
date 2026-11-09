@@ -12,6 +12,7 @@ const CLASES_OFERTA = ['semanal', 'temporada', 'remate'];
 const TODOS_LOS_DIAS = [0, 1, 2, 3, 4, 5, 6];
 const ROLES = ['dueno', 'encargado'];
 const MAX_COLORES = 12;
+const MAX_FOTOS_EXTRA = 5; // Además de la principal: 6 por producto
 const BITACORA_POR_PAGINA = 50;
 const CORREO_REPETIDO = 'Ese correo ya lo usa otro usuario de Necutools.';
 // Deben existir en public/iconos.js
@@ -155,6 +156,16 @@ function exigir_color($id): array
     if (!$c) throw new ErrorHttp(404, 'Ese color no existe.');
     exigir_stand($c['stand_id']);
     return $c;
+}
+
+function exigir_foto($id): array
+{
+    $fotoId = id_valido($id);
+    $f = $fotoId ? fila('SELECT x.id, x.producto_id, p.stand_id, p.nombre AS producto
+                         FROM producto_fotos x JOIN productos p ON p.id = x.producto_id WHERE x.id = ?', [$fotoId]) : null;
+    if (!$f) throw new ErrorHttp(404, 'Esa foto no existe.');
+    exigir_stand($f['stand_id']);
+    return $f;
 }
 
 function tocar_producto(int $id): void
@@ -502,7 +513,8 @@ function rutas_admin(): void
         $ids = array_column($productos, 'id');
         $colores = $ids ? filas('SELECT id, producto_id, nombre, hex, disponible, stock, orden, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
                                  FROM producto_colores WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
-        return array_map(function ($p) use ($colores) {
+        $fotos = $ids ? filas('SELECT id, producto_id FROM producto_fotos WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
+        return array_map(function ($p) use ($colores, $fotos) {
             $imagenUrl = a_bool($p['tiene_imagen']) ? url_imagen('productos', $p['id'], $p['actualizado_en']) : $p['imagen_ruta'];
             $suyos = array_values(array_filter($colores, fn($c) => $c['producto_id'] === $p['id']));
             // Por resurtir: con las piezas del mínimo o menos. Sin stock capturado no cuenta (tiene su propio filtro).
@@ -520,6 +532,8 @@ function rutas_admin(): void
                 'visible' => a_bool($p['visible']), 'orden' => $p['orden'], 'creado_en' => fecha_iso($p['creado_en']),
                 'actualizado_en' => fecha_iso($p['actualizado_en']),
                 'imagen_url' => $imagenUrl,
+                'fotos' => array_map(fn($f) => ['id' => $f['id'], 'imagen_url' => "/api/productos/{$p['id']}/fotos/{$f['id']}"],
+                    array_values(array_filter($fotos, fn($f) => $f['producto_id'] === $p['id']))),
                 'colores' => array_map(fn($c) => [
                     'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']), 'stock' => $c['stock'], 'orden' => $c['orden'],
                     'imagen_url' => a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $imagenUrl,
@@ -579,6 +593,50 @@ function rutas_admin(): void
         $producto = exigir_producto_admin($idRuta);
         q('DELETE FROM productos WHERE id = ?', [$producto['id']]);
         anotar($admin, 'borrar', 'productos', $producto['id'], $producto['nombre']);
+        return vacia(204);
+    });
+
+    // ================= Más fotos de un producto (plan 2026-11-08-carrusel-fotos-producto) =================
+    // Cada foto va en su propia petición, igual que los colores
+    post('/api/admin/productos/:id/fotos', function ($idRuta) {
+        $admin = requiere_admin();
+        $producto = exigir_producto_admin($idRuta);
+        $info = fila('SELECT p.tipo, (SELECT COUNT(*) FROM producto_fotos f WHERE f.producto_id = p.id) AS fotos,
+                             (SELECT COALESCE(MAX(f.orden), -1) FROM producto_fotos f WHERE f.producto_id = p.id) AS ultimo
+                      FROM productos p WHERE p.id = ?', [$producto['id']]);
+        if ($info['tipo'] !== 'producto') throw dato_invalido('Las fotos adicionales son solo para productos.');
+        if ((int) $info['fotos'] >= MAX_FOTOS_EXTRA) throw dato_invalido('Un producto puede tener hasta ' . MAX_FOTOS_EXTRA . ' fotos además de la principal. Elimina una para agregar otra.');
+        $imagen = imagen_de(cuerpo()) ?? throw dato_invalido('Elige la foto que quieres agregar.');
+        q('INSERT INTO producto_fotos (producto_id, imagen, imagen_tipo, orden) VALUES (?, ?, ?, ?)',
+          [$producto['id'], $imagen['bytes'], $imagen['tipo'], (int) $info['ultimo'] + 1]);
+        $id = ultimo_id();
+        tocar_producto($producto['id']);
+        anotar($admin, 'crear', 'producto_fotos', $id, $producto['nombre']);
+        return json_respuesta(['id' => $id], 201);
+    });
+
+    put('/api/admin/productos/:id/fotos/orden', function ($idRuta) {
+        $admin = requiere_admin();
+        $producto = exigir_producto_admin($idRuta);
+        $pedidos = cuerpo()['ids'] ?? null;
+        $actuales = array_column(filas('SELECT id FROM producto_fotos WHERE producto_id = ?', [$producto['id']]), 'id');
+        $ordenados = is_array($pedidos) && array_is_list($pedidos) ? $pedidos : [];
+        $revisar = $ordenados;
+        sort($revisar);
+        sort($actuales);
+        if ($revisar !== $actuales) throw dato_invalido('Las fotos cambiaron. Recarga la página e intenta de nuevo.');
+        foreach ($ordenados as $orden => $id) q('UPDATE producto_fotos SET orden = ? WHERE id = ?', [$orden, $id]);
+        tocar_producto($producto['id']);
+        anotar($admin, 'editar', 'producto_fotos', $producto['id'], $producto['nombre']);
+        return ['ids' => $ordenados];
+    });
+
+    delete('/api/admin/fotos/:id', function ($idRuta) {
+        $admin = requiere_admin();
+        $foto = exigir_foto($idRuta);
+        q('DELETE FROM producto_fotos WHERE id = ?', [$foto['id']]);
+        tocar_producto($foto['producto_id']);
+        anotar($admin, 'borrar', 'producto_fotos', $foto['id'], $foto['producto']);
         return vacia(204);
     });
 

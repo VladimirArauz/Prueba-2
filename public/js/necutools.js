@@ -23,7 +23,7 @@ const TITULOS_PANEL = {
 const NOMBRE_TABLA = {
   tiendas: "Tienda", subcategorias: "Subcategoría", productos: "Producto", ofertas: "Oferta", opiniones: "Opinión",
   promociones: "Promoción", usuarios: "Usuario", pedidos: "Pedido", sesiones: "Sesión",
-  producto_colores: "Color"
+  producto_colores: "Color", producto_fotos: "Foto de producto"
 };
 
 const st = {
@@ -920,7 +920,73 @@ function productoConColores() {
   return p && p.tipo === "producto" ? p : null;
 }
 
+// ================= Más fotos de un producto (plan 2026-11-08-carrusel-fotos-producto) =================
+const MAX_FOTOS_EXTRA = 5;
+
+function renderFotos() {
+  const p = productoConColores();
+  $("fotos-card").hidden = !p;
+  if (!p) return;
+  const total = p.fotos.length;
+  $("fotos-title").textContent = `Más fotos de ${p.nombre}`;
+  $("foto-list").innerHTML = total ? p.fotos.map((f, i) => `
+    <li class="sub-row foto-row">
+      <img class="admin-thumb" src="${escapeHTML(f.imagen_url)}" alt="">
+      <span class="cell-sub">Foto ${i + 2} de ${total + 1}</span>
+      <span class="sub-actions">
+        <button type="button" class="btn secondary btn-sm btn-icon" data-action="foto-subir" data-id="${f.id}" aria-label="Mover la foto ${i + 2} antes" title="Mover antes"${i ? "" : " disabled"}>${icon("chevron-up")}</button>
+        <button type="button" class="btn secondary btn-sm btn-icon" data-action="foto-bajar" data-id="${f.id}" aria-label="Mover la foto ${i + 2} después" title="Mover después"${i < total - 1 ? "" : " disabled"}>${icon("chevron-down")}</button>
+        <button type="button" class="btn danger btn-sm btn-icon" data-action="foto-borrar" data-id="${f.id}" aria-label="Eliminar la foto ${i + 2}" title="Eliminar">${icon("trash-2")}</button>
+      </span>
+    </li>`).join("") : `<li class="sub-row color-row-vacia"><span class="form-hint">Este producto solo tiene su imagen principal. Agrega otra foto abajo.</span></li>`;
+  $("form-foto").hidden = total >= MAX_FOTOS_EXTRA;
+}
+
+async function guardarFoto(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const p = productoConColores();
+  if (!p) return;
+  await enviar(form, async () => {
+    const imagen = await leerImagen(campo(form, "imagen"));
+    if (!imagen) throw new Error("Elige la foto que quieres agregar.");
+    await api(`/admin/productos/${p.id}/fotos`, { method: "POST", body: { imagen } });
+    await recargar("productos");
+    form.reset();
+    showToast(`Foto agregada a ${p.nombre}`);
+  });
+}
+
+async function moverFoto(id, cambio) {
+  const p = productoConColores();
+  if (!p) return;
+  const ids = p.fotos.map(f => f.id);
+  const desde = ids.indexOf(id);
+  if (desde < 0 || !ids[desde + cambio]) return;
+  [ids[desde], ids[desde + cambio]] = [ids[desde + cambio], ids[desde]];
+  try {
+    await api(`/admin/productos/${p.id}/fotos/orden`, { method: "PUT", body: { ids } });
+    await recargar("productos");
+  } catch (error) {
+    manejarError(error);
+  }
+}
+
+async function borrarFoto(id) {
+  const p = productoConColores();
+  if (!p || !(await confirmar({ tipo: "peligro", titulo: "¿Eliminar esta foto?",
+    mensaje: `Se quita de ${p.nombre}.`, aceptar: "Eliminar foto" }))) return;
+  try {
+    await api(`/admin/fotos/${id}`, { method: "DELETE" });
+    await recargar("productos");
+    showToast(`Foto eliminada de ${p.nombre}`);
+  } catch (error) {
+    manejarError(error);
+  }
+}
+
 function renderColores() {
+  renderFotos();
   const p = productoConColores();
   $("colores-card").hidden = !p;
   if (!p) return;
@@ -1757,6 +1823,9 @@ Object.assign(ACCIONES, {
   "color-editar": el => editarColor(Number(el.dataset.id)),
   "color-borrar": el => borrarColor(Number(el.dataset.id)),
   "color-cancelar": () => cancelarColor(),
+  "foto-subir": el => moverFoto(Number(el.dataset.id), -1),
+  "foto-bajar": el => moverFoto(Number(el.dataset.id), 1),
+  "foto-borrar": el => borrarFoto(Number(el.dataset.id)),
   "sub-guardar": el => guardarSubcategoria(Number(el.dataset.id)),
   "sub-borrar": el => borrarSubcategoria(Number(el.dataset.id)),
   "promo-item-agregar": () => $("promo-items").insertAdjacentHTML("beforeend", filaItemPaquete()),
@@ -1771,6 +1840,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("form-subcategoria").addEventListener("submit", agregarSubcategoria);
   $("form-producto").addEventListener("submit", guardarProducto);
   $("form-color").addEventListener("submit", guardarColor);
+  $("form-foto").addEventListener("submit", guardarFoto);
   $("form-oferta").addEventListener("submit", guardarOferta);
   $("form-resena").addEventListener("submit", guardarResena);
   $("form-promo").addEventListener("submit", guardarPromo);

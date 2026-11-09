@@ -11,6 +11,8 @@ const NECUTLA_ICONS = {
   "wrench": '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+  "chevron-left": '<path d="m15 18-6-6 6-6"/>',
+  "chevron-up": '<path d="m18 15-6-6-6 6"/>',
   "plus": '<path d="M5 12h14"/><path d="M12 5v14"/>',
   "minus": '<path d="M5 12h14"/>',
   "trash-2": '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',

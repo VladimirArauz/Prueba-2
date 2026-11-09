@@ -17,6 +17,15 @@ function imagen_producto(array $f): ?string
     return $f['imagen_ruta'] ?: null;
 }
 
+// Fotos del carrusel: la principal (si no es un dibujo de ejemplo) y las demás, en su orden
+function fotos_producto(array $f): array
+{
+    $principal = imagen_producto($f);
+    $fotos = $principal && !str_ends_with($principal, '.svg') ? [$principal] : [];
+    foreach (array_filter(explode(',', (string) ($f['fotos_extra'] ?? ''))) as $foto) $fotos[] = "/api/productos/{$f['id']}/fotos/$foto";
+    return $fotos;
+}
+
 function imagen_tienda(array $f): ?string
 {
     if (a_bool($f['tiene_portada'])) return "/api/stands/{$f['id']}/portada?v=" . version_ms($f['actualizado_en']);
@@ -54,6 +63,7 @@ function producto_publico(array $f, array $ofertas = []): array
         'disponibilidad' => $f['disponibilidad'],
         'descripcion' => $f['descripcion'],
         'imagen_url' => imagen_producto($f),
+        'fotos' => fotos_producto($f),
         'calificacion' => $f['calificacion'],
         'resenas' => $f['total_resenas'] ?: 0,
         'colores_total' => $f['total_colores'] ?: 0,
@@ -75,6 +85,7 @@ const COLUMNAS_PRODUCTO = '
   (SELECT ROUND(AVG(r.calificacion), 1) FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS calificacion,
   (SELECT COUNT(*) FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS total_resenas,
   (SELECT COUNT(*) FROM producto_colores c WHERE c.producto_id = p.id) AS total_colores,
+  (SELECT GROUP_CONCAT(f.id ORDER BY f.orden, f.id) FROM producto_fotos f WHERE f.producto_id = p.id) AS fotos_extra,
   ' . SQL_AGOTADO . ' AS agotado';
 
 
@@ -314,6 +325,16 @@ function rutas_api(): void
         if (!$id) return vacia(404);
         $f = fila('SELECT p.imagen, p.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
                    FROM productos p JOIN stands s ON s.id = p.stand_id WHERE p.id = ?', [$id]);
+        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
+    });
+
+    get('/api/productos/:id/fotos/:foto', function ($id, $foto) {
+        $id = id_valido($id);
+        $foto = id_valido($foto);
+        if (!$id || !$foto) return vacia(404);
+        $f = fila('SELECT x.imagen, x.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+                   FROM producto_fotos x JOIN productos p ON p.id = x.producto_id JOIN stands s ON s.id = p.stand_id
+                   WHERE x.id = ? AND x.producto_id = ?', [$foto, $id]);
         return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
     });
 

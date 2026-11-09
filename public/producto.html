@@ -95,7 +95,14 @@
     </a>
 
     <article class="producto-detalle" id="producto" aria-live="polite">
-      <div class="producto-img"><img id="producto-img" src="/imagenes/producto.svg" alt=""></div>
+      <div class="producto-galeria">
+        <div class="producto-img"><img id="producto-img" src="/imagenes/producto.svg" alt=""></div>
+        <div class="carrusel-controles" id="producto-fotos" hidden>
+          <button type="button" class="btn secondary btn-sm btn-icon" data-action="foto-anterior" aria-label="Foto anterior"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"></use></svg></button>
+          <div class="carrusel-puntos" id="producto-puntos"></div>
+          <button type="button" class="btn secondary btn-sm btn-icon" data-action="foto-siguiente" aria-label="Foto siguiente"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+        </div>
+      </div>
       <div class="producto-info">
         <a class="card-sub" id="producto-tienda" href="/"></a>
         <h1 id="producto-nombre"><span class="esqueleto esqueleto-titulo" aria-hidden="true"></span><span class="visually-hidden">Cargando producto</span></h1>

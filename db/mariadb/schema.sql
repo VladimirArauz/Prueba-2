@@ -482,3 +482,18 @@ ALTER TABLE productos ADD CONSTRAINT IF NOT EXISTS productos_stock_minimo_check 
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_id INT UNSIGNED NULL AFTER promocion_id;
 ALTER TABLE pedidos ADD INDEX IF NOT EXISTS pedidos_cliente_fecha_idx (cliente_id, creado_en);
 ALTER TABLE pedidos ADD CONSTRAINT pedidos_cliente_fk FOREIGN KEY IF NOT EXISTS (cliente_id) REFERENCES clientes (id) ON DELETE SET NULL;
+
+-- ---------- 2026-11-08: varias fotos por producto (plan 2026-11-08-carrusel-fotos-producto.md) ----------
+
+-- Fotos además de la principal, que sigue en productos.imagen. Hasta 5 por producto (lo valida app/admin.php).
+CREATE TABLE IF NOT EXISTS producto_fotos (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  producto_id  INT UNSIGNED NOT NULL,
+  imagen       MEDIUMBLOB NOT NULL,
+  imagen_tipo  VARCHAR(30) NOT NULL,
+  orden        INT NOT NULL DEFAULT 0,
+  creado_en    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY producto_fotos_producto_idx (producto_id, orden),
+  CONSTRAINT producto_fotos_producto_fk FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

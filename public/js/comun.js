@@ -467,14 +467,112 @@ function accionProducto(p, opciones = {}) {
   return `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}" data-precio="${Number(p.oferta?.precio_oferta ?? p.precio)}" data-tienda="${escapeHTML(p.tienda || "")}">${icon("shopping-cart")}Agregar al carrito</button>`;
 }
 
+// ================= Carrusel de fotos (plan 2026-11-08-carrusel-fotos-producto) =================
+// Excepción de movimiento autorizada por el usuario solo para ese plan. Con movimiento reducido no cambia solo.
+function fotosDe(p) {
+  return p.fotos && p.fotos.length ? p.fotos : [imagenDe(p)];
+}
+
+function crearCarrusel(marco, fotos, { espera, alCambiar = () => {} }) {
+  const img = marco.querySelector("img");
+  const sinMovimiento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let actual = 0, turno = 0, reloj = null, fijada = false;
+
+  // La foto nueva ya decodificada entra mientras una copia de la anterior sale: no hay parpadeo ni salto
+  async function pintar(url, atras) {
+    const mio = ++turno;
+    const previa = new Image();
+    previa.src = url;
+    try { await previa.decode(); } catch { return; }
+    if (mio !== turno || !img.isConnected) return;
+    marco.querySelectorAll(".carrusel-sale").forEach(el => el.remove());
+    if (!sinMovimiento()) {
+      const sale = img.cloneNode();
+      sale.removeAttribute("id");
+      sale.removeAttribute("loading");
+      sale.alt = "";
+      sale.className = `carrusel-sale${atras ? " is-atras" : ""}`;
+      sale.addEventListener("animationend", () => sale.remove(), { once: true });
+      marco.append(sale);
+      img.classList.remove("carrusel-entra", "is-atras");
+      void img.offsetWidth; // para que la animación vuelva a correr
+      img.classList.add("carrusel-entra");
+      img.classList.toggle("is-atras", atras);
+    }
+    img.src = url;
+  }
+
+  const carrusel = {
+    pausado: false,
+    ir(i, atras = false) {
+      actual = (i + fotos.length) % fotos.length;
+      alCambiar(actual);
+      pintar(fotos[actual], atras);
+    },
+    avanzar() { carrusel.ir(actual + 1); },
+    retroceder() { carrusel.ir(actual - 1, true); },
+    aLaPrimera() { if (actual) carrusel.ir(0, true); },
+    detener() { clearTimeout(reloj); reloj = null; },
+    programar() {
+      carrusel.detener();
+      reloj = setTimeout(() => {
+        if (!img.isConnected) return;
+        if (!carrusel.pausado && !document.hidden) carrusel.avanzar();
+        carrusel.programar();
+      }, espera);
+    },
+    iniciar(inmediato = false) {
+      if (fijada || sinMovimiento() || fotos.length < 2) return;
+      if (inmediato) carrusel.avanzar();
+      carrusel.programar();
+    },
+    // Después de cambiar a mano, la siguiente foto espera el tiempo completo
+    reiniciar() { if (reloj) carrusel.programar(); },
+    // Foto de un color elegido: se queda ahí y ya no cambia sola
+    fijar(url) {
+      fijada = true;
+      carrusel.detener();
+      alCambiar(-1);
+      pintar(url, false);
+    }
+  };
+  return carrusel;
+}
+
+// Tarjetas: el carrusel empieza cuando el cursor entra y, al salir, vuelve a la primera foto.
+// En pantallas táctiles no hay cursor: se queda la primera foto.
+if (matchMedia("(hover: hover)").matches) {
+  const carruselesDeTarjeta = new WeakMap();
+  const marcoDe = (event) => {
+    const tarjeta = event.target.closest && event.target.closest(".card");
+    if (!tarjeta || tarjeta.contains(event.relatedTarget)) return null;
+    return tarjeta.querySelector(".card-img-wrap[data-fotos]");
+  };
+  document.addEventListener("mouseover", event => {
+    const marco = marcoDe(event);
+    if (!marco) return;
+    if (!carruselesDeTarjeta.has(marco)) carruselesDeTarjeta.set(marco, crearCarrusel(marco, marco.dataset.fotos.split(" "), { espera: 2000 }));
+    carruselesDeTarjeta.get(marco).iniciar(true);
+  });
+  document.addEventListener("mouseout", event => {
+    const marco = marcoDe(event);
+    const carrusel = marco && carruselesDeTarjeta.get(marco);
+    if (!carrusel) return;
+    carrusel.detener();
+    carrusel.aLaPrimera();
+  });
+}
+
 // opciones.conTienda: muestra la tienda (búsqueda y vitrina)
 function tarjetaProducto(p, opciones = {}) {
   const enlace = `/p/${Number(p.id)}`;
   const etiquetas = etiquetasProducto(p);
   const detalle = p.oferta ? detalleOferta(p.oferta) : "";
+  const fotos = fotosDe(p);
+  const carrusel = fotos.length > 1 ? ` carrusel-marco" data-fotos="${escapeHTML(fotos.join(" "))}` : "";
   return `
     <article class="card">
-      <a class="card-img-wrap" href="${enlace}" tabindex="-1" aria-hidden="true"><img src="${escapeHTML(imagenDe(p))}" alt="" loading="lazy"></a>
+      <a class="card-img-wrap${carrusel}" href="${enlace}" tabindex="-1" aria-hidden="true"><img src="${escapeHTML(fotos[0])}" alt="" loading="lazy"></a>
       ${opciones.conTienda ? `<a class="card-sub" href="/t/${escapeHTML(p.slug)}">${escapeHTML(p.tienda)}</a>` : ""}
       <h3><a class="card-link" href="${enlace}">${escapeHTML(p.nombre)}</a></h3>
       ${estrellas(p.calificacion, p.resenas)}
