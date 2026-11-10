@@ -23,7 +23,7 @@ const TITULOS_PANEL = {
 const NOMBRE_TABLA = {
   tiendas: "Tienda", subcategorias: "Subcategoría", productos: "Producto", ofertas: "Oferta", opiniones: "Opinión",
   promociones: "Promoción", usuarios: "Usuario", pedidos: "Pedido", sesiones: "Sesión",
-  producto_colores: "Color", producto_fotos: "Foto de producto"
+  producto_colores: "Color", producto_fotos: "Foto de producto", producto_color_fotos: "Foto de color"
 };
 
 const st = {
@@ -44,6 +44,8 @@ const st = {
   resenas: [],
   promos: [],
   usuarios: [],
+  productoSucio: false,
+  carrusel: "base",
   editando: { tienda: null, producto: null, color: null, oferta: null, resena: null, promo: null, usuario: null }
 };
 
@@ -76,7 +78,7 @@ async function leerImagen(input) {
 
 function modoEdicion(form, nombreForm, editando, titulo, tituloEdicion) {
   form.querySelectorAll("[data-solo-edicion]").forEach(el => { el.hidden = !editando; });
-  const cancelar = form.querySelector(`[data-action="cancelar"][data-form="${nombreForm}"]`);
+  const cancelar = document.querySelector(`[data-action="cancelar"][data-form="${nombreForm}"]`);
   if (cancelar) cancelar.hidden = !editando;
   const encabezado = $(`form-${nombreForm}-title`);
   if (encabezado) encabezado.textContent = editando ? tituloEdicion : titulo;
@@ -117,8 +119,7 @@ function manejarError(error) {
 }
 
 // Envía un formulario con su botón ocupado ("Guardando…") mientras espera
-async function enviar(form, accion) {
-  const boton = form.querySelector('[type="submit"]');
+async function enviar(form, accion, boton = form.querySelector('[type="submit"]')) {
   botonOcupado(boton);
   try {
     await accion();
@@ -140,6 +141,7 @@ function renderAcceso() {
   $("admin-user").innerHTML = `${icon("user")}<span>Hola, ${escapeHTML(st.sesion.usuario)} · ${rol}${escapeHTML(tiendas)}</span>`;
   document.querySelectorAll("[data-solo-dueno]").forEach(el => { el.hidden = !esDueno(); });
   $("tienda-card").hidden = !esDueno() && !st.editando.tienda;
+  $("sub-btn-tienda").hidden = !esDueno() && !st.editando.tienda;
   $("tiendas-intro").textContent = esDueno()
     ? "Crea tiendas nuevas para vender algo distinto, ocúltalas o cambia su orden en el directorio."
     : "Estas son las tiendas que tienes a tu cargo.";
@@ -743,7 +745,10 @@ function editarTienda(id) {
   campo(form, "quitar_imagen").checked = false;
   modoEdicion(form, "tienda", true, "Crear tienda", `Editar tienda: ${t.nombre}`);
   $("tienda-card").hidden = false;
-  form.scrollIntoView({ behavior: "smooth", block: "center" });
+  $("sub-btn-tienda").hidden = false;
+  $("sub-btn-tienda").textContent = "Editar tienda";
+  mostrarSubseccion("tiendas", "editor");
+  window.scrollTo(0, 0);
 }
 
 function cancelarTienda() {
@@ -752,6 +757,8 @@ function cancelarTienda() {
   form.reset();
   modoEdicion(form, "tienda", false, "Crear tienda", "");
   renderAcceso();
+  $("sub-btn-tienda").textContent = "Crear tienda";
+  mostrarSubseccion("tiendas", "lista");
 }
 
 async function guardarTienda(event) {
@@ -853,9 +860,46 @@ async function borrarSubcategoria(id) {
 }
 
 // ================= Productos y servicios =================
+// Barra de guardar: común a los datos del producto y a sus colores y fotos
+function pintarBarraProducto() {
+  const sub = subseccionActiva("productos");
+  const p = st.editando.producto;
+  const enColores = sub === "colores";
+  const sucio = st.productoSucio;
+  $("producto-barra").hidden = sub === "catalogo";
+  $("producto-guardar").hidden = enColores && !sucio;
+  document.querySelector('[data-action="cancelar"][data-form="producto"]').hidden = !p || (enColores && !sucio);
+  $("producto-volver").hidden = !enColores || sucio;
+  $("producto-estado").textContent = enColores && !sucio
+    ? "Los colores y las fotos se guardan al agregarlos"
+    : `${p ? `Editando: ${p.nombre} · ` : ""}${sucio ? "Cambios sin guardar" : p ? "Todo guardado" : "Llena los datos y guarda"}`;
+}
+
+function marcarProducto(sucio) {
+  st.productoSucio = sucio;
+  pintarBarraProducto();
+}
+
+// Antes de dejar un producto con cambios sin guardar
+async function puedeDejarProducto() {
+  if (!st.productoSucio) return true;
+  return confirmar({ tipo: "peligro", titulo: "¿Salir sin guardar?",
+    mensaje: "Los cambios que hiciste en los datos del producto se pierden. Los colores y las fotos ya están guardados.", aceptar: "Salir sin guardar" });
+}
+
+// Un campo obligatorio vacío en una subsección oculta no puede recibir el foco: primero se muestra
+function guardarDesdeBarra(event) {
+  const form = $("form-producto");
+  if (form.checkValidity()) return;
+  event.preventDefault();
+  mostrarSubseccion("productos", "datos");
+  form.reportValidity();
+}
+
 function actualizarFormProducto() {
   const form = $("form-producto");
   const servicio = campo(form, "tipo").value === "servicio";
+  $("producto-guardar-texto").textContent = servicio ? "Guardar servicio" : "Guardar producto";
   $("prod-modo-group").hidden = !servicio;
   if (!servicio) campo(form, "precio_modo").value = "fijo";
   const cotizar = servicio && campo(form, "precio_modo").value === "cotizar";
@@ -907,7 +951,7 @@ function renderProductos() {
       <td>${estadoBadge(p.visible)}${p.disponibilidad !== "Disponible" ? ` <span class="status-badge">${escapeHTML(p.disponibilidad)}</span>` : ""}${textoStock(p)}</td>
       <td class="col-actions">${botonesFila("producto", p.id, p.nombre)}</td>
     </tr>`).join("") : filaVacia(6, filtroStock === "resurtir" ? "Nada por resurtir en esta tienda. Elige Todos en Stock para ver el catálogo completo."
-    : filtroStock ? "No hay productos con ese stock en esta tienda." : "Todavía no hay productos aquí. Agrega el primero con el formulario de arriba.");
+    : filtroStock ? "No hay productos con ese stock en esta tienda." : "Todavía no hay productos aquí. Agrega el primero en Agregar producto.");
   renderColores();
 }
 
@@ -923,13 +967,34 @@ function productoConColores() {
 // ================= Más fotos de un producto (plan 2026-11-08-carrusel-fotos-producto) =================
 const MAX_FOTOS_EXTRA = 5;
 
+// El carrusel que se está editando: el del producto base o el de un color
+function destinoCarrusel(p) {
+  const color = p.colores.find(c => c.id === st.carrusel);
+  if (!color) {
+    st.carrusel = "base";
+    return { nombre: "Producto base", sujeto: p.nombre, principal: imagenDe(p), fotos: p.fotos, ruta: `/admin/productos/${p.id}/fotos`,
+      borrar: id => `/admin/fotos/${id}`, ayuda: "La foto principal se cambia en Editar producto." };
+  }
+  return { nombre: color.nombre, sujeto: `${p.nombre} (${color.nombre})`, principal: color.imagen_url || imagenDe(p), fotos: color.fotos, ruta: `/admin/colores/${color.id}/fotos`,
+    borrar: id => `/admin/color-fotos/${id}`, ayuda: "La foto principal se cambia al editar este color." };
+}
+
 function renderFotos() {
   const p = productoConColores();
   $("fotos-card").hidden = !p;
   if (!p) return;
-  const total = p.fotos.length;
-  $("fotos-title").textContent = `Más fotos de ${p.nombre}`;
-  $("foto-list").innerHTML = total ? p.fotos.map((f, i) => `
+  const d = destinoCarrusel(p);
+  const total = d.fotos.length;
+  $("fotos-title").textContent = `Carrusel de ${p.nombre}`;
+  $("carrusel-destinos").innerHTML = [{ id: "base", nombre: "Producto base" }, ...p.colores].map(o => `
+    <button type="button" class="btn secondary btn-sm" data-action="carrusel-destino" data-destino="${o.id}" aria-pressed="${o.id === st.carrusel}">${escapeHTML(o.nombre)}</button>`).join("");
+  $("fotos-ayuda").textContent = `Estás editando: ${d.nombre}. ${d.ayuda} Puedes agregar hasta ${MAX_FOTOS_EXTRA} fotos más.`;
+  $("foto-list").innerHTML = `
+    <li class="sub-row foto-row">
+      <img class="admin-thumb" src="${escapeHTML(d.principal)}" alt="">
+      <span class="cell-sub">Foto 1 de ${total + 1}: principal</span>
+      <span class="sub-actions"></span>
+    </li>` + d.fotos.map((f, i) => `
     <li class="sub-row foto-row">
       <img class="admin-thumb" src="${escapeHTML(f.imagen_url)}" alt="">
       <span class="cell-sub">Foto ${i + 2} de ${total + 1}</span>
@@ -938,7 +1003,7 @@ function renderFotos() {
         <button type="button" class="btn secondary btn-sm btn-icon" data-action="foto-bajar" data-id="${f.id}" aria-label="Mover la foto ${i + 2} después" title="Mover después"${i < total - 1 ? "" : " disabled"}>${icon("chevron-down")}</button>
         <button type="button" class="btn danger btn-sm btn-icon" data-action="foto-borrar" data-id="${f.id}" aria-label="Eliminar la foto ${i + 2}" title="Eliminar">${icon("trash-2")}</button>
       </span>
-    </li>`).join("") : `<li class="sub-row color-row-vacia"><span class="form-hint">Este producto solo tiene su imagen principal. Agrega otra foto abajo.</span></li>`;
+    </li>`).join("");
   $("form-foto").hidden = total >= MAX_FOTOS_EXTRA;
 }
 
@@ -948,24 +1013,26 @@ async function guardarFoto(event) {
   const p = productoConColores();
   if (!p) return;
   await enviar(form, async () => {
+    const d = destinoCarrusel(p);
     const imagen = await leerImagen(campo(form, "imagen"));
     if (!imagen) throw new Error("Elige la foto que quieres agregar.");
-    await api(`/admin/productos/${p.id}/fotos`, { method: "POST", body: { imagen } });
+    await api(d.ruta, { method: "POST", body: { imagen } });
     await recargar("productos");
     form.reset();
-    showToast(`Foto agregada a ${p.nombre}`);
+    showToast(`Foto agregada a ${d.sujeto}`);
   });
 }
 
 async function moverFoto(id, cambio) {
   const p = productoConColores();
   if (!p) return;
-  const ids = p.fotos.map(f => f.id);
+  const d = destinoCarrusel(p);
+  const ids = d.fotos.map(f => f.id);
   const desde = ids.indexOf(id);
   if (desde < 0 || !ids[desde + cambio]) return;
   [ids[desde], ids[desde + cambio]] = [ids[desde + cambio], ids[desde]];
   try {
-    await api(`/admin/productos/${p.id}/fotos/orden`, { method: "PUT", body: { ids } });
+    await api(`${d.ruta}/orden`, { method: "PUT", body: { ids } });
     await recargar("productos");
   } catch (error) {
     manejarError(error);
@@ -974,12 +1041,14 @@ async function moverFoto(id, cambio) {
 
 async function borrarFoto(id) {
   const p = productoConColores();
-  if (!p || !(await confirmar({ tipo: "peligro", titulo: "¿Eliminar esta foto?",
-    mensaje: `Se quita de ${p.nombre}.`, aceptar: "Eliminar foto" }))) return;
+  if (!p) return;
+  const d = destinoCarrusel(p);
+  if (!(await confirmar({ tipo: "peligro", titulo: "¿Eliminar esta foto?",
+    mensaje: `Se quita de ${d.sujeto}.`, aceptar: "Eliminar foto" }))) return;
   try {
-    await api(`/admin/fotos/${id}`, { method: "DELETE" });
+    await api(d.borrar(id), { method: "DELETE" });
     await recargar("productos");
-    showToast(`Foto eliminada de ${p.nombre}`);
+    showToast(`Foto eliminada de ${d.sujeto}`);
   } catch (error) {
     manejarError(error);
   }
@@ -989,6 +1058,8 @@ function renderColores() {
   renderFotos();
   const p = productoConColores();
   $("colores-card").hidden = !p;
+  $("sub-btn-colores").hidden = !p;
+  if (!p && subseccionActiva("productos") === "colores") mostrarSubseccion("productos", "datos");
   if (!p) return;
   $("colores-title").textContent = `Colores de ${p.nombre}`;
   $("color-list").innerHTML = p.colores.length ? p.colores.map(c => `
@@ -1016,6 +1087,8 @@ function editarColor(id) {
   const c = p && p.colores.find(x => x.id === id);
   if (!c) return;
   st.editando.color = c;
+  st.carrusel = c.id;
+  renderFotos();
   const form = $("form-color");
   campo(form, "nombre").value = c.nombre;
   campo(form, "hex").value = c.hex;
@@ -1055,8 +1128,11 @@ async function guardarColor(event) {
     const guardado = editando
       ? await api(`/admin/colores/${editando.id}`, { method: "PUT", body })
       : await api(`/admin/productos/${p.id}/colores`, { method: "POST", body });
+    // Un color nuevo queda elegido para seguir con sus fotos
+    if (!editando) st.carrusel = guardado.id;
     await recargar("productos");
     cancelarColor();
+    if (!editando) $("fotos-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
     showToast(`${editando ? "Color actualizado" : "Color agregado"}: ${guardado.nombre} · ${Number(body.stock)} en stock`);
   });
 }
@@ -1081,6 +1157,7 @@ function editarProducto(id) {
   if (!p) return;
   const form = $("form-producto");
   st.editando.producto = p;
+  st.carrusel = "base";
   campo(form, "stand_id").value = p.stand_id;
   campo(form, "tipo").value = p.tipo;
   campo(form, "nombre").value = p.nombre;
@@ -1096,7 +1173,10 @@ function editarProducto(id) {
   renderProductos();
   cancelarColor();
   modoEdicion(form, "producto", true, "Agregar producto o servicio", `Editar: ${p.nombre}`);
-  form.scrollIntoView({ behavior: "smooth", block: "center" });
+  $("sub-btn-producto").textContent = p.tipo === "servicio" ? "Editar servicio" : "Editar producto";
+  mostrarSubseccion("productos", "datos");
+  marcarProducto(false);
+  window.scrollTo(0, 0);
 }
 
 function cancelarProducto() {
@@ -1108,6 +1188,9 @@ function cancelarProducto() {
   campo(form, "stand_id").value = tienda;
   modoEdicion(form, "producto", false, "Agregar producto o servicio", "");
   renderProductos();
+  $("sub-btn-producto").textContent = "Agregar producto";
+  mostrarSubseccion("productos", "catalogo");
+  marcarProducto(false);
 }
 
 async function guardarProducto(event) {
@@ -1145,9 +1228,9 @@ async function guardarProducto(event) {
     // Un producto nuevo se queda abierto para agregarle sus colores
     if (!editando && body.tipo === "producto") {
       editarProducto(guardado.id);
-      $("colores-card").scrollIntoView({ behavior: "smooth", block: "start" });
+      mostrarSubseccion("productos", "colores");
     }
-  });
+  }, $("producto-guardar"));
 }
 
 async function borrarProducto(id) {
@@ -1767,9 +1850,9 @@ async function desactivar2fa(event) {
 }
 
 // ================= Eventos =================
-const EDITAR = { tienda: editarTienda, producto: editarProducto, oferta: editarOferta, resena: editarResena, promo: editarPromo, usuario: editarUsuario };
+const EDITAR = { tienda: editarTienda, producto: async id => { if (await puedeDejarProducto()) editarProducto(id); }, oferta: editarOferta, resena: editarResena, promo: editarPromo, usuario: editarUsuario };
 const BORRAR = { tienda: borrarTienda, producto: borrarProducto, oferta: borrarOferta, promo: borrarPromo };
-const CANCELAR = { tienda: cancelarTienda, producto: cancelarProducto, oferta: cancelarOferta, resena: cancelarResena, promo: cancelarPromo, usuario: cancelarUsuario };
+const CANCELAR = { tienda: cancelarTienda, producto: async () => { if (await puedeDejarProducto()) cancelarProducto(); }, oferta: cancelarOferta, resena: cancelarResena, promo: cancelarPromo, usuario: cancelarUsuario };
 
 Object.assign(ACCIONES, {
   logout: () => cerrarSesion(),
@@ -1779,7 +1862,15 @@ Object.assign(ACCIONES, {
     $("tfa-respaldo-lista").innerHTML = "";
     render2fa();
   },
-  panel: el => mostrarPanel(el.dataset.panel),
+  panel: async el => {
+    if (st.panel === "productos" && st.productoSucio) {
+      if (!(await puedeDejarProducto())) return;
+      cancelarProducto();
+    }
+    mostrarPanel(el.dataset.panel);
+  },
+  "producto-guardar": (el, event) => guardarDesdeBarra(event),
+  "producto-volver": () => cancelarProducto(),
   "pedidos-estado": el => {
     st.pedidosEstado = el.dataset.estado;
     st.pedidosPagina = 1;
@@ -1823,6 +1914,10 @@ Object.assign(ACCIONES, {
   "color-editar": el => editarColor(Number(el.dataset.id)),
   "color-borrar": el => borrarColor(Number(el.dataset.id)),
   "color-cancelar": () => cancelarColor(),
+  "carrusel-destino": el => {
+    st.carrusel = el.dataset.destino === "base" ? "base" : Number(el.dataset.destino);
+    renderFotos();
+  },
   "foto-subir": el => moverFoto(Number(el.dataset.id), -1),
   "foto-bajar": el => moverFoto(Number(el.dataset.id), 1),
   "foto-borrar": el => borrarFoto(Number(el.dataset.id)),
@@ -1848,6 +1943,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("form-cuenta").addEventListener("submit", cambiarPassword);
   $("form-mi-correo").addEventListener("submit", guardarMiCorreo);
   prepararValidacion();
+  ["input", "change"].forEach(tipo => $("form-producto").addEventListener(tipo, () => marcarProducto(true)));
+  document.addEventListener("subseccion", event => { if (event.detail.grupo === "productos") pintarBarraProducto(); });
+  window.addEventListener("beforeunload", event => { if (st.productoSucio) event.preventDefault(); });
   $("admin-codigo-form").addEventListener("submit", enviarCodigo);
   $("form-2fa-iniciar").addEventListener("submit", iniciar2fa);
   $("form-2fa-activar").addEventListener("submit", activar2fa);

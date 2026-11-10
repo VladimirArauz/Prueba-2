@@ -467,6 +467,83 @@ function accionProducto(p, opciones = {}) {
   return `<button type="button" class="btn" data-action="agregar" data-tipo="producto" data-id="${Number(p.id)}" data-nombre="${escapeHTML(p.nombre)}" data-precio="${Number(p.oferta?.precio_oferta ?? p.precio)}" data-tienda="${escapeHTML(p.tienda || "")}">${icon("shopping-cart")}Agregar al carrito</button>`;
 }
 
+// ================= Subsecciones con botones (plan 2026-11-09-fotos-editor-carrusel-color-y-footer) =================
+function subseccionActiva(grupo) {
+  const boton = document.querySelector(`[data-action="subseccion"][data-grupo="${grupo}"][aria-pressed="true"]`);
+  return boton ? boton.dataset.sub : null;
+}
+
+// Si el botón pedido está oculto, se muestra el primero visible
+function mostrarSubseccion(grupo, sub) {
+  const botones = [...document.querySelectorAll(`[data-action="subseccion"][data-grupo="${grupo}"]`)];
+  const elegido = botones.find(b => b.dataset.sub === sub && !b.hidden) || botones.find(b => !b.hidden);
+  if (!elegido) return;
+  botones.forEach(b => b.setAttribute("aria-pressed", String(b === elegido)));
+  document.querySelectorAll(`.subseccion[data-grupo="${grupo}"]`).forEach(el => { el.hidden = el.dataset.sub !== elegido.dataset.sub; });
+  document.dispatchEvent(new CustomEvent("subseccion", { detail: { grupo, sub: elegido.dataset.sub } }));
+}
+
+// ================= Fotos que no caben en su marco (plan 2026-11-09-fotos-editor-carrusel-color-y-footer) =================
+// Solo cambia cómo se muestran: el archivo guardado no se toca. Las proporciones son fijas porque hay imágenes en paneles ocultos.
+const MARCOS_DE_FOTO = [
+  [".producto-img img", 4 / 3],
+  [".card-img-wrap img, .card > img, .letrero-img img", 16 / 10],
+  [".admin-thumb", 1]
+];
+const RECORTE_MAXIMO = 0.2;
+const ANGOSTA = 0.75; // Más angosta que esto respecto a su marco: agrandarla la dejaría borrosa
+const BORDE_PAREJO = 18; // Diferencia promedio por canal para considerar que el borde es de un solo color
+const lienzoFoto = document.createElement("canvas");
+lienzoFoto.width = lienzoFoto.height = 32;
+
+// Color del borde que queda junto a las franjas; null si es variado o transparente (entonces se usa --gis)
+function colorDeBorde(fuente, alta) {
+  try {
+    const ctx = lienzoFoto.getContext("2d", { willReadFrequently: true });
+    ctx.clearRect(0, 0, 32, 32);
+    ctx.drawImage(fuente, 0, 0, 32, 32);
+    const { data } = ctx.getImageData(0, 0, 32, 32);
+    const puntos = [];
+    for (let i = 0; i < 32; i++) puntos.push(...(alta ? [[0, i], [31, i]] : [[i, 0], [i, 31]]));
+    const pixeles = puntos.map(([x, y]) => Array.from(data.subarray((y * 32 + x) * 4, (y * 32 + x) * 4 + 4)));
+    if (pixeles.some(c => c[3] < 250)) return null;
+    const promedio = [0, 1, 2].map(n => pixeles.reduce((suma, c) => suma + c[n], 0) / pixeles.length);
+    const diferencia = pixeles.reduce((suma, c) => suma + promedio.reduce((d, v, n) => d + Math.abs(c[n] - v), 0) / 3, 0) / pixeles.length;
+    return diferencia <= BORDE_PAREJO ? `rgb(${promedio.map(Math.round).join(" ")})` : null;
+  } catch {
+    return null;
+  }
+}
+
+// fuente: la imagen de donde salen las medidas, si todavía no es la que se ve (carrusel)
+function ajustarFoto(img, fuente = img) {
+  const marco = MARCOS_DE_FOTO.find(([selector]) => img.matches(selector));
+  if (!marco || !fuente.naturalWidth || /\.svg(\?|$)/.test(fuente.currentSrc || fuente.src)) {
+    if (marco) quitarAjuste(img);
+    return;
+  }
+  const proporcion = fuente.naturalWidth / fuente.naturalHeight;
+  const recorte = 1 - Math.min(proporcion / marco[1], marco[1] / proporcion);
+  const chica = img.clientWidth > 0 && !img.srcset && fuente.naturalWidth < img.clientWidth * ANGOSTA;
+  if (recorte <= RECORTE_MAXIMO && !chica) return quitarAjuste(img);
+  img.classList.add("foto-completa");
+  const fondo = colorDeBorde(fuente, proporcion < marco[1]);
+  if (fondo) img.style.setProperty("--foto-fondo", fondo);
+  else img.style.removeProperty("--foto-fondo");
+}
+
+function quitarAjuste(img) {
+  img.classList.remove("foto-completa");
+  img.style.removeProperty("--foto-fondo");
+}
+
+document.addEventListener("load", event => {
+  if (event.target instanceof HTMLImageElement) ajustarFoto(event.target);
+}, true);
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("img").forEach(img => { if (img.complete) ajustarFoto(img); });
+});
+
 // ================= Carrusel de fotos (plan 2026-11-08-carrusel-fotos-producto) =================
 // Excepción de movimiento autorizada por el usuario solo para ese plan. Con movimiento reducido no cambia solo.
 function fotosDe(p) {
@@ -476,7 +553,7 @@ function fotosDe(p) {
 function crearCarrusel(marco, fotos, { espera, alCambiar = () => {} }) {
   const img = marco.querySelector("img");
   const sinMovimiento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let actual = 0, turno = 0, reloj = null, fijada = false;
+  let actual = 0, turno = 0, reloj = null;
 
   // La foto nueva ya decodificada entra mientras una copia de la anterior sale: no hay parpadeo ni salto
   async function pintar(url, atras) {
@@ -488,10 +565,13 @@ function crearCarrusel(marco, fotos, { espera, alCambiar = () => {} }) {
     marco.querySelectorAll(".carrusel-sale").forEach(el => el.remove());
     if (!sinMovimiento()) {
       const sale = img.cloneNode();
+      const fondo = img.style.getPropertyValue("--foto-fondo");
       sale.removeAttribute("id");
       sale.removeAttribute("loading");
+      sale.removeAttribute("style");
       sale.alt = "";
-      sale.className = `carrusel-sale${atras ? " is-atras" : ""}`;
+      sale.className = `carrusel-sale${atras ? " is-atras" : ""}${img.classList.contains("foto-completa") ? " foto-completa" : ""}`;
+      if (fondo) sale.style.setProperty("--foto-fondo", fondo);
       sale.addEventListener("animationend", () => sale.remove(), { once: true });
       marco.append(sale);
       img.classList.remove("carrusel-entra", "is-atras");
@@ -499,6 +579,7 @@ function crearCarrusel(marco, fotos, { espera, alCambiar = () => {} }) {
       img.classList.add("carrusel-entra");
       img.classList.toggle("is-atras", atras);
     }
+    ajustarFoto(img, previa);
     img.src = url;
   }
 
@@ -522,18 +603,20 @@ function crearCarrusel(marco, fotos, { espera, alCambiar = () => {} }) {
       }, espera);
     },
     iniciar(inmediato = false) {
-      if (fijada || sinMovimiento() || fotos.length < 2) return;
+      if (sinMovimiento() || fotos.length < 2) return;
       if (inmediato) carrusel.avanzar();
       carrusel.programar();
     },
     // Después de cambiar a mano, la siguiente foto espera el tiempo completo
     reiniciar() { if (reloj) carrusel.programar(); },
-    // Foto de un color elegido: se queda ahí y ya no cambia sola
-    fijar(url) {
-      fijada = true;
+    // Otra lista de fotos (el carrusel de un color): empieza desde la primera y sigue corriendo
+    cambiar(lista) {
+      fotos = lista;
+      actual = 0;
       carrusel.detener();
-      alCambiar(-1);
-      pintar(url, false);
+      alCambiar(0);
+      pintar(fotos[0], false);
+      carrusel.iniciar();
     }
   };
   return carrusel;
@@ -991,6 +1074,8 @@ function initBarraLateral() {
 
   cargarTiendasMenu();
 }
+
+ACCIONES.subseccion = el => mostrarSubseccion(el.dataset.grupo, el.dataset.sub);
 
 Object.assign(ACCIONES, {
   "menu-tiendas": (el, event) => {

@@ -347,6 +347,17 @@ function rutas_api(): void
         return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
     });
 
+    get('/api/colores/:id/fotos/:foto', function ($id, $foto) {
+        $id = id_valido($id);
+        $foto = id_valido($foto);
+        if (!$id || !$foto) return vacia(404);
+        $f = fila('SELECT x.imagen, x.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+                   FROM producto_color_fotos x JOIN producto_colores c ON c.id = x.color_id
+                   JOIN productos p ON p.id = c.producto_id JOIN stands s ON s.id = p.stand_id
+                   WHERE x.id = ? AND x.color_id = ?', [$foto, $id]);
+        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
+    });
+
     // ================= Detalle de un producto o servicio =================
     get('/api/productos/:id', function ($id) {
         $no = json_respuesta(['error' => 'Este producto no existe o ya no está disponible.'], 404);
@@ -362,12 +373,19 @@ function rutas_api(): void
         $producto = producto_publico($f, $ofertas);
         $colores = filas('SELECT id, nombre, hex, (disponible AND stock > 0) AS disponible, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
                           FROM producto_colores WHERE producto_id = ? ORDER BY orden, id', [$f['id']]);
+        $idsColor = array_column($colores, 'id');
+        $fotosColor = $idsColor ? filas('SELECT id, color_id FROM producto_color_fotos WHERE color_id IN (' . marcas($idsColor) . ') ORDER BY orden, id', $idsColor) : [];
         return [
             ...$producto,
-            'colores' => array_map(fn($c) => [
-                'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']),
-                'imagen_url' => a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $producto['imagen_url'],
-            ], $colores),
+            'colores' => array_map(function ($c) use ($producto, $fotosColor) {
+                $principal = a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $producto['imagen_url'];
+                $extra = array_values(array_filter($fotosColor, fn($x) => $x['color_id'] === $c['id']));
+                return [
+                    'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']),
+                    'imagen_url' => $principal,
+                    'fotos' => [$principal, ...array_map(fn($x) => "/api/colores/{$c['id']}/fotos/{$x['id']}", $extra)],
+                ];
+            }, $colores),
             'tienda' => $f['tienda'], 'slug' => $f['slug'], 'icono' => $f['icono'], 'subcategoria' => $f['subcategoria'],
             'whatsapp' => $f['tipo'] === 'servicio' ? numeros_de($f) : [],
         ];

@@ -183,7 +183,7 @@ function delete(string $patron, callable $fn): void { Rutas::agregar('DELETE', $
 
 // ================= Cuerpo JSON =================
 // Solo las rutas de Necutools que suben imágenes aceptan cuerpos grandes; el resto, 20 KB
-const CON_IMAGEN = '#^/admin/((tiendas|productos|promociones)(/[0-9]+)?|productos/[0-9]+/(colores|fotos)|colores/[0-9]+)$#';
+const CON_IMAGEN = '#^/admin/((tiendas|productos|promociones)(/[0-9]+)?|productos/[0-9]+/(colores|fotos)|colores/[0-9]+(/fotos)?)$#';
 
 function leer_json(string $rutaApi): array
 {

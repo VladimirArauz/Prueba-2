@@ -497,3 +497,18 @@ CREATE TABLE IF NOT EXISTS producto_fotos (
   KEY producto_fotos_producto_idx (producto_id, orden),
   CONSTRAINT producto_fotos_producto_fk FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- 2026-11-09: carrusel propio por color (plan 2026-11-09-fotos-editor-carrusel-color-y-footer.md) ----------
+
+-- Fotos además de la principal del color, que sigue en producto_colores.imagen. Hasta 5 por color (lo valida app/admin.php).
+CREATE TABLE IF NOT EXISTS producto_color_fotos (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  color_id     INT UNSIGNED NOT NULL,
+  imagen       MEDIUMBLOB NOT NULL,
+  imagen_tipo  VARCHAR(30) NOT NULL,
+  orden        INT NOT NULL DEFAULT 0,
+  creado_en    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY producto_color_fotos_color_idx (color_id, orden),
+  CONSTRAINT producto_color_fotos_color_fk FOREIGN KEY (color_id) REFERENCES producto_colores (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

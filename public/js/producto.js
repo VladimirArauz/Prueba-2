@@ -46,13 +46,19 @@ function marcarPunto(i) {
   });
 }
 
-function iniciarGaleria(fotos) {
+// Flechas y puntos solo si hay más de una foto
+function pintarControles(fotos) {
   $("producto-fotos").hidden = fotos.length < 2;
-  if (fotos.length < 2) return;
+  $("producto-puntos").innerHTML = fotos.length < 2 ? "" : fotos.map((_, i) =>
+    `<button type="button" class="carrusel-punto" data-action="foto-ir" data-i="${i}" aria-label="Ver foto ${i + 1} de ${fotos.length}"${i ? "" : ' aria-current="true"'}></button>`).join("");
+}
+
+function iniciarGaleria(fotos) {
+  pintarControles(fotos);
+  // También hace falta si el base tiene una sola foto, pero algún color tiene varias
+  if (![fotos, ...(est.producto.colores || []).map(c => c.fotos)].some(lista => lista.length > 1)) return;
   const marco = $("producto-img").parentElement;
   marco.classList.add("carrusel-marco");
-  $("producto-puntos").innerHTML = fotos.map((_, i) =>
-    `<button type="button" class="carrusel-punto" data-action="foto-ir" data-i="${i}" aria-label="Ver foto ${i + 1} de ${fotos.length}"${i ? "" : ' aria-current="true"'}></button>`).join("");
   const carrusel = crearCarrusel(marco, fotos, { espera: 4000, alCambiar: marcarPunto });
   est.carrusel = carrusel;
   const galeria = marco.parentElement;
@@ -90,7 +96,7 @@ function renderColores() {
       <span>${escapeHTML(c.nombre)}${c.disponible ? "" : `<span class="color-agotado"> · Agotado</span>`}</span>
     </label>`).join("");
   pintarMuestras($("producto-color-opciones"));
-  // El color que se elige solo al cargar no detiene el carrusel; el de un enlace con ?color= sí
+  // El color que se elige solo al cargar deja el carrusel base; el de un enlace con ?color= muestra el suyo
   elegirColor(inicial, !(inicial && inicial.id === pedido));
 }
 
@@ -99,9 +105,12 @@ function elegirColor(color, automatico = false) {
   est.color = color;
   $("producto-color-texto").textContent = color ? `Color: ${color.nombre}` : "Color";
   if (color && !(automatico && est.carrusel)) {
-    const foto = color.imagen_url || imagenDe(p);
-    if (est.carrusel) est.carrusel.fijar(foto);
-    else $("producto-img").src = foto;
+    if (est.carrusel) {
+      pintarControles(color.fotos);
+      est.carrusel.cambiar(color.fotos);
+    } else {
+      $("producto-img").src = color.fotos[0];
+    }
     $("producto-img").alt = `${p.nombre}, color ${color.nombre.toLowerCase()}`;
     const url = new URL(location.href);
     url.searchParams.set("color", color.id);

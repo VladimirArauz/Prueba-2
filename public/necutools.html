@@ -239,7 +239,7 @@
                 <button type="button" class="btn secondary" data-action="pedido-agregar"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Agregar al pedido</button>
               </div>
             </div>
-            <div class="form-actions">
+            <div class="form-actions is-fija">
               <button type="button" class="btn" data-action="pedido-guardar"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Guardar cambios</button>
               <button type="button" class="btn secondary" data-action="pedido-editor-cerrar">Cancelar</button>
             </div>
@@ -248,6 +248,13 @@
 
         <!-- ================= TIENDAS ================= -->
         <section class="admin-panel" id="panel-tiendas" hidden>
+          <div class="tabs subsecciones" role="group" aria-label="Secciones de tiendas">
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="tiendas" data-sub="lista" aria-pressed="true">Tus tiendas</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="tiendas" data-sub="editor" aria-pressed="false" id="sub-btn-tienda">Crear tienda</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="tiendas" data-sub="subcategorias" aria-pressed="false">Subcategorías</button>
+          </div>
+
+          <div class="subseccion" data-grupo="tiendas" data-sub="lista">
           <div class="admin-card">
             <h3>Tus tiendas</h3>
             <p id="tiendas-intro">Edita el nombre, la descripción, el icono y los números de WhatsApp que reciben los pedidos.</p>
@@ -258,7 +265,9 @@
               </table>
             </div>
           </div>
+          </div>
 
+          <div class="subseccion" data-grupo="tiendas" data-sub="editor" hidden>
           <div class="admin-card" id="tienda-card">
             <h3 id="form-tienda-title">Crear tienda</h3>
             <p>Los números de WhatsApp son los de los vendedores de esta tienda. Si no pones ninguno, los pedidos llegan a los números generales de Necutla.</p>
@@ -286,13 +295,15 @@
                   </div>
                 </div>
               </div>
-              <div class="form-actions">
+              <div class="form-actions is-fija">
                 <button type="submit" class="btn" id="form-tienda-submit">Guardar tienda</button>
                 <button type="button" class="btn secondary" data-action="cancelar" data-form="tienda" hidden>Cancelar edición</button>
               </div>
             </form>
           </div>
+          </div>
 
+          <div class="subseccion" data-grupo="tiendas" data-sub="subcategorias" hidden>
           <div class="admin-card">
             <h3>Subcategorías</h3>
             <p>Ordenan el catálogo de cada tienda (ej. Playeras, Pantalones). Al borrar una, sus productos quedan sin subcategoría.</p>
@@ -307,10 +318,42 @@
               </div>
             </form>
           </div>
+          </div>
         </section>
 
         <!-- ================= PRODUCTOS Y SERVICIOS ================= -->
         <section class="admin-panel" id="panel-productos" hidden>
+          <div class="tabs subsecciones" role="group" aria-label="Secciones de productos y servicios">
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="productos" data-sub="catalogo" aria-pressed="true">Catálogo</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="productos" data-sub="datos" aria-pressed="false" id="sub-btn-producto">Agregar producto</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="productos" data-sub="colores" aria-pressed="false" id="sub-btn-colores" hidden>Colores y fotos</button>
+          </div>
+
+          <div class="subseccion" data-grupo="productos" data-sub="catalogo">
+          <div class="admin-card">
+            <h3>Catálogo</h3>
+            <div class="admin-filter">
+              <div class="form-group"><label for="prod-filtro">Ver tienda</label><select id="prod-filtro"></select></div>
+              <div class="form-group">
+                <label for="prod-stock-filtro">Stock</label>
+                <select id="prod-stock-filtro">
+                  <option value="resurtir" selected>Por resurtir</option>
+                  <option value="">Todos</option>
+                  <option value="falta">Falta capturar el stock</option>
+                  <option value="agotado">Agotados</option>
+                </select>
+              </div>
+            </div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>Imagen</th><th>Nombre</th><th>Tienda</th><th>Precio</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
+                <tbody id="productos-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+
+          <div class="subseccion" data-grupo="productos" data-sub="datos" hidden>
           <div class="admin-card">
             <h3 id="form-producto-title">Agregar producto o servicio</h3>
             <p>Los productos se agregan al carrito. Los servicios (armado de dulceros, estampado de logos, reparaciones) salen en su propia sección de la tienda y se piden por WhatsApp.</p>
@@ -355,16 +398,14 @@
                   </div>
                 </div>
               </div>
-              <div class="form-actions">
-                <button type="submit" class="btn">Guardar</button>
-                <button type="button" class="btn secondary" data-action="cancelar" data-form="producto" hidden>Cancelar edición</button>
-              </div>
             </form>
           </div>
+          </div>
 
+          <div class="subseccion" data-grupo="productos" data-sub="colores" hidden>
           <div class="admin-card" id="colores-card" hidden>
             <h3 id="colores-title">Colores</h3>
-            <p>Agrega solo los colores que tienes de este producto, cada uno con su foto. Todos cuestan lo mismo. En la tienda salen en una barra para que el cliente elija.</p>
+            <p>Agrega solo los colores que tienes de este producto, cada uno con su foto. Todos cuestan lo mismo. En la tienda salen en una barra para que el cliente elija. Las demás fotos de cada color se agregan abajo, en Carrusel.</p>
             <ul class="sub-list" id="color-list"></ul>
             <form id="form-color">
               <div class="admin-form-grid">
@@ -387,8 +428,10 @@
           </div>
 
           <div class="admin-card" id="fotos-card" hidden>
-            <h3 id="fotos-title">Más fotos</h3>
-            <p>La imagen del producto siempre sale primero. Agrega hasta 5 fotos más, por ejemplo de otros ángulos o con más datos. Pasan solas en la página del producto y al poner el cursor sobre su tarjeta.</p>
+            <h3 id="fotos-title">Carrusel</h3>
+            <p>Producto base: lo primero que ve el cliente al entrar. Cada color tiene su propio carrusel, que se ve cuando el cliente elige ese color.</p>
+            <div class="tabs carrusel-destinos" id="carrusel-destinos" role="group" aria-label="Carrusel que vas a editar"></div>
+            <p class="form-hint" id="fotos-ayuda"></p>
             <ul class="sub-list" id="foto-list"></ul>
             <form id="form-foto">
               <div class="admin-form-grid">
@@ -399,26 +442,14 @@
               </div>
             </form>
           </div>
+          </div>
 
-          <div class="admin-card">
-            <h3>Catálogo</h3>
-            <div class="admin-filter">
-              <div class="form-group"><label for="prod-filtro">Ver tienda</label><select id="prod-filtro"></select></div>
-              <div class="form-group">
-                <label for="prod-stock-filtro">Stock</label>
-                <select id="prod-stock-filtro">
-                  <option value="resurtir" selected>Por resurtir</option>
-                  <option value="">Todos</option>
-                  <option value="falta">Falta capturar el stock</option>
-                  <option value="agotado">Agotados</option>
-                </select>
-              </div>
-            </div>
-            <div class="admin-table-wrap">
-              <table class="admin-table">
-                <thead><tr><th>Imagen</th><th>Nombre</th><th>Tienda</th><th>Precio</th><th>Estado</th><th class="col-actions">Acciones</th></tr></thead>
-                <tbody id="productos-tbody"></tbody>
-              </table>
+          <div class="barra-guardar" id="producto-barra" hidden>
+            <p class="barra-guardar-estado" id="producto-estado" role="status"></p>
+            <div class="barra-guardar-botones">
+              <button type="submit" form="form-producto" class="btn" id="producto-guardar" data-action="producto-guardar"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span id="producto-guardar-texto">Guardar producto</span></button>
+              <button type="button" class="btn secondary" data-action="cancelar" data-form="producto" hidden>Cancelar edición</button>
+              <button type="button" class="btn secondary" data-action="producto-volver" id="producto-volver" hidden>Volver al catálogo</button>
             </div>
           </div>
         </section>
@@ -497,7 +528,7 @@
                   <div class="check-group"><label><input type="checkbox" name="activa" checked> Oferta activa</label></div>
                 </div>
               </div>
-              <div class="form-actions">
+              <div class="form-actions is-fija">
                 <button type="submit" class="btn">Guardar oferta</button>
                 <button type="button" class="btn secondary" data-action="cancelar" data-form="oferta" hidden>Cancelar edición</button>
               </div>
@@ -590,7 +621,7 @@
                   </div>
                 </div>
               </div>
-              <div class="form-actions">
+              <div class="form-actions is-fija">
                 <button type="submit" class="btn">Guardar promoción</button>
                 <button type="button" class="btn secondary" data-action="cancelar" data-form="promo" hidden>Cancelar edición</button>
               </div>
@@ -648,7 +679,7 @@
                   <div class="check-group"><label><input type="checkbox" name="quitar_2fa"> Quitar la verificación en dos pasos (perdió su celular)</label></div>
                 </div>
               </div>
-              <div class="form-actions">
+              <div class="form-actions is-fija">
                 <button type="submit" class="btn">Guardar usuario</button>
                 <button type="button" class="btn secondary" data-action="cancelar" data-form="usuario" hidden>Cancelar edición</button>
               </div>
@@ -689,6 +720,14 @@
 
         <!-- ================= MI CUENTA ================= -->
         <section class="admin-panel" id="panel-cuenta" hidden>
+          <div class="tabs subsecciones" role="group" aria-label="Secciones de Mi cuenta">
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="cuenta" data-sub="correo" aria-pressed="true">Mi correo</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="cuenta" data-sub="contrasena" aria-pressed="false">Contraseña</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="cuenta" data-sub="dos-pasos" aria-pressed="false">Verificación en dos pasos</button>
+            <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="cuenta" data-sub="servidor" aria-pressed="false" data-solo-dueno hidden>Servidor</button>
+          </div>
+
+          <div class="subseccion" data-grupo="cuenta" data-sub="correo">
           <div class="admin-card">
             <h3>Mi correo</h3>
             <p id="mi-correo-estado">Con tu correo también puedes iniciar sesión en Necutools. Es opcional.</p>
@@ -700,7 +739,9 @@
               <div class="form-actions"><button type="submit" class="btn">Guardar correo</button></div>
             </form>
           </div>
+          </div>
 
+          <div class="subseccion" data-grupo="cuenta" data-sub="contrasena" hidden>
           <div class="admin-card">
             <h3>Cambiar mi contraseña</h3>
             <p>Al cambiarla se cierran tus sesiones en otros dispositivos.</p>
@@ -713,7 +754,9 @@
               <div class="form-actions"><button type="submit" class="btn">Cambiar contraseña</button></div>
             </form>
           </div>
+          </div>
 
+          <div class="subseccion" data-grupo="cuenta" data-sub="dos-pasos" hidden>
           <div class="admin-card" id="card-2fa">
             <h3>Verificación en dos pasos</h3>
             <p id="estado-2fa">Además de tu contraseña, Necutools te pedirá un código de tu celular. Así nadie entra aunque sepa tu contraseña.</p>
@@ -754,11 +797,14 @@
               <div class="form-actions"><button type="submit" class="btn danger">Desactivar verificación en dos pasos</button></div>
             </form>
           </div>
+          </div>
 
+          <div class="subseccion" data-grupo="cuenta" data-sub="servidor" hidden>
           <div class="admin-card" id="card-sistema" data-solo-dueno hidden>
             <h3>Servidor</h3>
             <p>Versiones con las que funciona la página ahora mismo. Si alguna dice que falta actualizar, revísala en el panel de IONOS.</p>
             <ul class="lista-sistema" id="sistema-lista"></ul>
+          </div>
           </div>
         </section>
       </div>
@@ -813,7 +859,10 @@
     </div>
 
     <div class="footer-bottom">
-      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+      <div class="container footer-bottom-fila">
+        <span>© 2026 Necutla, la ciudad del estudiante.</span>
+        <span class="footer-autor">By YANCORE <img src="/imagenes/yancore.png" alt="" width="32" height="32" loading="lazy"></span>
+      </div>
     </div>
   </footer>
 

@@ -158,6 +158,17 @@ function exigir_color($id): array
     return $c;
 }
 
+function exigir_foto_color($id): array
+{
+    $fotoId = id_valido($id);
+    $f = $fotoId ? fila('SELECT x.id, x.color_id, c.nombre AS color, c.producto_id, p.stand_id, p.nombre AS producto
+                         FROM producto_color_fotos x JOIN producto_colores c ON c.id = x.color_id JOIN productos p ON p.id = c.producto_id
+                         WHERE x.id = ?', [$fotoId]) : null;
+    if (!$f) throw new ErrorHttp(404, 'Esa foto no existe.');
+    exigir_stand($f['stand_id']);
+    return $f;
+}
+
 function exigir_foto($id): array
 {
     $fotoId = id_valido($id);
@@ -514,7 +525,9 @@ function rutas_admin(): void
         $colores = $ids ? filas('SELECT id, producto_id, nombre, hex, disponible, stock, orden, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
                                  FROM producto_colores WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
         $fotos = $ids ? filas('SELECT id, producto_id FROM producto_fotos WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
-        return array_map(function ($p) use ($colores, $fotos) {
+        $idsColor = array_column($colores, 'id');
+        $fotosColor = $idsColor ? filas('SELECT id, color_id FROM producto_color_fotos WHERE color_id IN (' . marcas($idsColor) . ') ORDER BY orden, id', $idsColor) : [];
+        return array_map(function ($p) use ($colores, $fotos, $fotosColor) {
             $imagenUrl = a_bool($p['tiene_imagen']) ? url_imagen('productos', $p['id'], $p['actualizado_en']) : $p['imagen_ruta'];
             $suyos = array_values(array_filter($colores, fn($c) => $c['producto_id'] === $p['id']));
             // Por resurtir: con las piezas del mínimo o menos. Sin stock capturado no cuenta (tiene su propio filtro).
@@ -537,6 +550,8 @@ function rutas_admin(): void
                 'colores' => array_map(fn($c) => [
                     'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']), 'stock' => $c['stock'], 'orden' => $c['orden'],
                     'imagen_url' => a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $imagenUrl,
+                    'fotos' => array_map(fn($f) => ['id' => $f['id'], 'imagen_url' => "/api/colores/{$c['id']}/fotos/{$f['id']}"],
+                        array_values(array_filter($fotosColor, fn($f) => $f['color_id'] === $c['id']))),
                 ], $suyos),
             ];
         }, $productos);
@@ -637,6 +652,46 @@ function rutas_admin(): void
         q('DELETE FROM producto_fotos WHERE id = ?', [$foto['id']]);
         tocar_producto($foto['producto_id']);
         anotar($admin, 'borrar', 'producto_fotos', $foto['id'], $foto['producto']);
+        return vacia(204);
+    });
+
+    // ================= Carrusel de cada color (plan 2026-11-09-fotos-editor-carrusel-color-y-footer) =================
+    post('/api/admin/colores/:id/fotos', function ($idRuta) {
+        $admin = requiere_admin();
+        $color = exigir_color($idRuta);
+        $info = fila('SELECT COUNT(*) AS fotos, COALESCE(MAX(orden), -1) AS ultimo FROM producto_color_fotos WHERE color_id = ?', [$color['id']]);
+        if ((int) $info['fotos'] >= MAX_FOTOS_EXTRA) throw dato_invalido('Un color puede tener hasta ' . MAX_FOTOS_EXTRA . ' fotos además de la principal. Elimina una para agregar otra.');
+        $imagen = imagen_de(cuerpo()) ?? throw dato_invalido('Elige la foto que quieres agregar.');
+        q('INSERT INTO producto_color_fotos (color_id, imagen, imagen_tipo, orden) VALUES (?, ?, ?, ?)',
+          [$color['id'], $imagen['bytes'], $imagen['tipo'], (int) $info['ultimo'] + 1]);
+        $id = ultimo_id();
+        tocar_producto($color['producto_id']);
+        anotar($admin, 'crear', 'producto_color_fotos', $id, "{$color['producto']}: {$color['nombre']}");
+        return json_respuesta(['id' => $id], 201);
+    });
+
+    put('/api/admin/colores/:id/fotos/orden', function ($idRuta) {
+        $admin = requiere_admin();
+        $color = exigir_color($idRuta);
+        $pedidos = cuerpo()['ids'] ?? null;
+        $actuales = array_column(filas('SELECT id FROM producto_color_fotos WHERE color_id = ?', [$color['id']]), 'id');
+        $ordenados = is_array($pedidos) && array_is_list($pedidos) ? $pedidos : [];
+        $revisar = $ordenados;
+        sort($revisar);
+        sort($actuales);
+        if ($revisar !== $actuales) throw dato_invalido('Las fotos cambiaron. Recarga la página e intenta de nuevo.');
+        foreach ($ordenados as $orden => $id) q('UPDATE producto_color_fotos SET orden = ? WHERE id = ?', [$orden, $id]);
+        tocar_producto($color['producto_id']);
+        anotar($admin, 'editar', 'producto_color_fotos', $color['id'], "{$color['producto']}: {$color['nombre']}");
+        return ['ids' => $ordenados];
+    });
+
+    delete('/api/admin/color-fotos/:id', function ($idRuta) {
+        $admin = requiere_admin();
+        $foto = exigir_foto_color($idRuta);
+        q('DELETE FROM producto_color_fotos WHERE id = ?', [$foto['id']]);
+        tocar_producto($foto['producto_id']);
+        anotar($admin, 'borrar', 'producto_color_fotos', $foto['id'], "{$foto['producto']}: {$foto['color']}");
         return vacia(204);
     });
 

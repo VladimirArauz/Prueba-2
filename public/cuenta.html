@@ -302,6 +302,13 @@
         </form>
       </section>
 
+      <div class="tabs subsecciones cuenta-subsecciones" role="group" aria-label="Secciones de Mi cuenta">
+        <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="datos" aria-pressed="true">Mis datos</button>
+        <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="contrasena" aria-pressed="false">Contraseña</button>
+        <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="eliminar" aria-pressed="false">Eliminar mi cuenta</button>
+      </div>
+
+      <div class="subseccion" data-grupo="mi-cuenta" data-sub="datos">
       <section class="admin-card admin-auth" aria-labelledby="dentro-title">
         <h2 id="dentro-title">Hola</h2>
         <p class="section-desc" id="dentro-correo"></p>
@@ -314,7 +321,9 @@
           </button>
         </div>
       </section>
+      </div>
 
+      <div class="subseccion" data-grupo="mi-cuenta" data-sub="contrasena" hidden>
       <section class="admin-card admin-auth" aria-labelledby="cambiar-title">
         <h2 id="cambiar-title">Cambiar contraseña</h2>
         <p class="section-desc">Al cambiarla se cierra tu sesión en los demás dispositivos.</p>
@@ -348,7 +357,9 @@
           <button class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-key-round"></use></svg>Cambiar contraseña</button>
         </form>
       </section>
+      </div>
 
+      <div class="subseccion" data-grupo="mi-cuenta" data-sub="eliminar" hidden>
       <section class="admin-card admin-auth" aria-labelledby="eliminar-title">
         <h2 id="eliminar-title">Eliminar mi cuenta</h2>
         <p class="section-desc">Se borran tu nombre, usuario, correo y teléfono. Tus opiniones se quedan, pero sin tu nombre. No se puede deshacer.</p>
@@ -359,6 +370,7 @@
           </button>
         </div>
       </section>
+      </div>
     </div>
   </main>
 
@@ -410,7 +422,10 @@
     </div>
 
     <div class="footer-bottom">
-      <div class="container">© 2026 Necutla, la ciudad del estudiante.</div>
+      <div class="container footer-bottom-fila">
+        <span>© 2026 Necutla, la ciudad del estudiante.</span>
+        <span class="footer-autor">By YANCORE <img src="/imagenes/yancore.png" alt="" width="32" height="32" loading="lazy"></span>
+      </div>
     </div>
   </footer>
 

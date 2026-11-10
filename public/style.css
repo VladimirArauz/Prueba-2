@@ -302,6 +302,7 @@ small, .text-sm {
 }
 
 .btn.btn-icon {
+  flex: none;
   padding: 0;
   width: 36px;
 }
@@ -1518,6 +1519,45 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* Guardar siempre a la vista en los formularios largos */
+.form-actions.is-fija,
+.barra-guardar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: var(--hoja);
+  border-top: 1px solid var(--linea);
+  padding: 12px 0;
+}
+
+.barra-guardar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+}
+
+.barra-guardar-estado {
+  color: var(--texto-2);
+  overflow-wrap: anywhere;
+}
+
+.barra-guardar-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cuenta-subsecciones {
+  max-width: 760px;
+  margin: 16px auto 0;
+}
+
 .form-actions .text-sm {
   color: var(--texto-2);
 }
@@ -1938,6 +1978,26 @@ textarea {
   border-top: 1px solid var(--linea-tinta);
   font-size: 0.875rem;
   color: var(--tinta-suave);
+}
+
+.footer-bottom-fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 24px;
+}
+
+.footer-autor {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-autor img {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-btn);
 }
 
 /* ================= SUBPÁGINAS DE TIENDAS ================= */
@@ -2815,6 +2875,17 @@ a.card-img-wrap {
   object-fit: cover;
 }
 
+/* Fotos muy altas, muy cuadradas o chicas: se ven completas y nunca se agrandan de más. El color de las
+   franjas sale del borde de la foto (excepción autorizada solo para el plan 2026-11-09-fotos-editor-carrusel-color-y-footer). */
+.card-img-wrap img.foto-completa,
+.card > img.foto-completa,
+.producto-img img.foto-completa,
+.letrero-item .letrero-img img.foto-completa,
+img.admin-thumb.foto-completa {
+  object-fit: scale-down;
+  background: var(--foto-fondo, var(--gis));
+}
+
 /* Carrusel de fotos. Excepción de movimiento autorizada por el usuario solo para el plan
    2026-11-08-carrusel-fotos-producto. Usa translate para no pelear con el transform del hover de las tarjetas. */
 .carrusel-marco {
@@ -2899,6 +2970,15 @@ a.card-img-wrap {
 
 .sub-row.foto-row {
   grid-template-columns: 48px 1fr auto;
+}
+
+/* Al agregar un color, la tarjeta del carrusel queda a la vista sin que la tape la barra de guardar */
+#fotos-card {
+  scroll-margin-block: 96px;
+}
+
+.carrusel-destinos {
+  margin: 14px 0 8px;
 }
 
 .producto-info {
@@ -4242,7 +4322,7 @@ a.card-img-wrap {
 
 /* Necutools: lista de colores del producto */
 .sub-row.color-row {
-  grid-template-columns: 48px 1fr auto auto;
+  grid-template-columns: 48px 1fr auto auto auto;
 }
 
 .sub-row.color-row-vacia {

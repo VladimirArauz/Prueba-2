@@ -100,8 +100,15 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   o "a cotizar") se piden por WhatsApp directo a la tienda. Cada tienda muestra sus servicios en una
   sección propia (`/t/<tienda>#servicios`).
 - **Colores de un producto**: hasta 12 colores, cada uno con su foto y si está disponible (Necutools →
-  Productos y servicios → Editar → Colores). Todos cuestan lo mismo; el color elegido llega al carrito y
+  Productos y servicios → Editar → Colores y fotos). Todos cuestan lo mismo; el color elegido llega al carrito y
   al mensaje de WhatsApp.
+- **Carruseles de fotos**: el producto base tiene su carrusel (la imagen principal y hasta 5 fotos más,
+  `producto_fotos`) y cada color tiene el suyo (su foto y hasta 5 más, `producto_color_fotos`). Se editan en
+  Necutools → Colores y fotos → Carrusel. En la página del producto se ve el carrusel base y, al elegir un
+  color, el de ese color. Las tarjetas usan el base.
+- **Fotos que no caben**: `ajustarFoto()` de `comun.js` muestra completa (`.foto-completa`, `object-fit:
+  scale-down`) la foto que `cover` recortaría más del 20 % o que es mucho más chica que su marco; las franjas
+  toman el color del borde de la foto (`--foto-fondo`) o `--gis`. El archivo guardado no se toca.
 - **Ofertas de la tienda**: semanales (por día de la semana), de temporada (por fechas) o remates; por
   porcentaje, precio especial o 2x1, sobre un producto, una subcategoría o toda la tienda. El servidor
   las calcula con la fecha de Ciudad de México.
@@ -185,6 +192,12 @@ botones + y − del carrito cambian el número al momento y piden los precios 35
 (mientras tanto el botón de WhatsApp dice "Actualizando el total"), y el buscador de la portada busca
 mientras escribes, 400 ms después de la última tecla.
 
+Secciones con más de 2 partes (Necutools → Mi cuenta, Productos y servicios, Tiendas, y la página Mi cuenta)
+se dividen con botones `data-action="subseccion"` (`data-grupo`, `data-sub`) y envoltorios `.subseccion`;
+`mostrarSubseccion(grupo, sub)` de `comun.js` cambia la vista y avisa con el evento `subseccion`. Los
+formularios largos llevan el guardar pegado abajo (`.form-actions.is-fija`); el de productos usa
+`.barra-guardar`, que dice si hay cambios sin guardar.
+
 Texto mínimo: 14 px (`0.875rem`). Solo el número del contador del carrito va en 12 px, para caber en su globo.
 
 ### Preguntar y avisar (sin `alert`, `confirm` ni `prompt`)
@@ -257,6 +270,7 @@ La base de IONOS compartido solo se ve desde su propio espacio web: no se conect
 fuera. Se administra en IONOS → Bases de datos → **phpMyAdmin**. Respaldos: phpMyAdmin → *Exportar*.
 
 Tablas: `stands` (tiendas), `subcategorias`, `productos` (productos y servicios), `producto_colores`,
+`producto_fotos`, `producto_color_fotos`,
 `ofertas`, `promociones`, `promocion_items`, `pedidos`, `admins`, `admin_stands` (tiendas de cada
 encargado), `clientes`, `resenas`, `bitacora`, `intentos_login`, `migraciones`, `sesiones`, `limites` y
 `dns_correo`.

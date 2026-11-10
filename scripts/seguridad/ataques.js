@@ -1148,6 +1148,64 @@ async function main() {
       && recientes.length <= 3 && suya.producto.id === prodA, r.texto.slice(0, 300));
   });
 
+  // ---------- Carrusel de cada color (plan 2026-11-09-fotos-editor-carrusel-color-y-footer) ----------
+  const productoColor = await ctx.producto(A);
+  const colorA = (await pedir("POST", `/api/admin/productos/${productoColor}/colores`, { sesion: dueno,
+    body: { nombre: "Negro", hex: "#112233", stock: 3, imagen: dataUrl("image/png", PNG_1x1) } })).json.id;
+  const fotoColor = { imagen: dataUrl("image/png", PNG_1x1) };
+  // Encargado nuevo de la tienda B: las pruebas de arriba pueden haber cerrado la sesión de encB
+  const creado = await pedir("POST", "/api/admin/usuarios", { sesion: dueno,
+    body: { usuario: `foto-b-${SUFIJO}`, password: ctx.pass, confirmar: ctx.pass, rol: "encargado", tiendas: [B.id] } });
+  const encAjeno = await loginAdmin(`foto-b-${SUFIJO}`, ctx.pass);
+  const sesionAjena = (await pedir("GET", "/api/auth/sesion", { sesion: encAjeno })).texto;
+  await prueba("CFO", "el encargado ajeno solo tiene la tienda B", async () =>
+    espera(creado.status === 201 && JSON.parse(sesionAjena).tiendas.join() === String(B.id), `${creado.status} ${creado.texto.slice(0, 120)} ${sesionAjena} A=${A.id} B=${B.id}`));
+  await prueba("CFO", "sin sesión no se agregan, ordenan ni borran fotos de un color", async () => {
+    const [a, b, c] = await Promise.all([pedir("POST", `/api/admin/colores/${colorA}/fotos`, { body: fotoColor }),
+      pedir("PUT", `/api/admin/colores/${colorA}/fotos/orden`, { body: { ids: [] } }), pedir("DELETE", "/api/admin/color-fotos/1")]);
+    return espera(a.status === 401 && b.status === 401 && c.status === 401, `${a.status} ${b.status} ${c.status}`);
+  });
+  await prueba("CFO", "un encargado de otra tienda no toca las fotos del color", async () => {
+    const r = await pedir("POST", `/api/admin/colores/${colorA}/fotos`, { body: fotoColor, sesion: encAjeno });
+    return espera(r.status === 403, r.status);
+  });
+  await prueba("CFO", "imagen falsa en la foto de un color → 400", async () => {
+    const r = await pedir("POST", `/api/admin/colores/${colorA}/fotos`, { sesion: dueno,
+      body: { imagen: dataUrl("image/png", Buffer.from("<script>alert(1)</script>")) } });
+    return espera(r.status === 400, r.status);
+  });
+  const fotosDelColor = [];
+  await prueba("CFO", "el encargado de la tienda agrega hasta 5 y la sexta → 400", async () => {
+    for (let i = 0; i < 5; i++) fotosDelColor.push((await pedir("POST", `/api/admin/colores/${colorA}/fotos`, { body: fotoColor, sesion: encA })).json.id);
+    const r = await pedir("POST", `/api/admin/colores/${colorA}/fotos`, { body: fotoColor, sesion: encA });
+    return espera(fotosDelColor.every(Boolean) && r.status === 400, `${fotosDelColor} ${r.status}`);
+  });
+  await prueba("CFO", "el orden solo acepta las fotos de ese color", async () => {
+    const r = await pedir("PUT", `/api/admin/colores/${colorA}/fotos/orden`, { sesion: dueno, body: { ids: [...fotosDelColor.slice(1), 999999999] } });
+    return espera(r.status === 400, r.status);
+  });
+  await prueba("CFO", "un encargado de otra tienda no borra la foto", async () => {
+    const r = await pedir("DELETE", `/api/admin/color-fotos/${fotosDelColor[0]}`, { sesion: encAjeno });
+    return espera(r.status === 403, r.status);
+  });
+  await prueba("CFO", "la foto de un producto oculto no se ve sin sesión", async () => {
+    const url = `/api/colores/${colorA}/fotos/${fotosDelColor[0]}`;
+    const visible = await pedir("GET", url);
+    await pedir("PUT", `/api/admin/productos/${productoColor}`, { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, stock: 100, visible: false } });
+    const oculta = await pedir("GET", url);
+    await pedir("PUT", `/api/admin/productos/${productoColor}`, { sesion: dueno, body: { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, precio: 50, stock: 100, visible: true } });
+    return espera(visible.status === 200 && oculta.status === 404, `${visible.status} ${oculta.status}`);
+  });
+  await prueba("CFO", "una foto solo se pide con su propio color", async () => {
+    const r = await pedir("GET", `/api/colores/${colorA + 999999}/fotos/${fotosDelColor[0]}`);
+    return espera(r.status === 404, r.status);
+  });
+  await prueba("CFO", "al borrar el color se borran sus fotos", async () => {
+    await pedir("DELETE", `/api/admin/colores/${colorA}`, { sesion: dueno });
+    const r = await pedir("GET", `/api/colores/${colorA}/fotos/${fotosDelColor[0]}`);
+    return espera(r.status === 404, r.status);
+  });
+
   // ---------- Errores sin detalles ----------
   await prueba("—", "404 de la API sin detalles internos", async () => {
     const r = await pedir("GET", "/api/no-existe");
