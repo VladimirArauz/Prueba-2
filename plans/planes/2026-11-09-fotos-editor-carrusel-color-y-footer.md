@@ -1,7 +1,7 @@
 # Plan: fotos completas, editor de productos, carrusel por color, subsecciones y crédito YANCORE
 
 - **Fecha:** 2026-11-09
-- **Estado:** en curso
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-09-fotos-editor-carrusel-color-y-footer.md` (7 prompts, en orden)
 - **Alcance:** cómo se muestran las fotos (sin reprocesar archivos), crédito YANCORE en el pie, subsecciones con botones en Necutools y en Mi cuenta, barra de guardar en los formularios largos, filas de colores y carrusel propio por color (tabla nueva, API, Necutools y página del producto). No cambia la lógica del carrito ni el envío por WhatsApp.
 

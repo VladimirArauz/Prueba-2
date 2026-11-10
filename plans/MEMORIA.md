@@ -51,13 +51,13 @@ Cómo se usa:
 | `2026-11-08-reels-botones-debounce-texto-y-portada.md` | Aplicado (prompts 1 a 5) y subido a IONOS. En IONOS aún no hay opiniones: la sección de opiniones no se ve | 2026-11-08 |
 | `2026-11-08-carrusel-fotos-producto.md` | Aplicado y subido a IONOS (2026-11-08). Falta que el usuario agregue fotos reales en Necutools y lo revise | 2026-11-08 |
 | `2026-11-08-robots-y-search-console.md` | Aplicado, subido a IONOS y comprobado en Inspección de URLs. Falta que Google lea el sitemap y `robots.txt` | 2026-11-08 |
-| `2026-11-09-fotos-editor-carrusel-color-y-footer.md` | En curso: prompts 1 a 6 aplicados y probados en local, con commit. Falta subir a IONOS (prompt 7, con permiso; la tabla `producto_color_fotos` va antes que el código) | 2026-11-09 |
+| `2026-11-09-fotos-editor-carrusel-color-y-footer.md` | Aplicado (prompts 1 a 7) y subido a IONOS (2026-11-09). Falta que el usuario agregue fotos a los colores en Necutools y lo revise | 2026-11-09 |
 
 ---
 
 ## Pendientes
 
-**Fotos completas, editor, carrusel por color, subsecciones y YANCORE (2026-11-09, solo en local):** (a) Subir a IONOS solo con permiso: primero crear `producto_color_fotos` (bloque del 2026-11-09 en `db/mariadb/schema.sql`), después el código (`app/admin.php`, `app/api.php`, `app/http.php`, 10 páginas, `public/necutools.html`, `public/js/comun.js`, `necutools.js`, `producto.js`, `public/style.css`, `public/imagenes/yancore.png`). Si el código sube sin la tabla, el detalle del producto y el catálogo de Necutools fallan. (b) **Excepción de diseño solo para ese plan:** las franjas de las fotos completas toman el color del borde de la foto (`--foto-fondo`, calculado en el navegador). (c) **Excepción de movimiento:** el carrusel de cada color corre solo, ampliando la del plan del carrusel del 2026-11-08. Si quiere que alguna sea regla, que pida actualizar `plans/CLAUDE.md`. (d) El usuario revisa en su navegador el editor (Colores y fotos → Carrusel) y la página de un producto con colores. (e) La regla de "foto completa" (más de 20 % de recorte o menos del 75 % del ancho del marco) está en `ajustarFoto()`; si alguna foto se ve con franjas y no debería, se ajustan ahí.
+**Fotos completas, editor, carrusel por color, subsecciones y YANCORE (2026-11-09, subido):** (a) (Resuelto 2026-11-09: subido a IONOS, ver "Cambios hechos".) **Si se restaura `app/` en otra base, `producto_color_fotos` debe existir antes:** sin ella fallan el detalle del producto y el catálogo de Necutools. El respaldo completo previo está en `~/respaldos/2026-11-09-carrusel-color/antes.sql` del servidor (permisos 600, lleva datos personales): borrarlo cuando ya no haga falta. En vivo ningún color tiene fotos extra todavía. (b) **Excepción de diseño solo para ese plan:** las franjas de las fotos completas toman el color del borde de la foto (`--foto-fondo`, calculado en el navegador). (c) **Excepción de movimiento:** el carrusel de cada color corre solo, ampliando la del plan del carrusel del 2026-11-08. Si quiere que alguna sea regla, que pida actualizar `plans/CLAUDE.md`. (d) El usuario revisa en su navegador el editor (Colores y fotos → Carrusel) y la página de un producto con colores. (e) La regla de "foto completa" (más de 20 % de recorte o menos del 75 % del ancho del marco) está en `ajustarFoto()`; si alguna foto se ve con franjas y no debería, se ajustan ahí.
 
 **Salto en la página de tienda (detectado 2026-11-08):** `/t/tecnologia` en vivo da CLS de 0.13 a 1280 y 0.33 a 360 (0.28 a 360 con las cookies ya decididas). Es idéntico con el CSS anterior al cambio de fotos, así que ya existía. Sin causa investigada ni corrección.
 
@@ -115,6 +115,17 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-09: fotos completas, carrusel por color, subsecciones y YANCORE subidos a IONOS (prompt 7)
+- Con permiso del usuario. Los 18 archivos del servidor (17 que ya existían más `yancore.png`) eran la versión de `09c1e78`. Respaldo en `~/respaldos/2026-11-09-carrusel-color/`: `antes.tar` (17 archivos) y `antes.sql` (base completa, 11.5 MB), ambos con permisos 600. La tabla `producto_color_fotos` se creó **antes** del código, con conteos iguales (8 tiendas, 15 productos, 1 color, 16 fotos, 5 pedidos, 3 clientes, 0 opiniones, 3 admins). Subida por rsync y los 18 archivos quedaron idénticos.
+- En vivo con Chrome, 56 de 56 a 1280, 360 y movimiento reducido, sin crear datos:
+  - El cable USB a Lightning (`/p/47`) y el logo de Goat Brothers se ven completos, con franjas gris y negra.
+  - "By YANCORE" en el pie.
+  - Carrusel base de `/p/47`.
+  - Carrusel de un color en `/p/48`, simulando sus fotos en el navegador con fotos reales del 47.
+  - Subsecciones de Necutools en el HTML, y Mi cuenta con sesión simulada.
+  - CLS menor a 0.02, sin errores, nada a Google sin aceptar y sin números de WhatsApp sin sesión.
+- Necutools con sesión no se probó en vivo. Credenciales leídas a variables, sin imprimirlas.
 
 ### 2026-11-09: fotos completas, crédito YANCORE, subsecciones, barra de guardar y carrusel por color (plan `2026-11-09-fotos-editor-carrusel-color-y-footer.md`, prompts 1 a 6, solo en local)
 - **Prompt 1** (`public/js/comun.js`, `public/style.css`): `ajustarFoto()` con la proporción fija de cada marco (producto 4/3; tarjetas, tiendas y promociones 16/10; miniaturas de Necutools 1/1). Si `cover` recortaría más del 20 % o la foto mide menos del 75 % del ancho del marco, va `.foto-completa` (`object-fit: scale-down`) con franjas del color del borde (`--foto-fondo`, canvas de 32 px) o `--gis` si el borde es variado o transparente. En el carrusel se ajusta antes de cambiar la foto y la copia que sale conserva clase y fondo. No se reprocesa ningún archivo. **Desviación:** el plan decía "más angosta que su marco"; quedó en menos del 75 %, para no poner franjas a fotos apenas más chicas que su marco, y no se aplica a imágenes con `srcset`. El archivo servido es igual al de la base; el original subido solo pierde el comentario que GD mete al JPEG (lo quita el limpiador de metadatos que ya existía).
