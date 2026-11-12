@@ -1,7 +1,7 @@
 # Plan: carga progresiva al hacer scroll y fotos guardadas en el navegador
 
 - **Fecha:** 2026-11-11
-- **Estado:** en curso (prompts 1 a 4 y la parte local del 5 aplicados el 2026-11-11; falta subir a IONOS)
+- **Estado:** aplicado (prompts 1 a 5; subido a IONOS el 2026-11-11)
 - **Prompts:** `plans/prompts/2026-11-11-carga-progresiva-y-cache-de-fotos.md`
 - **Alcance:** páginas públicas (portada, tienda, producto, promociones) y rutas de fotos de la API. Necutools queda fuera, salvo que sus fotos también se benefician del caché.
 
