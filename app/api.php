@@ -13,7 +13,7 @@ const OPINIONES_PORTADA = 3;
 // ================= Formato de salida =================
 function imagen_producto(array $f): ?string
 {
-    if (a_bool($f['tiene_imagen'])) return "/api/productos/{$f['id']}/imagen?v=" . version_ms($f['actualizado_en']);
+    if (a_bool($f['tiene_imagen'])) return "/api/productos/{$f['id']}/imagen?v={$f['imagen_v']}";
     return $f['imagen_ruta'] ?: null;
 }
 
@@ -28,7 +28,7 @@ function fotos_producto(array $f): array
 
 function imagen_tienda(array $f): ?string
 {
-    if (a_bool($f['tiene_portada'])) return "/api/stands/{$f['id']}/portada?v=" . version_ms($f['actualizado_en']);
+    if (a_bool($f['tiene_portada'])) return "/api/stands/{$f['id']}/portada?v={$f['portada_v']}";
     return $f['imagen_ruta'] ?: null;
 }
 
@@ -81,7 +81,7 @@ const SQL_AGOTADO = "(p.tipo = 'producto' AND IF(
 
 const COLUMNAS_PRODUCTO = '
   p.id, p.stand_id, p.subcategoria_id, p.tipo, p.nombre, p.precio, p.precio_modo,
-  p.disponibilidad, p.descripcion, (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.actualizado_en,
+  p.disponibilidad, p.descripcion, (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_v, p.imagen_ruta, p.actualizado_en,
   (SELECT ROUND(AVG(r.calificacion), 1) FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS calificacion,
   (SELECT COUNT(*) FROM resenas r WHERE r.producto_id = p.id AND r.visible) AS total_resenas,
   (SELECT COUNT(*) FROM producto_colores c WHERE c.producto_id = p.id) AS total_colores,
@@ -90,25 +90,40 @@ const COLUMNAS_PRODUCTO = '
 
 
 // ================= Imágenes guardadas en la base =================
-// La de algo oculto solo la ve en Necutools quien puede editarlo, y sin caché pública
-function servir_imagen(?array $f, callable $puedeVerla): Respuesta
+// $f es la fila sin la imagen (version, tipo, publica); $bytes la trae solo si hace falta mandarla.
+// La versión es la huella de la foto (imagen_v / portada_v) o el id de una foto extra, que nunca cambia.
+// - Pública con la versión al día en ?v= (o foto extra): el navegador la guarda un año sin volver a preguntar.
+// - Pública con otra versión o sin ?v=: 5 minutos, y luego pregunta con If-None-Match (304 si no cambió).
+// - Oculta: solo la ve en Necutools quien puede editarla, sin caché.
+function servir_imagen(?array $f, callable $puedeVerla, callable $bytes, bool $fija = false): Respuesta
 {
-    if (!$f || $f['imagen'] === null) return vacia(404);
+    if (!$f || $f['version'] === null) return vacia(404);
     if (a_bool($f['publica'])) {
-        $cache = 'public, max-age=86400';
+        $cache = $fija || consulta('v') === (string) $f['version'] ? 'public, max-age=31536000, immutable' : 'public, max-age=300';
     } else {
+        Sesion::cargar(); // las fotos públicas no leen la sesión (app/arranque.php); esta sí la necesita
+        vida_maxima();
         Actual::$admin = cargar_admin();
         if (!Actual::$admin || !$puedeVerla()) return vacia(404);
         $cache = 'private, no-store';
     }
-    return binaria($f['imagen'], $f['tipo'], ['Cache-Control' => $cache]);
+    $cabeceras = ['Cache-Control' => $cache, 'ETag' => '"' . $f['version'] . '"'];
+    $pedidas = array_map(fn($e) => preg_replace('#^W/#', '', trim($e)), explode(',', (string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')));
+    if (in_array($cabeceras['ETag'], $pedidas, true)) {
+        $r = vacia(304);
+        $r->cabeceras = $cabeceras;
+        return $r;
+    }
+    $imagen = $bytes();
+    if ($imagen === null) return vacia(404);
+    return binaria($imagen, $f['tipo'], $cabeceras);
 }
 
 // ================= Promociones generales (paquetes) =================
 function promociones_vigentes(?array $ids = null, bool $soloDestacadas = false): array
 {
     $cuando = hoy();
-    $sql = 'SELECT id, titulo, descripcion, precio, inicio, fin, destacada, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
+    $sql = 'SELECT id, titulo, descripcion, precio, inicio, fin, destacada, (imagen IS NOT NULL) AS tiene_imagen, imagen_v, actualizado_en
             FROM promociones WHERE activa AND inicio <= ? AND fin >= ?';
     $params = [$cuando['fecha'], $cuando['fecha']];
     if ($ids !== null) {
@@ -155,7 +170,7 @@ function promociones_vigentes(?array $ids = null, bool $soloDestacadas = false):
             'inicio' => $promo['inicio'],
             'fin' => $promo['fin'],
             'destacada' => a_bool($promo['destacada']),
-            'imagen_url' => a_bool($promo['tiene_imagen']) ? "/api/promociones/{$promo['id']}/imagen?v=" . version_ms($promo['actualizado_en']) : null,
+            'imagen_url' => a_bool($promo['tiene_imagen']) ? "/api/promociones/{$promo['id']}/imagen?v={$promo['imagen_v']}" : null,
             'incluye' => array_map(fn($i) => ['producto_id' => $i['producto_id'], 'nombre' => $i['nombre'], 'cantidad' => $i['cantidad'],
                 'tienda' => $i['tienda'], 'slug' => $i['slug']], $suyos),
             'tiendas' => array_values(array_map(fn($t) => $t['tienda'], $tiendas)),
@@ -274,7 +289,7 @@ function rutas_api(): void
         $cuando = hoy();
         $filas = filas(
             "SELECT s.id, s.nombre, s.slug, s.descripcion, s.icono, s.imagen_ruta, s.actualizado_en,
-                    (s.portada IS NOT NULL) AS tiene_portada,
+                    (s.portada IS NOT NULL) AS tiene_portada, s.portada_v,
                     (SELECT COUNT(*) FROM productos p WHERE p.stand_id = s.id AND p.visible AND p.tipo = 'producto') AS productos,
                     (SELECT COUNT(*) FROM productos p WHERE p.stand_id = s.id AND p.visible AND p.tipo = 'servicio') AS servicios,
                     (SELECT COUNT(*) FROM ofertas o WHERE o.stand_id = s.id AND " . VIGENTE_HOY . ") AS ofertas_hoy
@@ -287,7 +302,7 @@ function rutas_api(): void
     });
 
     get('/api/stands/:slug', function ($slug) {
-        $stand = fila('SELECT id, nombre, slug, descripcion, icono, whatsapp, imagen_ruta, actualizado_en, (portada IS NOT NULL) AS tiene_portada
+        $stand = fila('SELECT id, nombre, slug, descripcion, icono, whatsapp, imagen_ruta, actualizado_en, (portada IS NOT NULL) AS tiene_portada, portada_v
                        FROM stands WHERE slug = ? AND visible', [mb_substr($slug, 0, 60)]);
         if (!$stand) return json_respuesta(['error' => 'Esta tienda no existe o ya no está disponible.'], 404);
 
@@ -316,46 +331,49 @@ function rutas_api(): void
     get('/api/stands/:id/portada', function ($id) {
         $id = id_valido($id);
         if (!$id) return vacia(404);
-        $f = fila('SELECT portada AS imagen, portada_tipo AS tipo, visible AS publica FROM stands WHERE id = ?', [$id]);
-        return servir_imagen($f, fn() => puede_editar_stand($id));
+        $f = fila('SELECT portada_v AS version, portada_tipo AS tipo, visible AS publica FROM stands WHERE id = ?', [$id]);
+        return servir_imagen($f, fn() => puede_editar_stand($id), fn() => valor('SELECT portada FROM stands WHERE id = ?', [$id]));
     });
 
     get('/api/productos/:id/imagen', function ($id) {
         $id = id_valido($id);
         if (!$id) return vacia(404);
-        $f = fila('SELECT p.imagen, p.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+        $f = fila('SELECT p.imagen_v AS version, p.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
                    FROM productos p JOIN stands s ON s.id = p.stand_id WHERE p.id = ?', [$id]);
-        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
+        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']), fn() => valor('SELECT imagen FROM productos WHERE id = ?', [$id]));
     });
 
+    // Las fotos extra nunca se reemplazan (solo se agregan, se ordenan o se borran): su id es su versión
     get('/api/productos/:id/fotos/:foto', function ($id, $foto) {
         $id = id_valido($id);
         $foto = id_valido($foto);
         if (!$id || !$foto) return vacia(404);
-        $f = fila('SELECT x.imagen, x.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+        $f = fila('SELECT x.id AS version, x.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
                    FROM producto_fotos x JOIN productos p ON p.id = x.producto_id JOIN stands s ON s.id = p.stand_id
                    WHERE x.id = ? AND x.producto_id = ?', [$foto, $id]);
-        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
+        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']),
+            fn() => valor('SELECT imagen FROM producto_fotos WHERE id = ?', [$foto]), true);
     });
 
     get('/api/colores/:id/imagen', function ($id) {
         $id = id_valido($id);
         if (!$id) return vacia(404);
-        $f = fila('SELECT c.imagen, c.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+        $f = fila('SELECT c.imagen_v AS version, c.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
                    FROM producto_colores c JOIN productos p ON p.id = c.producto_id JOIN stands s ON s.id = p.stand_id
                    WHERE c.id = ?', [$id]);
-        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
+        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']), fn() => valor('SELECT imagen FROM producto_colores WHERE id = ?', [$id]));
     });
 
     get('/api/colores/:id/fotos/:foto', function ($id, $foto) {
         $id = id_valido($id);
         $foto = id_valido($foto);
         if (!$id || !$foto) return vacia(404);
-        $f = fila('SELECT x.imagen, x.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
+        $f = fila('SELECT x.id AS version, x.imagen_tipo AS tipo, p.stand_id, (p.visible AND s.visible) AS publica
                    FROM producto_color_fotos x JOIN producto_colores c ON c.id = x.color_id
                    JOIN productos p ON p.id = c.producto_id JOIN stands s ON s.id = p.stand_id
                    WHERE x.id = ? AND x.color_id = ?', [$foto, $id]);
-        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']));
+        return servir_imagen($f, fn() => puede_editar_stand($f['stand_id']),
+            fn() => valor('SELECT imagen FROM producto_color_fotos WHERE id = ?', [$foto]), true);
     });
 
     // ================= Detalle de un producto o servicio =================
@@ -371,14 +389,14 @@ function rutas_api(): void
         $f = producto_de_fila($f);
         $ofertas = $f['tipo'] === 'producto' ? ofertas_de_hoy([$f['stand_id']]) : [];
         $producto = producto_publico($f, $ofertas);
-        $colores = filas('SELECT id, nombre, hex, (disponible AND stock > 0) AS disponible, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
+        $colores = filas('SELECT id, nombre, hex, (disponible AND stock > 0) AS disponible, (imagen IS NOT NULL) AS tiene_imagen, imagen_v
                           FROM producto_colores WHERE producto_id = ? ORDER BY orden, id', [$f['id']]);
         $idsColor = array_column($colores, 'id');
         $fotosColor = $idsColor ? filas('SELECT id, color_id FROM producto_color_fotos WHERE color_id IN (' . marcas($idsColor) . ') ORDER BY orden, id', $idsColor) : [];
         return [
             ...$producto,
             'colores' => array_map(function ($c) use ($producto, $fotosColor) {
-                $principal = a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $producto['imagen_url'];
+                $principal = a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v={$c['imagen_v']}" : $producto['imagen_url'];
                 $extra = array_values(array_filter($fotosColor, fn($x) => $x['color_id'] === $c['id']));
                 return [
                     'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']),
@@ -452,8 +470,8 @@ function rutas_api(): void
     get('/api/promociones/:id/imagen', function ($id) {
         $id = id_valido($id);
         if (!$id) return vacia(404);
-        $f = fila('SELECT imagen, imagen_tipo AS tipo, activa AS publica FROM promociones WHERE id = ?', [$id]);
-        return servir_imagen($f, fn() => Actual::$admin['rol'] === 'dueno');
+        $f = fila('SELECT imagen_v AS version, imagen_tipo AS tipo, activa AS publica FROM promociones WHERE id = ?', [$id]);
+        return servir_imagen($f, fn() => Actual::$admin['rol'] === 'dueno', fn() => valor('SELECT imagen FROM promociones WHERE id = ?', [$id]));
     });
 
     // ================= Portada: cifras y opiniones reales (plan 2026-11-08) =================

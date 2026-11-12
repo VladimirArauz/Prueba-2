@@ -350,9 +350,10 @@ function exigir_password_actual(array $admin, $valor): string
     return $actual;
 }
 
-function url_imagen(string $ruta, int $id, string $actualizado): string
+// ?v= es la huella de la imagen (imagen_v / portada_v): solo cambia cuando cambia la foto
+function url_imagen(string $ruta, int $id, string $version): string
 {
-    return "/api/$ruta/$id/" . ($ruta === 'stands' ? 'portada' : 'imagen') . '?v=' . version_ms($actualizado);
+    return "/api/$ruta/$id/" . ($ruta === 'stands' ? 'portada' : 'imagen') . "?v=$version";
 }
 
 function rutas_admin(): void
@@ -393,7 +394,7 @@ function rutas_admin(): void
         requiere_admin();
         [$filtro, $params] = filtro_tiendas('s.id', null);
         $tiendas = filas("SELECT s.id, s.nombre, s.slug, s.descripcion, s.icono, s.whatsapp, s.orden, s.visible, s.imagen_ruta,
-                                 (s.portada IS NOT NULL) AS tiene_portada, s.actualizado_en,
+                                 (s.portada IS NOT NULL) AS tiene_portada, s.portada_v, s.actualizado_en,
                                  (SELECT COUNT(*) FROM productos p WHERE p.stand_id = s.id) AS productos
                           FROM stands s WHERE $filtro ORDER BY s.orden, s.nombre", $params);
         $ids = array_column($tiendas, 'id');
@@ -406,7 +407,7 @@ function rutas_admin(): void
                 'tiene_portada' => $tienePortada, 'actualizado_en' => fecha_iso($s['actualizado_en']), 'productos' => (int) $s['productos'],
                 'subcategorias' => array_values(array_map(fn($sc) => ['id' => $sc['id'], 'nombre' => $sc['nombre'], 'slug' => $sc['slug'], 'orden' => $sc['orden']],
                     array_filter($subs, fn($sc) => $sc['stand_id'] === $s['id']))),
-                'imagen_url' => $tienePortada ? url_imagen('stands', $s['id'], $s['actualizado_en']) : $s['imagen_ruta'],
+                'imagen_url' => $tienePortada ? url_imagen('stands', $s['id'], $s['portada_v']) : $s['imagen_ruta'],
             ];
         }, $tiendas);
     });
@@ -516,19 +517,19 @@ function rutas_admin(): void
         [$filtro, $params] = filtro_tiendas('p.stand_id', stand_filtro(consulta('stand')));
         $productos = filas("SELECT p.id, p.stand_id, s.nombre AS stand, p.subcategoria_id, sc.nombre AS subcategoria, p.tipo, p.nombre,
                                    p.precio, p.precio_modo, p.disponibilidad, p.stock, p.stock_minimo, p.descripcion, p.visible, p.orden,
-                                   (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_ruta, p.creado_en, p.actualizado_en
+                                   (p.imagen IS NOT NULL) AS tiene_imagen, p.imagen_v, p.imagen_ruta, p.creado_en, p.actualizado_en
                             FROM productos p JOIN stands s ON s.id = p.stand_id
                             LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_id
                             WHERE $filtro
                             ORDER BY s.orden, p.tipo, p.orden, p.creado_en DESC, p.id DESC", $params);
         $ids = array_column($productos, 'id');
-        $colores = $ids ? filas('SELECT id, producto_id, nombre, hex, disponible, stock, orden, (imagen IS NOT NULL) AS tiene_imagen, actualizado_en
+        $colores = $ids ? filas('SELECT id, producto_id, nombre, hex, disponible, stock, orden, (imagen IS NOT NULL) AS tiene_imagen, imagen_v
                                  FROM producto_colores WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
         $fotos = $ids ? filas('SELECT id, producto_id FROM producto_fotos WHERE producto_id IN (' . marcas($ids) . ') ORDER BY orden, id', $ids) : [];
         $idsColor = array_column($colores, 'id');
         $fotosColor = $idsColor ? filas('SELECT id, color_id FROM producto_color_fotos WHERE color_id IN (' . marcas($idsColor) . ') ORDER BY orden, id', $idsColor) : [];
         return array_map(function ($p) use ($colores, $fotos, $fotosColor) {
-            $imagenUrl = a_bool($p['tiene_imagen']) ? url_imagen('productos', $p['id'], $p['actualizado_en']) : $p['imagen_ruta'];
+            $imagenUrl = a_bool($p['tiene_imagen']) ? url_imagen('productos', $p['id'], $p['imagen_v']) : $p['imagen_ruta'];
             $suyos = array_values(array_filter($colores, fn($c) => $c['producto_id'] === $p['id']));
             // Por resurtir: con las piezas del mínimo o menos. Sin stock capturado no cuenta (tiene su propio filtro).
             $bajos = array_values(array_filter($suyos, fn($c) => $c['stock'] !== null && $c['stock'] <= $p['stock_minimo']));
@@ -549,7 +550,7 @@ function rutas_admin(): void
                     array_values(array_filter($fotos, fn($f) => $f['producto_id'] === $p['id']))),
                 'colores' => array_map(fn($c) => [
                     'id' => $c['id'], 'nombre' => $c['nombre'], 'hex' => $c['hex'], 'disponible' => a_bool($c['disponible']), 'stock' => $c['stock'], 'orden' => $c['orden'],
-                    'imagen_url' => a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v=" . version_ms($c['actualizado_en']) : $imagenUrl,
+                    'imagen_url' => a_bool($c['tiene_imagen']) ? "/api/colores/{$c['id']}/imagen?v={$c['imagen_v']}" : $imagenUrl,
                     'fotos' => array_map(fn($f) => ['id' => $f['id'], 'imagen_url' => "/api/colores/{$c['id']}/fotos/{$f['id']}"],
                         array_values(array_filter($fotosColor, fn($f) => $f['color_id'] === $c['id']))),
                 ], $suyos),
@@ -835,7 +836,7 @@ function rutas_admin(): void
         requiere_admin();
         requiere_dueno();
         $promos = filas('SELECT pr.id, pr.titulo, pr.descripcion, pr.precio, pr.inicio, pr.fin, pr.destacada, pr.activa,
-                                (pr.imagen IS NOT NULL) AS tiene_imagen, pr.actualizado_en
+                                (pr.imagen IS NOT NULL) AS tiene_imagen, pr.imagen_v, pr.actualizado_en
                          FROM promociones pr ORDER BY pr.fin DESC, pr.id DESC');
         $items = filas('SELECT i.promocion_id, i.producto_id, i.cantidad, p.nombre, s.nombre AS stand
                         FROM promocion_items i JOIN productos p ON p.id = i.producto_id JOIN stands s ON s.id = p.stand_id
@@ -846,7 +847,7 @@ function rutas_admin(): void
             'actualizado_en' => fecha_iso($p['actualizado_en']),
             'items' => array_values(array_map(fn($i) => ['producto_id' => $i['producto_id'], 'cantidad' => $i['cantidad'], 'nombre' => $i['nombre'], 'stand' => $i['stand']],
                 array_filter($items, fn($i) => $i['promocion_id'] === $p['id']))),
-            'imagen_url' => a_bool($p['tiene_imagen']) ? url_imagen('promociones', $p['id'], $p['actualizado_en']) : null,
+            'imagen_url' => a_bool($p['tiene_imagen']) ? url_imagen('promociones', $p['id'], $p['imagen_v']) : null,
         ], $promos);
     });
 

@@ -2109,6 +2109,11 @@ textarea {
   margin-top: 28px;
 }
 
+/* Marca invisible al final de una lista o antes de una sección: al acercarse, se carga lo que sigue (plan 2026-11-11) */
+.centinela {
+  height: 1px;
+}
+
 /* Precio con descuento */
 .price-row {
   display: flex;

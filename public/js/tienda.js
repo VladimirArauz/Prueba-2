@@ -8,6 +8,11 @@ const POR_PAGINA = 12;
 const PESTANAS = { productos: "Productos", servicios: "Servicios", ofertas: "Ofertas" };
 
 const estado = { datos: null, tab: "productos", sub: "", visibles: POR_PAGINA, visiblesServicios: POR_PAGINA };
+// Las tarjetas se agregan solas al acercarse al final de la lista (plan 2026-11-11). Sin IntersectionObserver
+// quedan los botones "Mostrar más" de siempre.
+const SOLAS = "IntersectionObserver" in window;
+let revisarProductos = () => {};
+let revisarServicios = () => {};
 
 function slugDeLaUrl() {
   const partes = location.pathname.split("/").filter(Boolean);
@@ -112,31 +117,51 @@ function tarjetaOferta(oferta) {
     </article>`;
 }
 
-function renderLista() {
-  const grid = document.getElementById("store-grid");
-  const vacioEl = document.getElementById("store-empty");
-  const mas = document.getElementById("store-more");
+function listaActual() {
   const { productos, ofertas } = estado.datos;
+  if (estado.tab === "ofertas") return [...ofertas].sort((a, b) => Number(b.hoy) - Number(a.hoy));
+  const sub = estado.sub && estado.datos.subcategorias.find(s => s.slug === estado.sub);
+  return sub ? productos.filter(p => p.subcategoria_id === sub.id) : productos;
+}
 
-  let lista;
-  let html;
-  if (estado.tab === "ofertas") {
-    lista = [...ofertas].sort((a, b) => Number(b.hoy) - Number(a.hoy));
-    html = lista.slice(0, estado.visibles).map(tarjetaOferta).join("");
-  } else {
-    lista = productos;
-    if (estado.sub) {
-      const sub = estado.datos.subcategorias.find(s => s.slug === estado.sub);
-      lista = sub ? lista.filter(p => p.subcategoria_id === sub.id) : lista;
-    }
-    html = lista.slice(0, estado.visibles).map(p => tarjetaProducto(p)).join("");
-  }
+// Las primeras 3 tarjetas se ven al abrir: su foto se pide de inmediato
+function tarjetasDe(lista, desde, hasta) {
+  return lista.slice(desde, hasta).map((x, i) =>
+    estado.tab === "ofertas" ? tarjetaOferta(x) : tarjetaProducto(x, { primera: desde + i < 3 })).join("");
+}
 
-  grid.innerHTML = html;
-  mas.hidden = lista.length <= estado.visibles;
-  vacioEl.innerHTML = lista.length ? "" : vacio(
+// "Mostrando 24 de 40 productos" para lectores de pantalla (las tarjetas nuevas no se leen todas en voz alta)
+function anunciar(id, mostradas, total, singular, plural) {
+  document.getElementById(id).textContent = total > POR_PAGINA
+    ? `Mostrando ${Math.min(mostradas, total)} de ${total} ${total === 1 ? singular : plural}.` : "";
+}
+
+function renderLista() {
+  const lista = listaActual();
+  document.getElementById("store-grid").innerHTML = tarjetasDe(lista, 0, estado.visibles);
+  finLista(lista);
+  document.getElementById("store-empty").innerHTML = lista.length ? "" : vacio(
     "Todavía no hay productos aquí.",
     `<a class="btn" href="/">Ver otras tiendas</a>`);
+  revisarProductos();
+}
+
+function finLista(lista) {
+  document.getElementById("store-more").hidden = SOLAS || lista.length <= estado.visibles;
+  anunciar("store-cuenta", estado.visibles, lista.length,
+    estado.tab === "ofertas" ? "oferta" : "producto", estado.tab === "ofertas" ? "ofertas" : "productos");
+}
+
+// Agrega solo las tarjetas que faltan (no repinta las que ya están, ni sus fotos)
+function masProductos() {
+  if (!estado.datos) return false;
+  const lista = listaActual();
+  if (estado.visibles >= lista.length) return false;
+  const desde = estado.visibles;
+  estado.visibles += POR_PAGINA;
+  document.getElementById("store-grid").insertAdjacentHTML("beforeend", tarjetasDe(lista, desde, estado.visibles));
+  finLista(lista);
+  return true;
 }
 
 function renderServicios() {
@@ -144,13 +169,35 @@ function renderServicios() {
   document.getElementById("servicios").hidden = false;
   document.getElementById("servicios-grid").innerHTML =
     servicios.slice(0, estado.visiblesServicios).map(p => tarjetaProducto(p)).join("");
-  document.getElementById("servicios-more").hidden = servicios.length <= estado.visiblesServicios;
+  finServicios();
   document.getElementById("servicios-empty").innerHTML = servicios.length ? "" : vacio(
     "Esta tienda todavía no tiene servicios.",
     `<p>Pregúntale al vendedor por WhatsApp si hace trabajos a la medida.</p>`, "wrench");
+  revisarServicios();
+}
+
+function finServicios() {
+  const { servicios } = estado.datos;
+  document.getElementById("servicios-more").hidden = SOLAS || servicios.length <= estado.visiblesServicios;
+  anunciar("servicios-cuenta", estado.visiblesServicios, servicios.length, "servicio", "servicios");
+}
+
+function masServicios() {
+  if (!estado.datos) return false;
+  const { servicios } = estado.datos;
+  if (estado.visiblesServicios >= servicios.length) return false;
+  const desde = estado.visiblesServicios;
+  estado.visiblesServicios += POR_PAGINA;
+  document.getElementById("servicios-grid").insertAdjacentHTML("beforeend",
+    servicios.slice(desde, estado.visiblesServicios).map(p => tarjetaProducto(p)).join(""));
+  finServicios();
+  return true;
 }
 
 function irAServicios() {
+  // Los productos se agregan solos al pasar por el final de su lista: se pintan todos antes de bajar,
+  // si no, la sección de servicios se recorre hacia abajo a medio camino (las fotos siguen esperando a acercarse)
+  if (estado.tab !== "ofertas") while (masProductos());
   const seccion = document.getElementById("servicios");
   const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   seccion.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
@@ -193,14 +240,8 @@ Object.assign(ACCIONES, {
     renderFiltros();
     renderLista();
   },
-  "ver-mas": () => {
-    estado.visibles += POR_PAGINA;
-    renderLista();
-  },
-  "ver-mas-servicios": () => {
-    estado.visiblesServicios += POR_PAGINA;
-    renderServicios();
-  },
+  "ver-mas": () => masProductos(),
+  "ver-mas-servicios": () => masServicios(),
   "pedir-servicio": el => pedirServicio(el)
 });
 
@@ -224,9 +265,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tab = params.get("tab");
   // Enlaces viejos (?tab=servicios) y nuevos (#servicios) bajan a la sección
   const aServicios = tab === "servicios" || location.hash === "#servicios";
+  if (SOLAS) {
+    revisarProductos = alAcercarse(document.getElementById("store-centinela"), masProductos, { repetir: true, margen: "1000px" });
+    revisarServicios = alAcercarse(document.getElementById("servicios-centinela"), masServicios, { repetir: true, margen: "1000px" });
+  }
   renderEncabezado();
   renderServicios();
   cambiarTab(aServicios ? "productos" : tab || "productos");
-  cargarVitrina(estado.datos.tienda.slug);
+  // La vitrina va al final: se pide cuando el usuario se acerca (con #servicios ya se baja, igual se pide al llegar)
+  alAcercarse(document.getElementById("vitrina-centinela"), () => cargarVitrina(estado.datos.tienda.slug), { margen: "800px" });
   if (aServicios) irAServicios();
 });

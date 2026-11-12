@@ -1206,6 +1206,47 @@ async function main() {
     return espera(r.status === 404, r.status);
   });
 
+  // ---------- Caché de fotos (plan 2026-11-11-carga-progresiva-y-cache-de-fotos) ----------
+  const datosFoto = { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, stock: 100, visible: true };
+  const prodFoto = await ctx.producto(A, { imagen: dataUrl("image/png", PNG_1x1) });
+  const urlFoto = async () => (await pedir("GET", `/api/productos/${prodFoto}`)).json.imagen_url;
+  const fotoInicial = await urlFoto();
+  await prueba("FOT", "foto con su versión: un año, ETag y sin tocar la sesión aunque llegue con cookie", async () => {
+    const r = await pedir("GET", fotoInicial, { sesion: { cookie: dueno.cookie } });
+    return espera(r.status === 200 && /max-age=31536000/.test(r.headers.get("cache-control")) && /immutable/.test(r.headers.get("cache-control"))
+      && r.headers.get("etag") && !r.galletas.length, `${r.status} ${r.headers.get("cache-control")} ${r.headers.get("etag")} ${r.galletas.length}`);
+  });
+  await prueba("FOT", "con If-None-Match de la misma foto → 304 sin cuerpo", async () => {
+    const etag = (await pedir("GET", fotoInicial)).headers.get("etag");
+    const r = await pedir("GET", fotoInicial, { headers: { "If-None-Match": etag } });
+    return espera(r.status === 304 && r.buf.length === 0, `${r.status} ${r.buf.length}`);
+  });
+  await prueba("FOT", "versión vieja o sin ?v= → solo 5 minutos", async () => {
+    const [a, b] = await Promise.all([pedir("GET", fotoInicial.replace(/\?v=.*/, "?v=vieja")), pedir("GET", fotoInicial.replace(/\?v=.*/, ""))]);
+    return espera(a.status === 200 && b.status === 200 && /max-age=300\b/.test(a.headers.get("cache-control")) && /max-age=300\b/.test(b.headers.get("cache-control")),
+      `${a.headers.get("cache-control")} | ${b.headers.get("cache-control")}`);
+  });
+  await prueba("FOT", "cambiar el precio no cambia la dirección de la foto; cambiar la foto sí", async () => {
+    await pedir("PUT", `/api/admin/productos/${prodFoto}`, { sesion: dueno, body: { ...datosFoto, precio: 77 } });
+    const trasPrecio = await urlFoto();
+    await pedir("PUT", `/api/admin/productos/${prodFoto}`, { sesion: dueno, body: { ...datosFoto, precio: 77, imagen: dataUrl("image/jpeg", jpegConExif()) } });
+    const trasFoto = await urlFoto();
+    return espera(trasPrecio === fotoInicial && trasFoto !== fotoInicial && /\?v=[0-9a-f]{12}$/.test(trasFoto), `${fotoInicial} ${trasPrecio} ${trasFoto}`);
+  });
+  await prueba("FOT", "foto de un producto oculto: 404 sin sesión, sin caché con el dueño", async () => {
+    const url = await urlFoto();
+    await pedir("PUT", `/api/admin/productos/${prodFoto}`, { sesion: dueno, body: { ...datosFoto, precio: 77, visible: false } });
+    const [sin, con] = await Promise.all([pedir("GET", url), pedir("GET", url, { sesion: { cookie: dueno.cookie } })]);
+    return espera(sin.status === 404 && con.status === 200 && /no-store/.test(con.headers.get("cache-control")),
+      `${sin.status} ${con.status} ${con.headers.get("cache-control")}`);
+  });
+  await prueba("FOT", "las fotos no gastan el límite de 300 peticiones de la API", async () => {
+    const ip = nuevaIp();
+    for (let i = 0; i < 31; i++) await Promise.all(Array.from({ length: 10 }, () => pedir("GET", fotoInicial, { ip })));
+    const r = await pedir("GET", "/api/stands", { ip });
+    return espera(r.status === 200, r.status);
+  });
+
   // ---------- Errores sin detalles ----------
   await prueba("—", "404 de la API sin detalles internos", async () => {
     const r = await pedir("GET", "/api/no-existe");

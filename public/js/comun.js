@@ -647,6 +647,7 @@ if (matchMedia("(hover: hover)").matches) {
 }
 
 // opciones.conTienda: muestra la tienda (búsqueda y vitrina)
+// opciones.primera: tarjeta de la primera fila, que se ve al abrir; su foto se pide de inmediato y no al acercarse
 function tarjetaProducto(p, opciones = {}) {
   const enlace = `/p/${Number(p.id)}`;
   const etiquetas = etiquetasProducto(p);
@@ -655,7 +656,7 @@ function tarjetaProducto(p, opciones = {}) {
   const carrusel = fotos.length > 1 ? ` carrusel-marco" data-fotos="${escapeHTML(fotos.join(" "))}` : "";
   return `
     <article class="card">
-      <a class="card-img-wrap${carrusel}" href="${enlace}" tabindex="-1" aria-hidden="true"><img src="${escapeHTML(fotos[0])}" alt="" loading="lazy"></a>
+      <a class="card-img-wrap${carrusel}" href="${enlace}" tabindex="-1" aria-hidden="true"><img src="${escapeHTML(fotos[0])}" alt="" ${opciones.primera ? "" : `loading="lazy" `}decoding="async"></a>
       ${opciones.conTienda ? `<a class="card-sub" href="/t/${escapeHTML(p.slug)}">${escapeHTML(p.tienda)}</a>` : ""}
       <h3><a class="card-link" href="${enlace}">${escapeHTML(p.nombre)}</a></h3>
       ${estrellas(p.calificacion, p.resenas)}
@@ -666,6 +667,36 @@ function tarjetaProducto(p, opciones = {}) {
       ${accionProducto(p, opciones)}
       <div data-wa-for="${Number(p.id)}"></div>
     </article>`;
+}
+
+// ================= Cargar al acercarse (plan 2026-11-11-carga-progresiva-y-cache-de-fotos) =================
+// Llama fn cuando el elemento queda a `margen` de entrar a la pantalla. Así lo de abajo (más tarjetas, la vitrina,
+// las opiniones) se pide y se pinta solo si el usuario baja hasta ahí. Sin IntersectionObserver, llama fn de una vez.
+// Con repetir, sigue observando: fn se llama cada vez que el elemento se acerca, y si devuelve true (pintó más)
+// se vuelve a revisar, porque el elemento puede seguir cerca. Devuelve esa misma función de revisar, para usarla
+// cuando la lista cambia (un filtro, otra pestaña).
+function alAcercarse(elemento, fn, { margen = "600px", repetir = false } = {}) {
+  if (!elemento) return () => {};
+  if (!("IntersectionObserver" in window)) {
+    fn();
+    return () => {};
+  }
+  const observador = new IntersectionObserver(entradas => {
+    if (!entradas.some(e => e.isIntersecting)) return;
+    if (!repetir) {
+      observador.disconnect();
+      fn();
+      return;
+    }
+    if (fn()) revisar();
+  }, { rootMargin: `${margen} 0px ${margen} 0px` });
+  // Al volver a observar, el navegador manda de nuevo si está cerca o no
+  function revisar() {
+    observador.unobserve(elemento);
+    requestAnimationFrame(() => observador.observe(elemento));
+  }
+  observador.observe(elemento);
+  return revisar;
 }
 
 // ================= Vitrina de ofertas (final de la portada y de cada tienda) =================

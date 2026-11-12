@@ -292,6 +292,18 @@ Plan `plans/planes/2026-10-31-seo-iconos-contenido-y-legal.md` (recomendaciones 
   registro. Los huecos `[COMPLETAR]` los llena el responsable.
 - **Rendimiento:** gzip para todo lo que es texto (`mod_deflate` en `.htaccess`), fuentes con caché de 30 días, y
   el contenido reserva su alto mientras llegan los datos para que la página no salte.
+- **Fotos guardadas en el navegador** (plan `2026-11-11-carga-progresiva-y-cache-de-fotos.md`): la dirección de cada
+  foto lleva `?v=` con su huella (`imagen_v` / `portada_v`, columnas que calcula la base con `MD5` de la imagen), que
+  solo cambia cuando cambia la foto. Con la versión al día, `servir_imagen()` responde `max-age` de un año e
+  `immutable`: el navegador no la vuelve a pedir. Con otra versión o sin `?v=`, 5 minutos y luego 304 con
+  `If-None-Match` (la imagen no se lee de la base). Las fotos extra del carrusel no se reemplazan nunca: su id es su
+  versión. Las fotos públicas no leen ni renuevan la sesión y tienen su propio límite (`fotos`, 2000 cada 15 min por
+  IP), aparte de las 300 peticiones de la API. Las ocultas siguen sin caché y solo para quien puede editarlas.
+- **Cargar al hacer scroll:** `alAcercarse()` de `comun.js` (con `IntersectionObserver`). En `/t/<slug>` los
+  productos y servicios se agregan solos de 12 en 12 al acercarse al final (sin IntersectionObserver vuelven los
+  botones "Mostrar más") y la vitrina se pide al llegar abajo. En la portada, las opiniones y la vitrina se piden al
+  acercarse (con `#ancla` o `?q=` de una vez); el tablero y las promociones, al abrir. El encabezado de la tienda
+  (nombre, descripción, pestañas y subcategorías) llega pintado desde el servidor (`con_encabezado_tienda()`).
 - **CDN: no se usa.** La CDN de IONOS solo funciona en subdominios (`www.necutla.com`) y el sitio usa
   `necutla.com` como dirección única (cookie `__Host-`, vista previa, Turnstile). Además, todas las visitas
   llegarían con la IP de Cloudflare y habría que cambiar `ip_cliente()`. Los visitantes son de la misma zona, así

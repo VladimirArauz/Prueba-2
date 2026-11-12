@@ -49,7 +49,7 @@ function recortar(string $texto, int $largo): string
 
 function og_de_tienda(string $slug): ?array
 {
-    $s = fila('SELECT id, nombre, descripcion, imagen_ruta, actualizado_en, (portada IS NOT NULL) AS tiene_portada
+    $s = fila('SELECT id, nombre, descripcion, imagen_ruta, actualizado_en, (portada IS NOT NULL) AS tiene_portada, portada_v
                FROM stands WHERE slug = ? AND visible', [mb_substr($slug, 0, 60)]);
     if (!$s) return null;
     $og = [
@@ -295,6 +295,50 @@ function con_tablero(string $html): string
     return $html;
 }
 
+// Tienda (plan 2026-11-11): el encabezado (nombre, descripción, aviso de WhatsApp, pestañas y subcategorías) llega
+// ya pintado, para que las tarjetas no bajen de golpe cuando responde la API (era un salto de 0.13 a 1280 y 0.33 a 360).
+// tienda.js lo vuelve a pintar igual, con las mismas reglas. Si la base falla, se queda el HTML de siempre.
+function con_encabezado_tienda(string $html, string $slug): string
+{
+    try {
+        $s = fila('SELECT id, nombre, descripcion, icono FROM stands WHERE slug = ? AND visible', [mb_substr($slug, 0, 60)]);
+        if (!$s) return $html;
+        $cuenta = fila("SELECT SUM(tipo = 'producto') AS productos, SUM(tipo = 'servicio') AS servicios FROM productos WHERE stand_id = ? AND visible", [$s['id']]);
+        $ofertas = (int) valor('SELECT COUNT(*) FROM ofertas WHERE stand_id = ? AND activa AND (fin IS NULL OR fin >= ?)', [$s['id'], hoy()['fecha']]);
+        $subs = filas("SELECT sc.nombre, sc.slug FROM subcategorias sc WHERE sc.stand_id = ?
+                         AND EXISTS (SELECT 1 FROM productos p WHERE p.subcategoria_id = sc.id AND p.visible AND p.tipo = 'producto')
+                       ORDER BY sc.orden, sc.nombre", [$s['id']]);
+    } catch (Throwable $e) {
+        error_log('Necutla: encabezado de tienda sin datos: ' . $e->getMessage());
+        return $html;
+    }
+    $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    $icono = '<svg class="icon" aria-hidden="true"><use href="#i-' . $e($s['icono'] ?: 'store') . '"></use></svg>';
+    $html = preg_replace_callback('#<h1 id="store-title">.*?</h1>#s', fn() => '<h1 id="store-title">' . $icono . $e($s['nombre']) . '</h1>', $html, 1);
+    $html = str_replace('<p id="store-desc"></p>', '<p id="store-desc">' . $e($s['descripcion']) . '</p>', $html);
+    $html = str_replace('id="store-meta" hidden', 'id="store-meta"', $html);
+
+    // Mismas reglas que pestanasDisponibles(), cambiarTab() y renderFiltros() de tienda.js
+    $totales = ['productos' => (int) $cuenta['productos'], 'servicios' => (int) $cuenta['servicios'], 'ofertas' => $ofertas];
+    $nombres = ['productos' => 'Productos', 'servicios' => 'Servicios', 'ofertas' => 'Ofertas'];
+    $tabs = array_values(array_filter(array_keys($nombres), fn($t) => $t !== 'ofertas' || $ofertas));
+    $pedida = is_string($_GET['tab'] ?? null) ? $_GET['tab'] : '';
+    $activa = $pedida === 'ofertas' && in_array('ofertas', $tabs, true) ? 'ofertas' : 'productos';
+    $botones = implode('', array_map(fn($t) => '<button type="button" class="btn secondary btn-sm" data-action="tab" data-tab="' . $t
+        . '" aria-pressed="' . ($t === $activa ? 'true' : 'false') . '">' . $nombres[$t] . ' (' . $totales[$t] . ')</button>', $tabs));
+    if (count($tabs) >= 2) {
+        $html = str_replace('aria-label="Secciones de la tienda" hidden></div>', 'aria-label="Secciones de la tienda">' . $botones . '</div>', $html);
+    }
+    if ($activa === 'productos' && count($subs) >= 2) {
+        $sub = is_string($_GET['sub'] ?? null) ? $_GET['sub'] : '';
+        $boton = fn($slug, $nombre) => '<button type="button" class="btn secondary btn-sm" data-action="filtrar" data-sub="' . $e($slug)
+            . '" aria-pressed="' . ($sub === $slug ? 'true' : 'false') . '">' . $e($nombre) . '</button>';
+        $filtros = $boton('', 'Todo') . implode('', array_map(fn($x) => $boton($x['slug'], $x['nombre']), $subs));
+        $html = str_replace('aria-label="Subcategorías" hidden></div>', 'aria-label="Subcategorías">' . $filtros . '</div>', $html);
+    }
+    return $html;
+}
+
 // Devuelve la respuesta de la página, o null si la ruta no es una página (la atiende la API)
 function pagina_publica(string $ruta): ?Respuesta
 {
@@ -328,6 +372,7 @@ function pagina_publica(string $ruta): ?Respuesta
     // Los controles del carrusel llegan visibles: si aparecieran con el JS, en celular empujarían el texto
     if (!empty($og['varias_fotos'])) $html = str_replace('id="producto-fotos" hidden', 'id="producto-fotos"', $html);
     if ($archivo === 'index.html') $html = con_tablero($html);
+    if ($archivo === 'tienda.html' && !empty($og)) $html = con_encabezado_tienda($html, $m[1]);
     $html = con_web_analytics($html);
     $html = con_tag_manager($html, $archivo);
     // Igual que el HTML estático (public/.htaccess): se revalida siempre

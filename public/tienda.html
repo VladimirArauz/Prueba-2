@@ -103,7 +103,9 @@
 
     <!-- Título para lectores de pantalla y buscadores: las tarjetas llevan h3 y no deben saltarse el h2 -->
     <h2 class="visually-hidden" id="store-grid-title">Catálogo de la tienda</h2>
-    <section class="grid" id="store-grid" aria-live="polite" aria-labelledby="store-grid-title"></section>
+    <section class="grid" id="store-grid" aria-labelledby="store-grid-title"></section>
+    <div class="centinela" id="store-centinela" aria-hidden="true"></div>
+    <p class="visually-hidden" id="store-cuenta" aria-live="polite"></p>
     <div id="store-empty"></div>
     <div class="list-more" id="store-more" hidden>
       <button type="button" class="btn secondary" data-action="ver-mas">
@@ -120,6 +122,8 @@
         </div>
       </div>
       <div class="grid" id="servicios-grid"></div>
+      <div class="centinela" id="servicios-centinela" aria-hidden="true"></div>
+      <p class="visually-hidden" id="servicios-cuenta" aria-live="polite"></p>
       <div id="servicios-empty"></div>
       <div class="list-more" id="servicios-more" hidden>
         <button type="button" class="btn secondary" data-action="ver-mas-servicios">
@@ -129,6 +133,7 @@
       </div>
     </section>
 
+    <div class="centinela" id="vitrina-centinela" aria-hidden="true"></div>
     <section class="vitrina" id="vitrina" aria-labelledby="vitrina-title" hidden>
       <div class="section-header-row">
         <div>

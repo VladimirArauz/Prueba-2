@@ -512,3 +512,12 @@ CREATE TABLE IF NOT EXISTS producto_color_fotos (
   KEY producto_color_fotos_color_idx (color_id, orden),
   CONSTRAINT producto_color_fotos_color_fk FOREIGN KEY (color_id) REFERENCES producto_colores (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- 2026-11-11: versión de cada foto (plan 2026-11-11-carga-progresiva-y-cache-de-fotos.md) ----------
+
+-- Huella de la imagen, calculada por la base: solo cambia cuando cambia la foto (no al editar precio o stock).
+-- Va en el ?v= de la dirección, así el navegador guarda la foto un año y baja la nueva en cuanto se cambia.
+ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_v CHAR(12) AS (LEFT(MD5(imagen), 12)) STORED;
+ALTER TABLE producto_colores ADD COLUMN IF NOT EXISTS imagen_v CHAR(12) AS (LEFT(MD5(imagen), 12)) STORED;
+ALTER TABLE promociones ADD COLUMN IF NOT EXISTS imagen_v CHAR(12) AS (LEFT(MD5(imagen), 12)) STORED;
+ALTER TABLE stands ADD COLUMN IF NOT EXISTS portada_v CHAR(12) AS (LEFT(MD5(portada), 12)) STORED;

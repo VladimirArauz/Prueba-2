@@ -244,8 +244,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const q = (new URLSearchParams(location.search).get("q") || "").trim();
   if (q) buscarDesdeBarra(q);
   iniciarGiro();
-  cargarTiendas();
+  const tiendas = cargarTiendas();
   cargarPromociones();
-  cargarPruebaSocial();
-  cargarVitrina();
+  // Opiniones y vitrina van debajo del directorio: se piden al acercarse (plan 2026-11-11). Con un #ancla o una
+  // búsqueda en la dirección se piden de una vez, para que no aparezcan arriba de donde salta la página.
+  let pedidas = false;
+  const abajo = () => {
+    if (pedidas) return;
+    pedidas = true;
+    cargarPruebaSocial();
+    cargarVitrina();
+  };
+  // Se empieza a observar ya con las tarjetas de tiendas pintadas: antes, la marca queda arriba y se pediría de una vez
+  if (location.hash || q) abajo();
+  else Promise.resolve(tiendas).finally(() => alAcercarse(document.getElementById("portada-centinela"), abajo, { margen: "800px" }));
+  // Un salto sin scroll suave (#como-funciona con movimiento reducido) puede brincarse la marca
+  window.addEventListener("hashchange", abajo);
 });

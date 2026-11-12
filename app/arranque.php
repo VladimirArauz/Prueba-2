@@ -97,6 +97,12 @@ const PRIVADAS = '#^/(admin|auth|clientes|config|carrito|pedidos)(/|$)|^/stands/
 // Fotos públicas de productos y portadas de tienda: son las únicas de la API que Google puede indexar
 const FOTOS_INDEXABLES = '#^/(stands/[0-9]+/portada|productos/[0-9]+/(imagen|fotos/[0-9]+))/?$#i';
 
+// Todas las fotos guardadas en la base (plan 2026-11-11). Las públicas no leen ni renuevan la sesión (sin consultas a
+// `sesiones` ni Set-Cookie en cada foto) y tienen su propio límite: así una tienda con muchas fotos no gasta las 300
+// peticiones de la API. Las ocultas cargan la sesión dentro de servir_imagen() (app/api.php).
+const FOTOS = '#^/(stands/[0-9]+/portada|(productos|colores)/[0-9]+/(imagen|fotos/[0-9]+)|promociones/[0-9]+/imagen)/?$#i';
+const MAX_FOTOS = 2000;
+
 // Convierte cualquier error en la respuesta que daba Node
 function respuesta_de_error(Throwable $e): Respuesta
 {
@@ -148,13 +154,20 @@ function atender(): void
     $cabeceras = preg_match(FOTOS_INDEXABLES, $rutaApi) ? [] : ['X-Robots-Tag' => 'noindex, nofollow'];
     if (preg_match(PRIVADAS, $rutaApi)) $cabeceras['Cache-Control'] = 'no-store';
     $conSesion = false;
+    $esFoto = ($metodo === 'GET' || $metodo === 'HEAD') && preg_match(FOTOS, $rutaApi);
     try {
-        limitar('api', 300, MIN_15, 'Demasiadas peticiones. Espera unos minutos.');
+        if ($esFoto) {
+            limitar('fotos', MAX_FOTOS, MIN_15, 'Demasiadas peticiones. Espera unos minutos.');
+        } else {
+            limitar('api', 300, MIN_15, 'Demasiadas peticiones. Espera unos minutos.');
+        }
         exigir_mismo_origen();
         Peticion::$cuerpo = leer_json($rutaApi);
-        Sesion::cargar();
-        $conSesion = true;
-        vida_maxima();
+        if (!$esFoto) {
+            Sesion::cargar();
+            $conSesion = true;
+            vida_maxima();
+        }
 
         rutas_auth();
         rutas_clientes();
