@@ -53,6 +53,7 @@ Cómo se usa:
 | `2026-11-08-robots-y-search-console.md` | Aplicado, subido a IONOS y comprobado en Inspección de URLs. Falta que Google lea el sitemap y `robots.txt` | 2026-11-08 |
 | `2026-11-09-fotos-editor-carrusel-color-y-footer.md` | Aplicado (prompts 1 a 7) y subido a IONOS (2026-11-09). Falta que el usuario agregue fotos a los colores en Necutools y lo revise | 2026-11-09 |
 | `2026-11-11-carga-progresiva-y-cache-de-fotos.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-11). Falta revisar en Search Console que la portada y las tiendas sigan mostrando sus tarjetas | 2026-11-11 |
+| `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` | Aplicado en local (prompts 1 a 3); falta subirlo a IONOS (prompt 4) | 2026-11-21 |
 
 ---
 
@@ -118,6 +119,15 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-21: carrusel en servicios y mensaje nuevo de WhatsApp de servicio (plan `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md`, prompts 1 a 3, en local)
+- **Prompt 1 (fotos):** `app/admin.php`: `POST /api/admin/productos/:id/fotos` ya acepta servicios (antes "Las fotos adicionales son solo para productos."); el aviso del máximo dice "Un servicio" o "Un producto". `public/js/necutools.js`: `productoEnEdicion()` (producto o servicio) para el carrusel y `productoConColores()` solo para colores; en un servicio el botón de subsección dice "Fotos", no hay tarjeta de colores ni botones de destino, y los textos de la ayuda, la barra de guardar y el aviso de salir no hablan de colores. Un servicio nuevo queda abierto en Fotos al guardarlo, igual que un producto en Colores y fotos. `public/necutools.html` (`#fotos-intro`), `README.md`. Sin cambios en la base: los servicios ya usaban `producto_fotos`. Lo público (`/p/<id>`, tarjetas y JSON-LD) ya pintaba el carrusel con cualquier tipo.
+- **Prompt 2 (mensaje):** `mensajeServicio()` y `textoPlanoWA()` en `public/js/comun.js`; `pedirServicio()` de `public/js/tienda.js` (antes una sola línea) y de `public/js/producto.js` lo usan, así que el texto es el mismo desde la tienda y desde `/p/<id>`. Lleva tienda, servicio, precio (con una línea para "Desde" y otra para "A cotizar"), descripción de hasta 160 caracteres (sin `*`, `_`, `~` ni saltos, y se omite si dice "de ejemplo"), nombre del cliente si hay sesión, fecha, 3 preguntas (disponibilidad, tiempo y qué necesitan, cómo se agenda y se paga), enlace y cierre. No cambió `enviarPorWhatsApp()`, `medirServicio()` ni los números.
+- **Pruebas locales** (Playwright del venv de `~/estudio/tests` con Chrome, 1280, 360 y movimiento reducido; dueño y encargado temporales; sesión de cliente y números simulados, `window.open` capturado, sin abrir WhatsApp): 57 de 57 (subsección Fotos, agregar 3 PNG reales de 25 y 200 KB, ordenar, borrar, sexta foto 400, encargado ajeno 403, producto con colores sin cambios, carrusel en `/p/36` y en la tarjeta, mensaje igual en los dos lugares con "desde" y "cotizar", con y sin sesión y sin descripción, CLS menor a 0.02, sin errores ni scroll horizontal). `ataques.js`: 6 pruebas "SRV"; 316 de 316. Lo que crearon las pruebas se borró de la base local (quedan 62 productos y 0 fotos extra; también sesiones, límites e intentos locales).
+
+### 2026-11-21: plan de carrusel en servicios y mensaje de WhatsApp de servicio
+- Nuevo plan `plans/planes/2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` y sus 4 prompts en `plans/prompts/` (mismo nombre). No se cambió código.
+- Hallazgos: los servicios son filas de `productos` y `producto_fotos` ya les sirve; lo público ya pinta el carrusel con cualquier tipo. Lo impiden `app/admin.php` (rechaza fotos extra si no es producto) y `productoConColores()` en `public/js/necutools.js`. El mensaje de la tarjeta de la tienda (`tienda.js`) es de una línea y el de `/p/<id>` (`producto.js`) es distinto: el plan los une en `mensajeServicio()`.
 
 ### 2026-11-20: el correo de la tienda ahora es `yancore@necutla.com`
 

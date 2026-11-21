@@ -617,11 +617,12 @@ function rutas_admin(): void
     post('/api/admin/productos/:id/fotos', function ($idRuta) {
         $admin = requiere_admin();
         $producto = exigir_producto_admin($idRuta);
+        // Productos y servicios (plan 2026-11-21-servicios-carrusel-y-mensaje-whatsapp)
         $info = fila('SELECT p.tipo, (SELECT COUNT(*) FROM producto_fotos f WHERE f.producto_id = p.id) AS fotos,
                              (SELECT COALESCE(MAX(f.orden), -1) FROM producto_fotos f WHERE f.producto_id = p.id) AS ultimo
                       FROM productos p WHERE p.id = ?', [$producto['id']]);
-        if ($info['tipo'] !== 'producto') throw dato_invalido('Las fotos adicionales son solo para productos.');
-        if ((int) $info['fotos'] >= MAX_FOTOS_EXTRA) throw dato_invalido('Un producto puede tener hasta ' . MAX_FOTOS_EXTRA . ' fotos además de la principal. Elimina una para agregar otra.');
+        $quien = $info['tipo'] === 'servicio' ? 'Un servicio' : 'Un producto';
+        if ((int) $info['fotos'] >= MAX_FOTOS_EXTRA) throw dato_invalido("$quien puede tener hasta " . MAX_FOTOS_EXTRA . ' fotos además de la principal. Elimina una para agregar otra.');
         $imagen = imagen_de(cuerpo()) ?? throw dato_invalido('Elige la foto que quieres agregar.');
         q('INSERT INTO producto_fotos (producto_id, imagen, imagen_tipo, orden) VALUES (?, ?, ?, ?)',
           [$producto['id'], $imagen['bytes'], $imagen['tipo'], (int) $info['ultimo'] + 1]);

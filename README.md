@@ -105,7 +105,8 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
 - **Carruseles de fotos**: el producto base tiene su carrusel (la imagen principal y hasta 5 fotos más,
   `producto_fotos`) y cada color tiene el suyo (su foto y hasta 5 más, `producto_color_fotos`). Se editan en
   Necutools → Colores y fotos → Carrusel. En la página del producto se ve el carrusel base y, al elegir un
-  color, el de ese color. Las tarjetas usan el base.
+  color, el de ese color. Las tarjetas usan el base. Los servicios también tienen carrusel (su imagen principal
+  y hasta 5 fotos más en `producto_fotos`, sin colores): se editan en Necutools → Editar servicio → Fotos.
 - **Fotos que no caben**: `ajustarFoto()` de `comun.js` muestra completa (`.foto-completa`, `object-fit:
   scale-down`) la foto que `cover` recortaría más del 20 % o que es mucho más chica que su marco; las franjas
   toman el color del borde de la foto (`--foto-fondo`) o `--gis`. El archivo guardado no se toca.

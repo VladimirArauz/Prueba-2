@@ -866,12 +866,13 @@ function pintarBarraProducto() {
   const p = st.editando.producto;
   const enColores = sub === "colores";
   const sucio = st.productoSucio;
+  const servicio = p && p.tipo === "servicio";
   $("producto-barra").hidden = sub === "catalogo";
   $("producto-guardar").hidden = enColores && !sucio;
   document.querySelector('[data-action="cancelar"][data-form="producto"]').hidden = !p || (enColores && !sucio);
   $("producto-volver").hidden = !enColores || sucio;
   $("producto-estado").textContent = enColores && !sucio
-    ? "Los colores y las fotos se guardan al agregarlos"
+    ? (servicio ? "Las fotos se guardan al agregarlas" : "Los colores y las fotos se guardan al agregarlos")
     : `${p ? `Editando: ${p.nombre} · ` : ""}${sucio ? "Cambios sin guardar" : p ? "Todo guardado" : "Llena los datos y guarda"}`;
 }
 
@@ -884,7 +885,9 @@ function marcarProducto(sucio) {
 async function puedeDejarProducto() {
   if (!st.productoSucio) return true;
   return confirmar({ tipo: "peligro", titulo: "¿Salir sin guardar?",
-    mensaje: "Los cambios que hiciste en los datos del producto se pierden. Los colores y las fotos ya están guardados.", aceptar: "Salir sin guardar" });
+    mensaje: st.editando.producto && st.editando.producto.tipo === "servicio"
+      ? "Los cambios que hiciste en los datos del servicio se pierden. Las fotos ya están guardadas."
+      : "Los cambios que hiciste en los datos del producto se pierden. Los colores y las fotos ya están guardados.", aceptar: "Salir sin guardar" });
 }
 
 // Un campo obligatorio vacío en una subsección oculta no puede recibir el foco: primero se muestra
@@ -964,6 +967,12 @@ function productoConColores() {
   return p && p.tipo === "producto" ? p : null;
 }
 
+// Producto o servicio que se está editando: los dos tienen carrusel (plan 2026-11-21-servicios-carrusel-y-mensaje-whatsapp)
+function productoEnEdicion() {
+  const editando = st.editando.producto;
+  return editando ? st.productos.find(x => x.id === editando.id) || null : null;
+}
+
 // ================= Más fotos de un producto (plan 2026-11-08-carrusel-fotos-producto) =================
 const MAX_FOTOS_EXTRA = 5;
 
@@ -972,20 +981,27 @@ function destinoCarrusel(p) {
   const color = p.colores.find(c => c.id === st.carrusel);
   if (!color) {
     st.carrusel = "base";
-    return { nombre: "Producto base", sujeto: p.nombre, principal: imagenDe(p), fotos: p.fotos, ruta: `/admin/productos/${p.id}/fotos`,
-      borrar: id => `/admin/fotos/${id}`, ayuda: "La foto principal se cambia en Editar producto." };
+    const servicio = p.tipo === "servicio";
+    return { nombre: servicio ? "Servicio" : "Producto base", sujeto: p.nombre, principal: imagenDe(p), fotos: p.fotos, ruta: `/admin/productos/${p.id}/fotos`,
+      borrar: id => `/admin/fotos/${id}`, ayuda: `La foto principal se cambia en ${servicio ? "Editar servicio" : "Editar producto"}.` };
   }
   return { nombre: color.nombre, sujeto: `${p.nombre} (${color.nombre})`, principal: color.imagen_url || imagenDe(p), fotos: color.fotos, ruta: `/admin/colores/${color.id}/fotos`,
     borrar: id => `/admin/color-fotos/${id}`, ayuda: "La foto principal se cambia al editar este color." };
 }
 
 function renderFotos() {
-  const p = productoConColores();
+  const p = productoEnEdicion();
   $("fotos-card").hidden = !p;
   if (!p) return;
   const d = destinoCarrusel(p);
   const total = d.fotos.length;
+  const servicio = p.tipo === "servicio";
   $("fotos-title").textContent = `Carrusel de ${p.nombre}`;
+  $("fotos-intro").textContent = servicio
+    ? "Las fotos del servicio pasan solas en su página y al pasar el mouse por su tarjeta."
+    : "Producto base: lo primero que ve el cliente al entrar. Cada color tiene su propio carrusel, que se ve cuando el cliente elige ese color.";
+  // Un servicio no tiene colores: solo hay un carrusel
+  $("carrusel-destinos").hidden = servicio;
   $("carrusel-destinos").innerHTML = [{ id: "base", nombre: "Producto base" }, ...p.colores].map(o => `
     <button type="button" class="btn secondary btn-sm" data-action="carrusel-destino" data-destino="${o.id}" aria-pressed="${o.id === st.carrusel}">${escapeHTML(o.nombre)}</button>`).join("");
   $("fotos-ayuda").textContent = `Estás editando: ${d.nombre}. ${d.ayuda} Puedes agregar hasta ${MAX_FOTOS_EXTRA} fotos más.`;
@@ -1010,7 +1026,7 @@ function renderFotos() {
 async function guardarFoto(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const p = productoConColores();
+  const p = productoEnEdicion();
   if (!p) return;
   await enviar(form, async () => {
     const d = destinoCarrusel(p);
@@ -1024,7 +1040,7 @@ async function guardarFoto(event) {
 }
 
 async function moverFoto(id, cambio) {
-  const p = productoConColores();
+  const p = productoEnEdicion();
   if (!p) return;
   const d = destinoCarrusel(p);
   const ids = d.fotos.map(f => f.id);
@@ -1040,7 +1056,7 @@ async function moverFoto(id, cambio) {
 }
 
 async function borrarFoto(id) {
-  const p = productoConColores();
+  const p = productoEnEdicion();
   if (!p) return;
   const d = destinoCarrusel(p);
   if (!(await confirmar({ tipo: "peligro", titulo: "¿Eliminar esta foto?",
@@ -1057,9 +1073,12 @@ async function borrarFoto(id) {
 function renderColores() {
   renderFotos();
   const p = productoConColores();
+  const enEdicion = productoEnEdicion();
   $("colores-card").hidden = !p;
-  $("sub-btn-colores").hidden = !p;
-  if (!p && subseccionActiva("productos") === "colores") mostrarSubseccion("productos", "datos");
+  // En un servicio la subsección solo lleva el carrusel
+  $("sub-btn-colores").hidden = !enEdicion;
+  $("sub-btn-colores").textContent = enEdicion && enEdicion.tipo === "servicio" ? "Fotos" : "Colores y fotos";
+  if (!enEdicion && subseccionActiva("productos") === "colores") mostrarSubseccion("productos", "datos");
   if (!p) return;
   $("colores-title").textContent = `Colores de ${p.nombre}`;
   $("color-list").innerHTML = p.colores.length ? p.colores.map(c => `
@@ -1225,8 +1244,8 @@ async function guardarProducto(event) {
     // La lista abre en "Por resurtir": si no sale ahí, que no parezca que no se guardó
     const fuera = guardadoP && $("prod-stock-filtro").value === "resurtir" && !guardadoP.por_resurtir ? ". Lo ves eligiendo Todos en Stock" : "";
     showToast(`${editando ? "Actualizado" : "Guardado"}: ${guardado.nombre}${piezas}${fuera}`);
-    // Un producto nuevo se queda abierto para agregarle sus colores
-    if (!editando && body.tipo === "producto") {
+    // Un producto nuevo se queda abierto para agregarle sus colores; un servicio, para sus fotos
+    if (!editando) {
       editarProducto(guardado.id);
       mostrarSubseccion("productos", "colores");
     }

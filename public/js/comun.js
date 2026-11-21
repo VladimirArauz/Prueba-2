@@ -322,6 +322,47 @@ function enlaceSitio(ruta) {
   return location.origin + ruta;
 }
 
+// Texto del vendedor dentro del mensaje: en una línea y sin * ni _ (WhatsApp los toma como negritas o cursivas)
+function textoPlanoWA(texto, maximo) {
+  const limpio = String(texto || "").replace(/[*_~`]/g, "").replace(/\s+/g, " ").trim();
+  if (limpio.length <= maximo) return limpio;
+  const corte = limpio.slice(0, maximo);
+  return `${corte.slice(0, corte.lastIndexOf(" ") > maximo * 0.6 ? corte.lastIndexOf(" ") : maximo).replace(/[\s.,;:]+$/, "")}…`;
+}
+
+// Mensaje para pedir información de un servicio: el mismo desde la tienda y desde /p/<id>
+// (plan 2026-11-21-servicios-carrusel-y-mensaje-whatsapp)
+function mensajeServicio(servicio, tienda) {
+  const cotizar = servicio.precio_modo === "cotizar" || servicio.precio === null;
+  const lineas = [
+    "🛠️ *Solicitud de servicio desde Necutla*",
+    SEPARADOR_WA,
+    `¡Hola, *${tienda}*! Vi su servicio en Necutla y me interesa.`,
+    "",
+    `🔧 *Servicio:* ${servicio.nombre}`,
+    `💵 *Precio:* ${cotizar ? "A cotizar" : textoPrecio(servicio)}`
+  ];
+  if (cotizar) lineas.push("    Me gustaría saber cuánto costaría.");
+  else if (servicio.precio_modo === "desde") lineas.push("    Entiendo que el precio final depende de lo que necesite.");
+  const detalles = /de ejemplo/i.test(servicio.descripcion || "") ? "" : textoPlanoWA(servicio.descripcion, 160);
+  if (detalles) lineas.push(`📝 *Detalles:* ${detalles}`);
+  const cliente = compra && compra.autenticado && compra.nombre ? textoPlanoWA(compra.nombre, 80) : "";
+  if (cliente) lineas.push(`👤 *Cliente:* ${cliente}`);
+  lineas.push(
+    `📅 *Fecha:* ${fechaMensaje()}`,
+    SEPARADOR_WA,
+    "❓ *Me gustaría saber:*",
+    "• ¿Tienen disponibilidad?",
+    "• ¿Cuánto tarda y qué necesitan de mi parte?",
+    "• ¿Cómo lo agendamos y cómo se paga?",
+    SEPARADOR_WA,
+    `🔗 Ver el servicio: ${enlaceSitio(`/p/${servicio.id}`)}`,
+    "",
+    "¡Gracias! Quedo al pendiente 🙌"
+  );
+  return lineas.join("\n");
+}
+
 // Abre el chat con el primer número. Si hay más vendedores, deja botones para escribirles también
 // (abrir varias ventanas seguidas lo bloquea el navegador).
 function abrirWhatsApp(numeros, mensaje, contenedor) {

@@ -1206,6 +1206,37 @@ async function main() {
     return espera(r.status === 404, r.status);
   });
 
+  // ---------- Carrusel de los servicios (plan 2026-11-21-servicios-carrusel-y-mensaje-whatsapp) ----------
+  const servicioFotos = await ctx.producto(A, { tipo: "servicio", precio_modo: "fijo", stock: undefined });
+  const fotosDelServicio = [];
+  await prueba("SRV", "sin sesión no se agregan fotos a un servicio", async () => {
+    const r = await pedir("POST", `/api/admin/productos/${servicioFotos}/fotos`, { body: fotoColor });
+    return espera(r.status === 401, r.status);
+  });
+  await prueba("SRV", "un encargado de otra tienda no agrega fotos al servicio", async () => {
+    const r = await pedir("POST", `/api/admin/productos/${servicioFotos}/fotos`, { body: fotoColor, sesion: encAjeno });
+    return espera(r.status === 403, r.status);
+  });
+  await prueba("SRV", "imagen falsa en la foto de un servicio → 400", async () => {
+    const r = await pedir("POST", `/api/admin/productos/${servicioFotos}/fotos`, { sesion: dueno,
+      body: { imagen: dataUrl("image/png", Buffer.from("<script>alert(1)</script>")) } });
+    return espera(r.status === 400, r.status);
+  });
+  await prueba("SRV", "el encargado de la tienda agrega hasta 5 al servicio y la sexta → 400", async () => {
+    for (let i = 0; i < 5; i++) fotosDelServicio.push((await pedir("POST", `/api/admin/productos/${servicioFotos}/fotos`, { body: fotoColor, sesion: encA })).json.id);
+    const r = await pedir("POST", `/api/admin/productos/${servicioFotos}/fotos`, { body: fotoColor, sesion: encA });
+    return espera(fotosDelServicio.every(Boolean) && r.status === 400 && /Un servicio/.test(r.json.error), `${fotosDelServicio} ${r.status}`);
+  });
+  await prueba("SRV", "las fotos del servicio salen en su detalle y en su tienda", async () => {
+    const [detalle, tienda] = await Promise.all([pedir("GET", `/api/productos/${servicioFotos}`), pedir("GET", `/api/stands/${A.slug}`)]);
+    const enTienda = (tienda.json.servicios || []).find(s => s.id === servicioFotos);
+    return espera(detalle.json.fotos.length === 5 && enTienda && enTienda.fotos.length === 5, `${detalle.json.fotos.length} ${enTienda && enTienda.fotos.length}`);
+  });
+  await prueba("SRV", "un encargado de otra tienda no borra la foto del servicio", async () => {
+    const r = await pedir("DELETE", `/api/admin/fotos/${fotosDelServicio[0]}`, { sesion: encAjeno });
+    return espera(r.status === 403, r.status);
+  });
+
   // ---------- Caché de fotos (plan 2026-11-11-carga-progresiva-y-cache-de-fotos) ----------
   const datosFoto = { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, stock: 100, visible: true };
   const prodFoto = await ctx.producto(A, { imagen: dataUrl("image/png", PNG_1x1) });

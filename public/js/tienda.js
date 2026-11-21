@@ -224,8 +224,7 @@ function pedirServicio(boton) {
   if (!puedePedir()) return void (location.href = rutaACuenta());
   const servicio = estado.datos.servicios.find(s => s.id === id);
   if (!servicio) return;
-  const mensaje = `¡Hola! Vi en Necutla el servicio *${servicio.nombre}* de ${estado.datos.tienda.nombre} ` +
-    `(${textoPrecio(servicio)}). Quisiera más información, por favor.`;
+  const mensaje = mensajeServicio(servicio, estado.datos.tienda.nombre);
   if (enviarPorWhatsApp(boton, estado.datos.tienda.whatsapp, mensaje, document.querySelector(`[data-wa-for="${id}"]`), "Chat abierto en WhatsApp")) {
     medirServicio(servicio, estado.datos.tienda.nombre);
   }
