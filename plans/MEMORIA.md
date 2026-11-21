@@ -123,7 +123,7 @@ Cómo se usa:
 
 - El buzón `tienda@necutla.com` cambió a `yancore@necutla.com` (misma contraseña). Probado: SMTP `smtp.ionos.mx:465` con `AUTH LOGIN` aceptado (235) y correo de prueba enviado a sí mismo.
 - Cambiado en `app/config.php` (remitente local), `app/config.ejemplo.php`, `app/paginas.php` (JSON-LD), `public/index.html`, `public/privacidad.html`, `public/terminos.html`, `public/.well-known/security.txt` y `README.md`. Los planes, prompts y auditorías anteriores se dejan como historial.
-- Falta subir a IONOS y cambiar `usuario` y `remitente` en el `app/config.php` del servidor (`~/necutla/app/config.php`).
+- IONOS (con permiso del usuario): los 5 archivos del servidor eran la versión anterior a `c12a314`; respaldo en `~/necutla/respaldos/2026-11-20-yancore/antes.tar` (incluye `app/config.php`, permisos 600). `usuario` y `remitente` cambiados en el `config.php` del servidor; 5 archivos por rsync, idénticos. En vivo: `/healthz` 200, las páginas ya muestran `yancore@`, y un correo de prueba enviado con la configuración del servidor salió bien (235/250).
 
 ### 2026-11-20: hosting de IONOS ordenado en `necutla/` y `tlapi/`
 
