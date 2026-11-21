@@ -193,7 +193,7 @@ function jsonld_portada(): array
             'name' => 'Necutla',
             'url' => url_completa('/'),
             'logo' => url_completa('/imagenes/icono-512.png'),
-            'email' => 'tienda@necutla.com',
+            'email' => 'yancore@necutla.com',
         ],
     ];
 }

@@ -119,6 +119,12 @@ Cómo se usa:
 
 ## Cambios hechos
 
+### 2026-11-20: el correo de la tienda ahora es `yancore@necutla.com`
+
+- El buzón `tienda@necutla.com` cambió a `yancore@necutla.com` (misma contraseña). Probado: SMTP `smtp.ionos.mx:465` con `AUTH LOGIN` aceptado (235) y correo de prueba enviado a sí mismo.
+- Cambiado en `app/config.php` (remitente local), `app/config.ejemplo.php`, `app/paginas.php` (JSON-LD), `public/index.html`, `public/privacidad.html`, `public/terminos.html`, `public/.well-known/security.txt` y `README.md`. Los planes, prompts y auditorías anteriores se dejan como historial.
+- Falta subir a IONOS y cambiar `usuario` y `remitente` en el `app/config.php` del servidor (`~/necutla/app/config.php`).
+
 ### 2026-11-20: hosting de IONOS ordenado en `necutla/` y `tlapi/`
 
 - Con permiso del usuario. `app/`, `public/`, `respaldos/` y `scripts/` se copiaron con `cp -a` a `~/necutla/` (verificadas con `diff -rq`, idénticas; `respaldos` conserva permisos 700). Sin cambios en el código ni en la base. Tlapi quedó en `~/tlapi/`.

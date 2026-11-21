@@ -43,9 +43,9 @@ return [
         'modo' => 'smtp',
         'host' => 'smtp.ionos.mx',
         'puerto' => 465,
-        'usuario' => 'tienda@necutla.com',
+        'usuario' => 'yancore@necutla.com',
         'password' => 'CAMBIA-ESTO',
-        'remitente' => 'tienda@necutla.com',
+        'remitente' => 'yancore@necutla.com',
         'nombre' => 'Necutla',
     ],
 

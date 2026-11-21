@@ -142,7 +142,7 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   quitar una palabra se edita la lista de ese archivo: `GROSERIAS_PALABRAS` (palabra completa, para las que van dentro de
   palabras normales, como "puta" en computadora) o `GROSERIAS_RAICES` (cuentan dentro de otra palabra).
 - **Código por correo** (`app/codigos.php`, `app/correo.php`, `public/js/codigo.js`): entrar, crear la cuenta,
-  eliminarla y "¿Olvidaste tu contraseña?" piden un código de 6 dígitos que llega desde `tienda@necutla.com`. Vence a los
+  eliminarla y "¿Olvidaste tu contraseña?" piden un código de 6 dígitos que llega desde `yancore@necutla.com`. Vence a los
   10 minutos, sirve una vez, aguanta 5 intentos y solo vale en el navegador que lo pidió; se reenvía cada 60 s
   (5 por hora). La cuenta se crea hasta poner el código, y entonces la sesión se inicia sola. Restablecer no dice
   si una cuenta existe. En local los correos se guardan en `/tmp/necutla-correos/` (`correo.modo = 'archivo'`).
