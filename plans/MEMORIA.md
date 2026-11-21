@@ -119,6 +119,12 @@ Cómo se usa:
 
 ## Cambios hechos
 
+### 2026-11-20: hosting de IONOS ordenado en `necutla/` y `tlapi/`
+
+- Con permiso del usuario. `app/`, `public/`, `respaldos/` y `scripts/` se copiaron con `cp -a` a `~/necutla/` (verificadas con `diff -rq`, idénticas; `respaldos` conserva permisos 700). Sin cambios en el código ni en la base. Tlapi quedó en `~/tlapi/`.
+- El usuario cambió el destino del dominio a `necutla/public`. En vivo: el sitio sirve desde la carpeta nueva (archivo de prueba temporal, ya borrado); `/healthz`, portada, tiendas, producto, carrito, cuenta, Necutools, sitemap y robots dan 200; `app/config.php` y `api/index.php` dan 404 y `.htaccess` 403. Login y pedido real no se probaron (Turnstile). Luego, con permiso, se borraron `~/app`, `~/public`, `~/respaldos`, `~/scripts` y `~/huella`.
+- **Desde ahora:** la subida por rsync va a `~/necutla/` y los respaldos del servidor a `~/necutla/respaldos/`. Las rutas `~/respaldos/...` de entradas viejas apuntan a la ubicación de antes (hoy `~/necutla/respaldos/...`).
+
 ### 2026-11-11: carga progresiva y caché de fotos subidas a IONOS (prompt 5)
 - Con permiso del usuario. Los 11 archivos del servidor eran la versión de `17ab4e5`. Respaldo en `~/respaldos/2026-11-11-carga-progresiva/`: `antes.tar` (11 archivos) y `antes.sql` (base completa con `--hex-blob`, 66 MB), ambos con permisos 600. Las 4 columnas se crearon **antes** del código, con conteos iguales (8 tiendas, 15 productos, 2 colores, 60 fotos de producto, 4 de color, 0 promociones, 5 pedidos, 3 clientes, 0 opiniones, 3 admins); todas las imágenes quedaron con su versión. Se subió por rsync y los 11 archivos quedaron idénticos.
 - En vivo con `curl`: `/healthz` y 9 rutas 200. Foto con su versión: un año e `immutable`, con `ETag`. Con `If-None-Match`, 304. Sin `?v=`, 5 minutos. Foto extra: un año. Encabezado de la tienda pintado desde el servidor; sin números de WhatsApp sin sesión.
