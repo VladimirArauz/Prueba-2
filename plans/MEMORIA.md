@@ -53,11 +53,13 @@ Cómo se usa:
 | `2026-11-08-robots-y-search-console.md` | Aplicado, subido a IONOS y comprobado en Inspección de URLs. Falta que Google lea el sitemap y `robots.txt` | 2026-11-08 |
 | `2026-11-09-fotos-editor-carrusel-color-y-footer.md` | Aplicado (prompts 1 a 7) y subido a IONOS (2026-11-09). Falta que el usuario agregue fotos a los colores en Necutools y lo revise | 2026-11-09 |
 | `2026-11-11-carga-progresiva-y-cache-de-fotos.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-11). Falta revisar en Search Console que la portada y las tiendas sigan mostrando sus tarjetas | 2026-11-11 |
-| `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` | Aplicado en local (prompts 1 a 3); falta subirlo a IONOS (prompt 4) | 2026-11-21 |
+| `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` | Aplicado (prompts 1 a 4) y subido a IONOS (2026-11-21). Falta que el usuario agregue fotos a un servicio y pruebe el mensaje en WhatsApp | 2026-11-21 |
 
 ---
 
 ## Pendientes
+
+**Carrusel en servicios y mensaje de servicio (2026-11-21, subido):** (a) El usuario agrega fotos a un servicio en Necutools → Editar servicio → Fotos y manda una solicitud real por WhatsApp Web y por el celular para ver el mensaje nuevo. En vivo hay 1 solo servicio (id 59, Propaganda) y sin fotos extra. (b) Respaldo en `~/necutla/respaldos/2026-11-21-servicios/antes.tar` (6 archivos, permisos 600). (c) Si un servicio no tiene foto principal (usa el dibujo de ejemplo), su carrusel solo muestra las fotos extra, igual que en los productos.
 
 **Carga progresiva y caché de fotos (2026-11-11, subido):** (a) (Resuelto 2026-11-11: subido a IONOS, ver "Cambios hechos".) **Si se restaura `app/` en otra base, las columnas `imagen_v` y `portada_v` deben existir antes:** sin ellas fallan las tiendas, los productos, la vitrina, la búsqueda y Necutools. El respaldo completo previo está en `~/respaldos/2026-11-11-carga-progresiva/antes.sql` del servidor (66 MB, permisos 600, lleva datos personales): borrarlo cuando ya no haga falta. (b) Al subir, las direcciones de todas las fotos cambian una vez (`?v=` pasa de fecha a huella): cada visitante las baja de nuevo una sola vez. (c) Según la guía de Google sobre carga diferida (leída el 2026-11-11), `IntersectionObserver` sirve "si carga todo el contenido relevante cuando está visible en la pantalla"; dice que "Google Search no interactúa con la página" y no dice de qué tamaño es su ventana. En la tienda, los productos después de los 12 primeros solo aparecen al bajar (antes, solo con el botón): se indexan por su `/p/<id>` del sitemap. Para un scroll infinito indexable, Google pide páginas con dirección propia (`?page=2`); no se hizo. Revisar en Inspección de URLs que `/` y `/t/tecnologia` sigan mostrando sus tarjetas. (d) La vitrina de la tienda solo se pide al terminar de bajar todos los productos.
 
@@ -119,6 +121,11 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-21: carrusel en servicios y mensaje de servicio subidos a IONOS (prompt 4)
+- Con permiso del usuario ("súbelo"; el primer intento lo frenó el clasificador de permisos sin tocar nada). Los 6 archivos del servidor (`app/admin.php`, `public/js/comun.js`, `necutools.js`, `producto.js`, `tienda.js`, `public/necutools.html`) eran la versión de `2f2ad2a`; respaldo en `~/necutla/respaldos/2026-11-21-servicios/antes.tar` (permisos 600), rsync, idénticos. Sin cambios en la base.
+- En vivo: `/healthz` 200, `comun.js` nuevo, ninguna tienda publica números sin sesión. Con Chrome a 1280, 360 y movimiento reducido, sin crear datos (sesión y números simulados, `window.open` capturado, fotos extra simuladas en el navegador con 3 fotos reales del producto 58): 25 de 28. Carrusel de 4 en `/p/59` y en su tarjeta (cambia con el mouse), mensaje igual en la tienda y en `/p/59` con cliente y enlace a https://necutla.com/p/59, sin errores, sin scroll horizontal y nada a Google sin aceptar. Las 3 fallas fueron el CLS de `/p/59` en la primera visita (0.025 a 1280 y 0.065 a 360), que viene del aviso de cookies (pendiente (a2) del carrusel); con las cookies decididas, 0.0002 a 1280 y 0 a 360.
+- Credenciales leídas a variables (script de la carpeta temporal con `sshpass -e`), sin imprimirlas.
 
 ### 2026-11-21: carrusel en servicios y mensaje nuevo de WhatsApp de servicio (plan `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md`, prompts 1 a 3, en local)
 - **Prompt 1 (fotos):** `app/admin.php`: `POST /api/admin/productos/:id/fotos` ya acepta servicios (antes "Las fotos adicionales son solo para productos."); el aviso del máximo dice "Un servicio" o "Un producto". `public/js/necutools.js`: `productoEnEdicion()` (producto o servicio) para el carrusel y `productoConColores()` solo para colores; en un servicio el botón de subsección dice "Fotos", no hay tarjeta de colores ni botones de destino, y los textos de la ayuda, la barra de guardar y el aviso de salir no hablan de colores. Un servicio nuevo queda abierto en Fotos al guardarlo, igual que un producto en Colores y fotos. `public/necutools.html` (`#fotos-intro`), `README.md`. Sin cambios en la base: los servicios ya usaban `producto_fotos`. Lo público (`/p/<id>`, tarjetas y JSON-LD) ya pintaba el carrusel con cualquier tipo.

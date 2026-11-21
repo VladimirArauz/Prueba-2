@@ -1,7 +1,7 @@
 # Carrusel de fotos en servicios y mensaje de WhatsApp de servicio
 
 - **Fecha:** 2026-11-21
-- **Estado:** en curso
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md`
 - **Alcance:** (1) que los servicios puedan tener hasta 5 fotos más que la principal, con el mismo carrusel que los productos; (2) un mensaje de WhatsApp para pedir información de un servicio igual de cuidado que el del carrito, y el mismo desde la tienda y desde la página del servicio.
 
