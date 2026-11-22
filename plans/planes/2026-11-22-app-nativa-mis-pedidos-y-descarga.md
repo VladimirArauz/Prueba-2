@@ -1,7 +1,7 @@
 # Mis pedidos, app nativa de Android y descarga del APK desde la web
 
 - **Fecha:** 2026-11-22
-- **Estado:** en curso
+- **Estado:** aplicado
 - **Prompts:** `plans/prompts/2026-11-22-app-nativa-mis-pedidos-y-descarga.md`
 - **Alcance:** subsección "Mis pedidos" en Mi cuenta (web y API), regla de trabajo "cada cambio también en la app con APK nuevo", app de Android **nativa** (Kotlin + Compose) con todas las funciones del sitio y de Necutools sobre la misma API, y botón "Descargar la app para Android" en el pie de todas las páginas y en la portada, que siempre baja el último APK. **Reemplaza** a `2026-11-22-app-android-studio.md` (la app WebView 1.0.0).
 

@@ -55,7 +55,7 @@ Cómo se usa:
 | `2026-11-11-carga-progresiva-y-cache-de-fotos.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-11). Falta revisar en Search Console que la portada y las tiendas sigan mostrando sus tarjetas | 2026-11-11 |
 | `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` | Aplicado (prompts 1 a 4) y subido a IONOS (2026-11-21). Falta que el usuario agregue fotos a un servicio y pruebe el mensaje en WhatsApp | 2026-11-21 |
 | `2026-11-22-app-android-studio.md` | Descartado: lo reemplaza `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` (al usuario no le gustó la app WebView 1.0.0) | 2026-11-22 |
-| `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` | En curso: prompts 1 a 9 hechos en local (la app 2.0.0 compila y está firmada, sin probar en un teléfono). Falta el prompt 10 (subir a IONOS, pide permiso) | 2026-11-22 |
+| `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` | Aplicado (prompts 1 a 10) y subido a IONOS (2026-11-22). Falta probar la app 2.0.0 en un teléfono | 2026-11-22 |
 
 ---
 
@@ -63,7 +63,7 @@ Cómo se usa:
 
 **Regla de trabajo vigente (2026-11-22, pedida por el usuario):** todo cambio de Necutla (web, API o Necutools) se aplica también a la app de Android en la misma tarea, y cada modificación genera un APK nuevo con versión subida (`versionName` semver y `versionCode` +1) en `~/Escritorio/Versiones Necutla Movil/Android/Necutla-X.Y.Z.apk`, sin borrar los anteriores. Desde el prompt 9 del plan de la app nativa, también se actualizan `public/app/necutla-android.apk` y `public/app/version.json` para que el botón de descarga baje la última. Lo que solo existe en la web no cambia la app. `plans/CLAUDE.md` no se tocó: si la quiere ahí, que lo pida.
 
-**App nativa, Mis pedidos y descarga (2026-11-22, en curso):** falta el prompt 10 de `plans/prompts/2026-11-22-app-nativa-mis-pedidos-y-descarga.md` (subir Mis pedidos, `public/app/`, `app-captcha.js`, `assetlinks.json`, `.htaccess`, el pie y la portada a IONOS, con permiso). **La 2.0.0 no se ha abierto en ningún teléfono ni emulador** (no hay imagen de sistema instalada): antes de subirla conviene que el usuario la instale sobre la 1.0.0 y recorra entrar, carrito, pedido, Mis pedidos y Necutools. Sin la página `/app/captcha.html` en IONOS, la app no puede entrar ni pedir. Lo pendiente de la app WebView (probar la 1.0.0 en un teléfono) ya no aplica; siguen (b) respaldar la llave, (c) subir `assetlinks.json` (va en el prompt 10) y (d) las notificaciones.
+**App nativa, Mis pedidos y descarga (2026-11-22, subido):** (a) **La 2.0.0 no se ha abierto en ningún teléfono ni emulador**: el usuario la baja de https://necutla.com (pie o portada), la instala sobre la 1.0.0 y recorre entrar, carrito, pedido, Mis pedidos, Necutools y el aviso de versión. Si algo falla, se corrige en una 2.0.1. (b) Las pruebas con dueño y encargado temporales de los prompts 6 y 7 no se hicieron (sin emulador). (c) Respaldo en `~/necutla/respaldos/2026-11-22-app-nativa/antes.tar` (16 archivos, permisos 600). (d) Los App Links (`assetlinks.json`) ya están en vivo; Android los verifica al instalar.
 
 **App de Android (2026-11-22):** (a) Probar `~/Escritorio/Versiones Necutla Movil/Android/Necutla-1.0.0.apk` en un teléfono real: no hubo teléfono ni emulador, así que solo se compiló y se verificó la firma. (b) **Respaldar la llave** `~/.necutla-firma/necutla-release.jks` y `keystore.properties` del proyecto: sin ellas no se puede actualizar la app en Play Store. (c) `public/.well-known/assetlinks.json` está listo pero **no subido** (pide permiso). (d) Siguen pendientes el plan de PWA, el diseño móvil en el sitio y las notificaciones (en el WebView no funciona Web Push: hará falta Firebase o una Trusted Web Activity). (e) iPhone: sin Mac, se queda como PWA.
 
@@ -129,6 +129,11 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-22: Mis pedidos, app 2.0.0 y descarga subidos a IONOS (prompt 10)
+- Con permiso del usuario. Commit `8cdab59`. Los 16 archivos que ya existían en el servidor eran la versión de `b385924`; respaldo en `~/necutla/respaldos/2026-11-22-app-nativa/antes.tar` (permisos 600). Subidos 21 archivos por rsync a `~/necutla/` (con `app/clientes.php` y `public/js/cuenta.js` de Mis pedidos, `public/app/`, `app-captcha.js` y `assetlinks.json`), idénticos. Sin cambios en la base.
+- En vivo con `curl`: `/healthz` 200; `/api/clientes/pedidos` sin sesión 401; `/app/necutla-android.apk` 200, `application/vnd.android.package-archive`, `attachment` como `Necutla.apk`, `no-cache`, `noindex` y SHA-256 igual al del escritorio; `version.json` y `assetlinks.json` con `application/json`; `/app/captcha.html` 200.
+- Chrome en vivo a 1280, 360 y movimiento reducido: 63 de 63 (sección de la portada con versión y tamaño, botón que baja `Necutla.apk`, enlace e icono en el pie, sin scroll horizontal, CLS menor a 0.02, sin errores y nada a Google sin aceptar). Mis pedidos con sesión no se probó en vivo (Turnstile). Credenciales leídas a variables, sin imprimirlas.
 
 ### 2026-11-22: app nativa 2.0.0 compilada y descarga desde la web (plan `2026-11-22-app-nativa-mis-pedidos-y-descarga.md`, prompts 2 a 9, solo en local)
 - La sesión anterior se cortó (se apagó la compu) con el código de los prompts 2 a 8 escrito y sin compilar; esta sesión lo compiló. En `~/AndroidStudioProjects/NecutlaMovil`: Compose + Material 3, Navigation, OkHttp, Coil 3 (con SVG); `data/` (`Red`, `Galletas` con la cookie cifrada por el Keystore, `PuenteCaptcha`, `Estado`, `Formato`), `ui/` (tema con los tokens, Archivo con `wdth`, iconos Lucide, `HojaCaptcha`, aviso de versión nueva), `ui/pantallas/` (Inicio, Tienda, Producto, Buscar, Carrito, Mi cuenta con Mis pedidos) y `ui/necutools/` (resumen, pedidos, catálogo, gestión y lo demás). Variante `debug` (`com.necutla.app.debug`) contra `http://10.0.2.2:8081`.
