@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Revisión de seguridad | Necutla</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="app-captcha">
+  <!-- Solo para la app de Android: Turnstile no tiene SDK nativo y corre en un WebView
+       (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga). El token se entrega a la app. -->
+  <main class="app-captcha-main">
+    <p class="app-captcha-estado" id="captcha-estado" role="status" aria-live="polite">Revisando que no eres un robot…</p>
+    <div class="captcha" id="captcha"></div>
+  </main>
+  <script src="/js/app-captcha.js"></script>
+</body>
+</html>

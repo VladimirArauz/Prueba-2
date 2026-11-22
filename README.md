@@ -314,6 +314,30 @@ Plan `plans/planes/2026-10-31-seo-iconos-contenido-y-legal.md` (recomendaciones 
   llegarían con la IP de Cloudflare y habría que cambiar `ip_cliente()`. Los visitantes son de la misma zona, así
   que gzip y caché dan casi lo mismo. El revisor de IONOS seguirá marcando ese punto.
 
+## App de Android
+
+La app nativa (Kotlin + Jetpack Compose) vive en `~/AndroidStudioProjects/NecutlaMovil` y usa la misma API de
+`https://necutla.com/api/...` que el sitio (no tiene base propia). La variante `debug` apunta a `http://10.0.2.2:8081`
+(el XAMPP de esta compu visto desde el emulador). Turnstile corre en una hoja con WebView sobre
+`/app/captcha.html` (`public/js/app-captcha.js`), que entrega el token a la app.
+
+Cómo se publica una versión nueva:
+
+1. Sube `versionName` (corrección = parche, función nueva = menor) y `versionCode` (+1) en `app/build.gradle.kts`.
+2. Compila como el usuario dueño del proyecto, con el Java de Android Studio:
+   `JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleRelease`.
+3. Revisa la firma: `apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk`
+   (la huella SHA-256 debe ser la de `public/.well-known/assetlinks.json`).
+4. Copia el APK a `~/Escritorio/Versiones Necutla Movil/Android/Necutla-X.Y.Z.apk` (sin borrar las anteriores)
+   y a `public/app/necutla-android.apk` (nombre fijo: el botón siempre baja ese).
+5. Actualiza `public/app/version.json` (`version`, `versionCode`, `tamano` en bytes, `sha256`, `fecha`,
+   `minimo_android`). La app lo lee al abrir y, si `versionCode` es mayor que el suyo, ofrece descargar la nueva.
+6. Sube `public/app/` a IONOS. `.htaccess` sirve el APK como `application/vnd.android.package-archive`, con
+   `attachment`, `no-cache` y `noindex`.
+
+La llave de firma (`~/.necutla-firma/necutla-release.jks`) y `keystore.properties` no van a git: sin ellas no se
+puede actualizar la app instalada.
+
 ## Seguridad
 
 Auditoría completa en `plans/auditorias/2026-10-20-seguridad.md` (se hizo sobre la versión en Node; la

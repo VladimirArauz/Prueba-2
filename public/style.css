@@ -4837,3 +4837,28 @@ img.admin-thumb.foto-completa {
     flex: 1;
   }
 }
+
+/* Página del captcha de la app de Android (public/app/captcha.html, plan 2026-11-22-app-nativa-mis-pedidos-y-descarga) */
+.app-captcha {
+  background: var(--hoja);
+}
+
+.app-captcha-main {
+  padding: 8px 0;
+}
+
+.app-captcha-estado {
+  margin: 0 0 8px;
+  color: var(--texto-2);
+}
+
+/* Enlace de descarga de la app en el pie (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga) */
+.footer-app {
+  color: var(--hoja);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-app:hover {
+  color: var(--senal);
+}

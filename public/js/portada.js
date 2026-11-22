@@ -230,6 +230,22 @@ function buscarDesdeBarra(q) {
   buscar(null);
 }
 
+// Versión y tamaño del APK de Android (public/app/version.json, plan 2026-11-22-app-nativa-mis-pedidos-y-descarga)
+async function cargarVersionApp() {
+  const texto = document.getElementById("app-version");
+  if (!texto) return;
+  try {
+    const r = await fetch("/app/version.json", { cache: "no-cache" });
+    if (!r.ok) return;
+    const v = await r.json();
+    const mb = (Number(v.tamano) / 1048576).toLocaleString("es-MX", { maximumFractionDigits: 1 });
+    texto.innerHTML = `Versión <span class="precio-num">${escapeHTML(String(v.version))}</span>, ` +
+      `<span class="precio-num">${escapeHTML(mb)}</span> MB, para Android ${escapeHTML(String(v.minimo_android))} o más nuevo.`;
+  } catch (e) {
+    // Se queda el texto del HTML
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("search-form").addEventListener("submit", buscar);
   document.getElementById("search-input").addEventListener("input", alEscribirBusqueda);
@@ -260,4 +276,5 @@ document.addEventListener("DOMContentLoaded", () => {
   else Promise.resolve(tiendas).finally(() => alAcercarse(document.getElementById("portada-centinela"), abajo, { margen: "800px" }));
   // Un salto sin scroll suave (#como-funciona con movimiento reducido) puede brincarse la marca
   window.addEventListener("hashchange", abajo);
+  alAcercarse(document.getElementById("app-android"), cargarVersionApp, { margen: "800px" });
 });

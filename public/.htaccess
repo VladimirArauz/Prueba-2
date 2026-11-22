@@ -18,6 +18,8 @@ ErrorDocument 403 /404.html
     AddType application/manifest+json .webmanifest
     AddType font/woff2 .woff2
     AddType image/x-icon .ico
+    AddType application/json .json
+    AddType application/vnd.android.package-archive .apk
 </IfModule>
 
 RewriteEngine On
@@ -105,6 +107,16 @@ RewriteRule \.(php[0-9]?|phtml|phar)$ - [R=404,L]
     <FilesMatch "\.woff2?$">
         Header set Cache-Control "public, max-age=2592000"
     </FilesMatch>
+
+    # App de Android (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga): el APK y version.json se revalidan
+    # siempre, para que el botón baje la última versión; se descarga con nombre fijo y no se indexa.
+    <FilesMatch "^(necutla-android\.apk|version\.json|captcha\.html)$">
+        Header set Cache-Control "no-cache"
+        Header set X-Robots-Tag "noindex, nofollow"
+    </FilesMatch>
+    <Files "necutla-android.apk">
+        Header set Content-Disposition "attachment; filename=\"Necutla.apk\""
+    </Files>
 
     # Necutools no debe aparecer en buscadores
     <Files "necutools.html">
