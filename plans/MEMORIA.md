@@ -54,10 +54,18 @@ Cómo se usa:
 | `2026-11-09-fotos-editor-carrusel-color-y-footer.md` | Aplicado (prompts 1 a 7) y subido a IONOS (2026-11-09). Falta que el usuario agregue fotos a los colores en Necutools y lo revise | 2026-11-09 |
 | `2026-11-11-carga-progresiva-y-cache-de-fotos.md` | Aplicado (prompts 1 a 5) y subido a IONOS (2026-11-11). Falta revisar en Search Console que la portada y las tiendas sigan mostrando sus tarjetas | 2026-11-11 |
 | `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` | Aplicado (prompts 1 a 4) y subido a IONOS (2026-11-21). Falta que el usuario agregue fotos a un servicio y pruebe el mensaje en WhatsApp | 2026-11-21 |
+| `2026-11-22-app-android-studio.md` | Descartado: lo reemplaza `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` (al usuario no le gustó la app WebView 1.0.0) | 2026-11-22 |
+| `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` | En curso: prompt 1 (Mis pedidos en la web) hecho en local | 2026-11-22 |
 
 ---
 
 ## Pendientes
+
+**Regla de trabajo vigente (2026-11-22, pedida por el usuario):** todo cambio de Necutla (web, API o Necutools) se aplica también a la app de Android en la misma tarea, y cada modificación genera un APK nuevo con versión subida (`versionName` semver y `versionCode` +1) en `~/Escritorio/Versiones Necutla Movil/Android/Necutla-X.Y.Z.apk`, sin borrar los anteriores. Desde el prompt 9 del plan de la app nativa, también se actualizan `public/app/necutla-android.apk` y `public/app/version.json` para que el botón de descarga baje la última. Lo que solo existe en la web no cambia la app. `plans/CLAUDE.md` no se tocó: si la quiere ahí, que lo pida.
+
+**App nativa, Mis pedidos y descarga (2026-11-22, propuesto):** correr los prompts de `plans/prompts/2026-11-22-app-nativa-mis-pedidos-y-descarga.md` en orden. Lo pendiente de la app WebView (probar la 1.0.0 en un teléfono) ya no aplica; siguen (b) respaldar la llave, (c) subir `assetlinks.json` (va en el prompt 10) y (d) las notificaciones.
+
+**App de Android (2026-11-22):** (a) Probar `~/Escritorio/Versiones Necutla Movil/Android/Necutla-1.0.0.apk` en un teléfono real: no hubo teléfono ni emulador, así que solo se compiló y se verificó la firma. (b) **Respaldar la llave** `~/.necutla-firma/necutla-release.jks` y `keystore.properties` del proyecto: sin ellas no se puede actualizar la app en Play Store. (c) `public/.well-known/assetlinks.json` está listo pero **no subido** (pide permiso). (d) Siguen pendientes el plan de PWA, el diseño móvil en el sitio y las notificaciones (en el WebView no funciona Web Push: hará falta Firebase o una Trusted Web Activity). (e) iPhone: sin Mac, se queda como PWA.
 
 **Carrusel en servicios y mensaje de servicio (2026-11-21, subido):** (a) El usuario agrega fotos a un servicio en Necutools → Editar servicio → Fotos y manda una solicitud real por WhatsApp Web y por el celular para ver el mensaje nuevo. En vivo hay 1 solo servicio (id 59, Propaganda) y sin fotos extra. (b) Respaldo en `~/necutla/respaldos/2026-11-21-servicios/antes.tar` (6 archivos, permisos 600). (c) Si un servicio no tiene foto principal (usa el dibujo de ejemplo), su carrusel solo muestra las fotos extra, igual que en los productos.
 
@@ -121,6 +129,32 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-22: Mis pedidos en Mi cuenta (plan `2026-11-22-app-nativa-mis-pedidos-y-descarga.md`, prompt 1, solo en local)
+- `app/clientes.php`: `GET /api/clientes/pedidos` (`requiere_cliente()`, 50 por página con `?antes=<id>` y `hay_mas`; reusa `UNIR_PEDIDO` y `lineas_de_pedidos()`; sin nota, huella ni stock; `no-store` por `PRIVADAS`). Los pedidos viejos sin `pedido_items` salen del JSON de respaldo. Sin cambios en la base (usa `pedidos_cliente_fecha_idx`).
+- `public/cuenta.html` (botón y subsección "Mis pedidos"), `public/js/cuenta.js` (`cargarMisPedidos`, `tarjetaPedido`, carga al abrir la subsección, "Ver más pedidos", estado vacío con "Explorar las tiendas"), `public/style.css` (`.mis-pedidos*`, `.precio-num`; el estado usa `.status-badge.is-<estado>` de Necutools), `README.md`.
+- **Desviación:** se ordena por `id` (no por `creado_en`) para que `?antes=<id>` pagine sin huecos; es el mismo orden.
+- Pruebas: `ataques.js` 323 de 323 (7 nuevas "MPD": sin sesión 401, solo los suyos, sin nota ni huella, `no-store`, `antes` inválido 400). Chrome (Playwright del venv) a 1280, 360 y movimiento reducido: 37 de 37 (3 pedidos en los 3 estados, orden, líneas, chip con tokens, sin scroll horizontal, CLS menor a 0.02, sin errores; cliente sin pedidos con estado vacío). "Ver más" (más de 50) no se probó en navegador: el límite de 20 pedidos por hora por cuenta lo impide. Datos de prueba y de `ataques.js` borrados de la base local (quedan 62 productos).
+- La app de Android lo tendrá en el prompt 5 (Mi cuenta nativa).
+
+### 2026-11-22: plan de Mis pedidos, app nativa de Android y descarga del APK
+- Pedido del usuario: subsección "Mis pedidos" en Mi cuenta con el estado de cada pedido; app de Android nativa (no WebView) con el diseño del lienzo y todas las funciones, **incluido Necutools** ("Todo de una vez"); botón "Descargar la app para Android" en el pie de todas las páginas y en la portada, que siempre baja el último APK; la app avisa sola de versiones nuevas.
+- Nuevo plan `plans/planes/2026-11-22-app-nativa-mis-pedidos-y-descarga.md` y sus 10 prompts en `plans/prompts/` (mismo nombre). `2026-11-22-app-android-studio.md` pasó a `descartado`. No se cambió código.
+- Estrategia: la app usa la misma API JSON de necutla.com (sin base local), cookie de sesión cifrada con el Keystore, `Origin: https://necutla.com` para pasar `exigir_mismo_origen()` sin tocar el servidor, y Turnstile en una hoja con WebView sobre `https://necutla.com/app/captcha.html` (el servidor revisa el `hostname`).
+- Regla nueva en la memoria de Claude (`app-movil-con-cada-cambio`) y en "Pendientes".
+
+### 2026-11-22: app de Android en Android Studio y APK 1.0.0 (plan `2026-11-22-app-android-studio.md`, prompt 1)
+- Decisiones del usuario: PWA y luego tiendas, notificaciones a clientes y vendedores, sin Mac. Pidió el proyecto de Android Studio y el APK en `~/Escritorio/Versiones Necutla Movil/Android/`.
+- Proyecto `~/AndroidStudioProjects/NecutlaMovil` (Kotlin sin Compose, AGP 9.5.1, Gradle 9.9.1, compileSdk y targetSdk 37, minSdk 26; `applicationId` `com.necutla.app`). `MainActivity` abre https://necutla.com en un WebView. Fuera de `necutla.com` todo se abre con su app: WhatsApp también desde `window.open` y `target="_blank"`, vía `onCreateWindow`. También tiene selector de fotos, Atrás, jalar para recargar, pantalla "Sin conexión", barra de progreso `--senal`, pantalla de arranque e icono adaptable (con monocromo), sin copia de seguridad y agente de usuario con ` NecutlaApp/1.0.0 (Android)`.
+- Firma: llave RSA 4096 en `~/.necutla-firma/necutla-release.jks` (600) y `keystore.properties` (600, ignorado por git). La contraseña se generó al azar y no se imprimió. Huella SHA-256 `41:38:B7:…:7C:16:7D`, la misma que lleva `public/.well-known/assetlinks.json` (creado, no subido).
+- `assembleRelease` compilado como el usuario. `apksigner verify` sin problemas (firma v2). `Necutla-1.0.0.apk` (171 KB) copiado al escritorio. Se hizo `git init` del proyecto con los archivos agregados, sin commit.
+- No se probó en un teléfono.
+
+### 2026-11-22: diseño de la app móvil (Android e iOS), solo diseño
+- Pedido del usuario: diseño de Necutla para teléfono en 2 versiones, con todas las funciones de la web; las funciones se conectan después. No se cambió código del sitio.
+- Lienzo de Claude (privado): https://claude.ai/artifact/LEtPcm84F9X3f9nwDKJsAU. Copia de las fuentes en `~/Escritorio/Necutla-app-diseno/` (`Android/`, `iOS/`, `canvas.json`, `LEEME.md`).
+- 8 pantallas por sistema: Inicio, Tienda, Producto, Carrito, Buscar y promociones, Mi cuenta, Necutools (entrar, dos pasos, resumen, pedidos) y Necutools gestión (productos, colores y fotos, tiendas, ofertas, opiniones, promociones, usuarios, bitácora, mi cuenta). Mismos colores, Archivo y botones de `plans/CLAUDE.md`. Android con barra inferior con píldora, cajón y snackbar; iOS con título grande, pestañas, controles segmentados, interruptores y hojas de acción.
+- Precios, conteos y opiniones van como `[PRECIO]`, `[N]`, etc. Pendiente: que el usuario lo revise y decida con qué se hace la app (PWA, Capacitor, nativa), que el plan registre en `plans/planes/`.
 
 ### 2026-11-21: carrusel en servicios y mensaje de servicio subidos a IONOS (prompt 4)
 - Con permiso del usuario ("súbelo"; el primer intento lo frenó el clasificador de permisos sin tocar nada). Los 6 archivos del servidor (`app/admin.php`, `public/js/comun.js`, `necutools.js`, `producto.js`, `tienda.js`, `public/necutools.html`) eran la versión de `2f2ad2a`; respaldo en `~/necutla/respaldos/2026-11-21-servicios/antes.tar` (permisos 600), rsync, idénticos. Sin cambios en la base.

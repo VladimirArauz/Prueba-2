@@ -136,6 +136,10 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   y código por correo (`/api/clientes/eliminar` y `/api/clientes/eliminar/codigo`). Se borran la cuenta, sus códigos,
   sus frenos de login y sus sesiones (la de Necutools del mismo navegador sigue). Sus opiniones se quedan con
   `cliente_id` en NULL y salen como "Cliente de Necutla" en la tienda y en Necutools.
+- **Mis pedidos** (Mi cuenta, plan `2026-11-22-app-nativa-mis-pedidos-y-descarga.md`): `GET /api/clientes/pedidos`
+  con sesión de cliente devuelve sus pedidos del más nuevo al más viejo, de 50 en 50 (`?antes=<id>` del último visto;
+  `hay_mas` dice si quedan), con tienda o paquete, estado (`en_proceso`, `pagado`, `cancelado`), total, fecha y
+  líneas (nombre, cantidad, subtotal y color). No lleva la nota del vendedor, la huella ni el stock. `no-store`.
 - **Sin groserías en lo público** (`app/groserias.php`, plan `2026-11-04-filtro-groserias.md`): nombre y usuario de
   los clientes, opiniones, respuestas de las tiendas y todo lo que se publica desde Necutools (tiendas, productos,
   servicios, subcategorías, colores, ofertas y promociones) pasan por `v_publico()` y dan 400 si llevan groserías en

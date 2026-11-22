@@ -304,6 +304,7 @@
 
       <div class="tabs subsecciones cuenta-subsecciones" role="group" aria-label="Secciones de Mi cuenta">
         <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="datos" aria-pressed="true">Mis datos</button>
+        <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="pedidos" aria-pressed="false">Mis pedidos</button>
         <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="contrasena" aria-pressed="false">Contraseña</button>
         <button type="button" class="btn secondary btn-sm" data-action="subseccion" data-grupo="mi-cuenta" data-sub="eliminar" aria-pressed="false">Eliminar mi cuenta</button>
       </div>
@@ -319,6 +320,18 @@
             <svg class="icon" aria-hidden="true"><use href="#i-log-out"></use></svg>
             Cerrar sesión
           </button>
+        </div>
+      </section>
+      </div>
+
+      <div class="subseccion" data-grupo="mi-cuenta" data-sub="pedidos" hidden>
+      <section class="admin-card admin-auth" aria-labelledby="pedidos-title">
+        <h2 id="pedidos-title">Mis pedidos</h2>
+        <p class="section-desc">Los pedidos que mandaste con tu cuenta y en qué van. La tienda cambia el estado cuando lo confirma o lo cobra.</p>
+        <p class="mis-pedidos-estado" id="mis-pedidos-estado" role="status" aria-live="polite"></p>
+        <ul class="mis-pedidos" id="mis-pedidos"></ul>
+        <div class="list-more" id="mis-pedidos-mas" hidden>
+          <button type="button" class="btn secondary" data-action="mis-pedidos-mas">Ver más pedidos</button>
         </div>
       </section>
       </div>

@@ -1237,6 +1237,30 @@ async function main() {
     return espera(r.status === 403, r.status);
   });
 
+  // ---------- Mis pedidos (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga) ----------
+  await prueba("MPD", "Mis pedidos sin sesión → 401", async () => {
+    const r = await pedir("GET", "/api/clientes/pedidos", { sesion: {} });
+    return espera(r.status === 401, r.status);
+  });
+  await prueba("MPD", "cada cliente ve solo sus pedidos, sin nota ni huella, y sin caché", async () => {
+    const yo = (await registrarCliente("mispedidos")).sesion;
+    const otro = (await registrarCliente("ajeno")).sesion;
+    const mio = await pedir("POST", "/api/pedidos", { sesion: yo, body: pedidoDe(A, prodA, 13) });
+    const suyo = await pedir("POST", "/api/pedidos", { sesion: otro, body: pedidoDe(A, prodA, 14) });
+    await pedir("PUT", `/api/admin/pedidos/${mio.json.id}`, { body: { nota: "Nota interna del vendedor" }, sesion: dueno });
+    const r = await pedir("GET", "/api/clientes/pedidos", { sesion: yo });
+    const ids = (r.json.pedidos || []).map(p => p.id);
+    return espera(r.status === 200 && ids.length === 1 && ids[0] === mio.json.id && !ids.includes(suyo.json.id)
+      && !r.texto.includes("Nota interna") && !r.texto.includes("huella") && r.headers.get("cache-control") === "no-store"
+      && r.json.pedidos[0].estado === "en_proceso" && r.json.pedidos[0].items[0].cantidad === 13, `${r.status} ${r.texto.slice(0, 200)}`);
+  });
+  for (const malo of ["0", "-1", "abc", "1 OR 1=1", "99999999999"]) {
+    await prueba("MPD", `Mis pedidos con ?antes=${malo} → 400`, async () => {
+      const r = await pedir("GET", `/api/clientes/pedidos?antes=${encodeURIComponent(malo)}`, { sesion: comprador });
+      return espera(r.status === 400, r.status);
+    });
+  }
+
   // ---------- Caché de fotos (plan 2026-11-11-carga-progresiva-y-cache-de-fotos) ----------
   const datosFoto = { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, stock: 100, visible: true };
   const prodFoto = await ctx.producto(A, { imagen: dataUrl("image/png", PNG_1x1) });

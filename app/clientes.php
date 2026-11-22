@@ -352,4 +352,39 @@ function rutas_clientes(): void
         cerrar_sesion_cliente();
         return ['autenticado' => false];
     });
+
+    // ================= Mis pedidos (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga) =================
+    // Solo los pedidos de esta cuenta, del más nuevo al más viejo, de 50 en 50 (?antes=<id> del último que se vio).
+    // Sin la nota del vendedor, la huella ni el stock: eso es de Necutools.
+    get('/api/clientes/pedidos', function () {
+        $cliente = requiere_cliente('Inicia sesión para ver tus pedidos.');
+        $antes = consulta('antes');
+        if ($antes !== null && (!is_string($antes) || !preg_match('/^[1-9][0-9]{0,9}$/', $antes))) throw dato_invalido('La página de pedidos no es válida.');
+        $params = [$cliente['id']];
+        $sql = 'SELECT pe.id, s.nombre AS tienda, pr.titulo AS paquete, pe.items, pe.total, pe.piezas, pe.estado, pe.creado_en' . UNIR_PEDIDO . ' WHERE pe.cliente_id = ?';
+        if ($antes !== null) {
+            $sql .= ' AND pe.id < ?';
+            $params[] = (int) $antes;
+        }
+        $filas = filas($sql . ' ORDER BY pe.id DESC LIMIT ' . (MIS_PEDIDOS_POR_PAGINA + 1), $params);
+        $hayMas = count($filas) > MIS_PEDIDOS_POR_PAGINA;
+        $filas = array_slice($filas, 0, MIS_PEDIDOS_POR_PAGINA);
+        $lineas = lineas_de_pedidos(array_column($filas, 'id'));
+        return [
+            'pedidos' => array_map(function ($f) use ($lineas) {
+                // Los pedidos de antes de pedido_items solo tienen el JSON de respaldo
+                $suyas = $lineas[$f['id']] ?? null;
+                $items = $suyas !== null
+                    ? array_map(fn($l) => ['nombre' => $l['nombre'], 'cantidad' => $l['cantidad'], 'subtotal' => $l['subtotal'], 'color' => $l['color']['nombre'] ?? null], $suyas)
+                    : array_map(fn($i) => ['nombre' => (string) ($i['nombre'] ?? ''), 'cantidad' => (int) ($i['cantidad'] ?? 0), 'subtotal' => a_float($i['subtotal'] ?? null), 'color' => null], array_values(array_filter(a_lista($f['items']), 'is_array')));
+                return [
+                    'id' => $f['id'], 'tienda' => $f['tienda'], 'paquete' => $f['paquete'], 'estado' => $f['estado'],
+                    'total' => (float) $f['total'], 'piezas' => $f['piezas'], 'creado_en' => fecha_iso($f['creado_en']), 'items' => $items,
+                ];
+            }, $filas),
+            'hay_mas' => $hayMas,
+        ];
+    });
 }
+
+const MIS_PEDIDOS_POR_PAGINA = 50;

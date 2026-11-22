@@ -1558,6 +1558,72 @@ textarea {
   margin: 16px auto 0;
 }
 
+/* Mis pedidos en Mi cuenta (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga) */
+.mis-pedidos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mis-pedidos-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mis-pedidos-cabeza h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.mis-pedidos-meta {
+  margin: 0;
+  color: var(--texto-2);
+  font-size: 0.875rem;
+}
+
+.mis-pedidos-total {
+  max-width: none;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--linea);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.precio-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mis-pedidos .pedido-items {
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mis-pedidos .pedido-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mis-pedidos-estado:empty {
+  display: none;
+}
+
+.mis-pedidos-item:hover {
+  border-color: var(--linea);
+}
+
 .form-actions .text-sm {
   color: var(--texto-2);
 }

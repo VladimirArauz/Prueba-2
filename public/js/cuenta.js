@@ -277,7 +277,68 @@ function prepararValidacion() {
   prepararPassword($("password-nueva"), { minimo: MIN_PASSWORD_CLIENTE, confirmar: $("password-confirmar") });
 }
 
+// ================= Mis pedidos (plan 2026-11-22-app-nativa-mis-pedidos-y-descarga) =================
+const ESTADO_PEDIDO = { en_proceso: "En proceso", pagado: "Pagado", cancelado: "Cancelado" };
+const misPedidos = { cargando: false, ultimo: null, vistos: 0 };
+
+function fechaPedido(iso) {
+  return new Date(iso).toLocaleString("es-MX", { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function tarjetaPedido(p) {
+  const estado = ESTADO_PEDIDO[p.estado] ? p.estado : "en_proceso";
+  const donde = p.paquete ? `Paquete ${p.paquete}` : (p.tienda || "Tienda que ya no existe");
+  const lineas = p.items.map(i => `<li><span>${Number(i.cantidad)} × ${escapeHTML(i.nombre)}${i.color ? ` (${escapeHTML(i.color)})` : ""}</span>${i.subtotal != null ? `<span class="precio-num">${money(i.subtotal)}</span>` : ""}</li>`).join("");
+  return `<li class="card mis-pedidos-item">
+    <div class="mis-pedidos-cabeza">
+      <h3>Pedido ${Number(p.id)}</h3>
+      <span class="status-badge is-${estado}">${ESTADO_PEDIDO[estado]}</span>
+    </div>
+    <p class="mis-pedidos-meta">${escapeHTML(donde)} · ${escapeHTML(fechaPedido(p.creado_en))}</p>
+    <ul class="pedido-items">${lineas}</ul>
+    <p class="mis-pedidos-total">Total <strong class="precio-num">${money(p.total)}</strong></p>
+  </li>`;
+}
+
+async function cargarMisPedidos(reiniciar = false) {
+  if (misPedidos.cargando) return;
+  misPedidos.cargando = true;
+  const lista = $("mis-pedidos");
+  const mas = $("mis-pedidos-mas");
+  if (reiniciar) {
+    misPedidos.ultimo = null;
+    misPedidos.vistos = 0;
+    lista.innerHTML = "";
+    mas.hidden = true;
+    pintarEsqueletos(lista, 2, "grupo");
+  }
+  const boton = mas.querySelector("button");
+  if (!reiniciar) botonOcupado(boton, "Cargando pedidos");
+  try {
+    const r = await api(`/clientes/pedidos${misPedidos.ultimo ? `?antes=${misPedidos.ultimo}` : ""}`);
+    if (reiniciar) lista.innerHTML = "";
+    lista.insertAdjacentHTML("beforeend", r.pedidos.map(tarjetaPedido).join(""));
+    misPedidos.vistos += r.pedidos.length;
+    if (r.pedidos.length) misPedidos.ultimo = r.pedidos[r.pedidos.length - 1].id;
+    mas.hidden = !r.hay_mas;
+    $("mis-pedidos-estado").innerHTML = misPedidos.vistos ? ""
+      : 'Todavía no tienes pedidos. <a href="/">Explorar las tiendas</a> y manda el primero por WhatsApp.';
+    if (!reiniciar && misPedidos.vistos) $("mis-pedidos-estado").textContent = `Mostrando ${misPedidos.vistos} pedidos.`;
+  } catch (error) {
+    if (reiniciar) lista.innerHTML = "";
+    $("mis-pedidos-estado").textContent = `${error.message} Vuelve a abrir Mis pedidos para intentar de nuevo.`;
+  } finally {
+    misPedidos.cargando = false;
+    botonListo(boton);
+  }
+}
+
+document.addEventListener("subseccion", event => {
+  if (event.detail.grupo === "mi-cuenta" && event.detail.sub === "pedidos") cargarMisPedidos(true);
+});
+
 Object.assign(ACCIONES, {
+  "mis-pedidos-mas": () => cargarMisPedidos(),
   "codigo-volver": () => volverDelCodigo(),
   "codigo-reenviar": async el => {
     botonOcupado(el);
