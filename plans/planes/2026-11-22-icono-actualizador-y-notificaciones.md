@@ -1,6 +1,6 @@
 # Plan: ícono completo, actualizador dentro de la app y notificaciones de pedidos (web y app)
 
-Fecha: 2026-11-22 · Estado: en curso · Prompts: `plans/prompts/2026-11-22-icono-actualizador-y-notificaciones.md`
+Fecha: 2026-11-22 · Estado: aplicado · Prompts: `plans/prompts/2026-11-22-icono-actualizador-y-notificaciones.md`
 Alcance: app de Android (`~/AndroidStudioProjects/NecutlaMovil`, versión 2.2.0), web (`public/`), servidor (`app/`) y base (`db/mariadb/schema.sql`).
 
 ## Context
