@@ -178,6 +178,11 @@ function render(sesion) {
   }
   vista(null);
   $("dentro-title").textContent = `Hola, ${sesion.nombre}`;
+  // /cuenta.html?sub=pedidos (al tocar el aviso de un pedido): abre Mis pedidos una vez
+  if (new URLSearchParams(location.search).get("sub") === "pedidos" && !render.subAbierta) {
+    render.subAbierta = true;
+    setTimeout(() => mostrarSubseccion("mi-cuenta", "pedidos"), 0);
+  }
   $("dentro-correo").textContent = sesion.usuario
     ? `Tu usuario es ${sesion.usuario} y tu correo ${sesion.correo}.`
     : `Entraste con ${sesion.correo}.`;
@@ -386,6 +391,8 @@ Object.assign(ACCIONES, {
   },
   salir: async () => {
     try {
+      // En un navegador compartido, quien entre después no recibe los avisos de esta cuenta
+      if (tieneMarcaAvisos("cliente")) await quitarAvisos("cliente").catch(() => {});
       await api("/clientes/logout", { method: "POST" });
     } catch (e) { /* la sesión ya no existe */ }
     render(null);

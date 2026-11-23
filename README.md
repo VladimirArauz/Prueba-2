@@ -344,6 +344,30 @@ Plan `plans/planes/2026-10-31-seo-iconos-contenido-y-legal.md` (recomendaciones 
   llegarían con la IP de Cloudflare y habría que cambiar `ip_cliente()`. Los visitantes son de la misma zona, así
   que gzip y caché dan casi lo mismo. El revisor de IONOS seguirá marcando ese punto.
 
+## Avisos de pedidos (notificaciones)
+
+Plan `2026-11-22-icono-actualizador-y-notificaciones.md`. Al cliente le llega un aviso cuando la tienda cambia el
+estado de su pedido, le deja una nota o ajusta las piezas; a los dueños y a los encargados de la tienda, cuando llega
+un pedido nuevo ("cancelar viejos" no avisa).
+
+- **Servidor** (`app/notificaciones.php`): tabla `notificaciones_destinos` (un navegador o un celular por fila, de un
+  cliente o de un admin; hasta 10 por cuenta). Web Push estándar sin servicios de pago: cifrado RFC 8291 y firma
+  VAPID con `openssl`, probado contra el ejemplo del RFC. La app de Android usa Firebase Cloud Messaging (HTTP v1 con
+  la cuenta de servicio). Se manda después de responder (`fastcgi_finish_request`), con 5 s por envío; los destinos
+  que el servicio da por muertos (404 o 410) se borran. Solo se manda a los servicios de push de los navegadores
+  (`PUSH_HOSTS`).
+- **Rutas:** `GET /api/notificaciones/llave`, `POST /api/notificaciones/suscribir` y `POST /api/notificaciones/quitar`
+  (`para` = `cliente` o `admin`, con su sesión; `tipo` = `web` con `endpoint`, `p256dh` y `auth`, o `fcm` con `token`).
+- **Web:** `public/sw.js` (solo `push` y `notificationclick`, sin caché), `activarAvisos()` y `quitarAvisos()` en
+  `comun.js`, cajas `[data-avisos]` en Mi cuenta → Mis pedidos y en Necutools → Pedidos, y la tarjeta del carrito
+  después de mandar un pedido (`ofrecerAvisos()`). El permiso solo se pide al tocar el botón. Al cerrar sesión se quita
+  la suscripción de ese navegador. En iPhone solo funciona con Necutla en la pantalla de inicio. La CSP permite
+  `worker-src 'self'`.
+- **Llaves:** `php8.5 scripts/crear-vapid.php` crea las de Web Push y las guarda en `app/config.php` (`web_push`). Para
+  la app, `fcm` en `app/config.php` (`proyecto` y la ruta del JSON de la cuenta de servicio, `app/fcm-cuenta.json`,
+  permisos 600, fuera de git).
+- Al tocar un aviso: el cliente va a `/cuenta.html?sub=pedidos`; el vendedor, a `/necutools.html?seccion=pedidos`.
+
 ## App de Android
 
 La app nativa (Kotlin + Jetpack Compose) vive en `~/AndroidStudioProjects/NecutlaMovil` y usa la misma API de
@@ -379,6 +403,10 @@ Diseño y movimiento en la app (plan `2026-11-22-buscador-letra-unidades-pie-y-t
   detalle. Fade entre pestañas y slide al entrar a Buscar, Necutools y sus secciones de "Más". Con "Quitar
   animaciones" del sistema no se mueve nada (`LocalSinMovimiento`).
 - Búsquedas recientes (`Recientes` en `data/Estado.kt`): las últimas 5, solo en el teléfono.
+- Actualizador (`data/Actualizador.kt`): "Actualizar ahora" baja el APK a la carpeta privada de la app (nunca a
+  Descargas), revisa tamaño y SHA-256 contra `version.json`, lo instala con `PackageInstaller` y lo borra al terminar
+  (`AppActualizada` con `MY_PACKAGE_REPLACED` y al abrir la app). La primera vez que se abre la app sale una hoja para
+  borrar el `Necutla.apk` que bajó el navegador (Android no deja que la app lo borre).
 
 ## Seguridad
 

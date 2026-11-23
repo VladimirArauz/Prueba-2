@@ -5096,3 +5096,35 @@ img.admin-thumb.foto-completa {
     min-height: 44px;
   }
 }
+
+/* ================= Avisos de pedidos en el navegador (plan 2026-11-22-icono-actualizador-y-notificaciones) ================= */
+.avisos-caja {
+  margin: 16px 0 20px;
+  padding: 16px;
+  background: var(--gis);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+}
+
+.avisos-caja h3 {
+  font-size: var(--letra-media);
+  margin-bottom: 4px;
+}
+
+.avisos-texto {
+  max-width: 68ch;
+  color: var(--texto-2);
+  font-size: var(--letra-chica);
+}
+
+.avisos-caja .form-actions {
+  margin-top: 12px;
+}
+
+.avisos-caja .form-actions:empty {
+  display: none;
+}
+
+.avisos-caja-admin {
+  margin-top: 0;
+}

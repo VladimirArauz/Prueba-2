@@ -66,6 +66,22 @@ return [
     // para que las pruebas no se cuenten como visitas. Muestra el aviso de cookies y carga Google si la persona acepta; no va en Mi cuenta ni Necutools.
     'google_tag_manager' => '',
 
+    // Notificaciones en el navegador (Web Push, app/notificaciones.php). Las llaves VAPID las crea y guarda aquí
+    // `php8.5 scripts/crear-vapid.php` (la privada es secreta). Sin ellas, el botón "Avisarme…" dice que aún no está listo.
+    'web_push' => [
+        'publica' => '',
+        'privada' => '',
+        'contacto' => 'mailto:yancore@necutla.com',
+    ],
+
+    // Notificaciones en la app de Android (Firebase Cloud Messaging). 'proyecto': el id del proyecto de Firebase;
+    // 'cuenta': el JSON de la cuenta de servicio (Firebase → Configuración → Cuentas de servicio → Generar llave),
+    // dentro de app/ (nunca en public/) con permisos 600 y fuera de git. Vacío = la app no recibe avisos.
+    'fcm' => [
+        'proyecto' => '',
+        'cuenta' => 'fcm-cuenta.json',
+    ],
+
     // Solo si IONOS pusiera un proxy delante y REMOTE_ADDR no fuera la IP del visitante. En hosting
     // compartido de IONOS se deja en false: si fuera true, cualquiera podría inventarse una IP.
     'confiar_x_forwarded_for' => false,

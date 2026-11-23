@@ -521,3 +521,31 @@ ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_v CHAR(12) AS (LEFT(MD5(im
 ALTER TABLE producto_colores ADD COLUMN IF NOT EXISTS imagen_v CHAR(12) AS (LEFT(MD5(imagen), 12)) STORED;
 ALTER TABLE promociones ADD COLUMN IF NOT EXISTS imagen_v CHAR(12) AS (LEFT(MD5(imagen), 12)) STORED;
 ALTER TABLE stands ADD COLUMN IF NOT EXISTS portada_v CHAR(12) AS (LEFT(MD5(portada), 12)) STORED;
+
+-- ---------- 2026-11-22: notificaciones de pedidos (plan 2026-11-22-icono-actualizador-y-notificaciones.md) ----------
+
+-- A dónde mandar los avisos: un navegador (Web Push) o un celular con la app (token de Firebase Cloud Messaging).
+-- Cada destino es de un cliente ('cliente') o de un admin de Necutools ('admin'); el mismo navegador puede tener los dos.
+CREATE TABLE IF NOT EXISTS notificaciones_destinos (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  para        VARCHAR(7) NOT NULL,
+  cliente_id  INT UNSIGNED,
+  admin_id    INT UNSIGNED,
+  tipo        VARCHAR(3) NOT NULL,
+  endpoint    VARCHAR(700) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  huella      CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  p256dh      VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin,
+  auth        VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin,
+  creado_en   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  usado_en    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY notificaciones_destino_unico (huella, para),
+  KEY notificaciones_cliente_idx (cliente_id),
+  KEY notificaciones_admin_idx (admin_id),
+  CONSTRAINT notificaciones_cliente_fk FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE,
+  CONSTRAINT notificaciones_admin_fk FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE,
+  CONSTRAINT notificaciones_para_valido CHECK (para IN ('cliente', 'admin')),
+  CONSTRAINT notificaciones_tipo_valido CHECK (tipo IN ('web', 'fcm')),
+  CONSTRAINT notificaciones_dueno CHECK ((para = 'cliente' AND cliente_id IS NOT NULL AND admin_id IS NULL)
+                                         OR (para = 'admin' AND admin_id IS NOT NULL AND cliente_id IS NULL))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

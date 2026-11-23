@@ -83,6 +83,7 @@ require __DIR__ . '/auth.php';
 require __DIR__ . '/clientes.php';
 require __DIR__ . '/api.php';
 require __DIR__ . '/resenas.php';
+require __DIR__ . '/notificaciones.php';
 require __DIR__ . '/pedidos.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/og-imagen.php';
@@ -92,7 +93,7 @@ require __DIR__ . '/sitemap.php';
 // Respuestas con datos privados: que no se guarden en caché
 // Sin importar mayúsculas, igual que el router: /API/ADMIN/… también es privado
 // También lo que trae números de WhatsApp: cambia según la sesión y no se puede guardar en una caché compartida
-const PRIVADAS = '#^/(admin|auth|clientes|config|carrito|pedidos)(/|$)|^/stands/[^/]+/?$|^/productos/[0-9]+/?$#i';
+const PRIVADAS = '#^/(admin|auth|clientes|config|carrito|pedidos|notificaciones)(/|$)|^/stands/[^/]+/?$|^/productos/[0-9]+/?$#i';
 
 // Fotos públicas de productos y portadas de tienda: son las únicas de la API que Google puede indexar
 const FOTOS_INDEXABLES = '#^/(stands/[0-9]+/portada|productos/[0-9]+/(imagen|fotos/[0-9]+))/?$#i';
@@ -173,6 +174,7 @@ function atender(): void
         rutas_clientes();
         rutas_resenas();
         rutas_pedidos();
+        rutas_notificaciones();
         rutas_api();
         rutas_og_imagen();
         rutas_admin();

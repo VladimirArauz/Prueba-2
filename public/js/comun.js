@@ -946,6 +946,145 @@ window.addEventListener("pagereveal", event => {
   event.viewTransition.finished.finally(limpiarNombresTransicion);
 });
 
+// ================= Avisos de pedidos en el navegador (Web Push, plan 2026-11-22-icono-actualizador-y-notificaciones) =================
+// El permiso se pide solo cuando la persona toca el botón. El navegador guarda una sola suscripción; en el servidor
+// puede quedar ligada al cliente y al admin (los dos en el mismo navegador). Lo que este navegador activó se recuerda
+// en localStorage solo para pintar el botón; lo que manda es el servidor.
+const AVISOS_TEXTOS = {
+  cliente: { activar: "Avisarme cuando cambie mi pedido", listo: "Avisos activados en este navegador. Te avisamos cuando cambie tu pedido." },
+  admin: { activar: "Avisarme de pedidos nuevos", listo: "Avisos activados en este navegador. Te avisamos cuando llegue un pedido a tus tiendas." }
+};
+
+function avisosPosibles() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+function esIphone() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function marcaAvisos(para, valor) {
+  try {
+    if (valor) localStorage.setItem(`necutla_avisos_${para}`, "1");
+    else localStorage.removeItem(`necutla_avisos_${para}`);
+  } catch (e) { /* sin almacenamiento, el botón solo no recuerda */ }
+}
+
+function tieneMarcaAvisos(para) {
+  try { return localStorage.getItem(`necutla_avisos_${para}`) === "1"; } catch (e) { return false; }
+}
+
+async function suscripcionActual() {
+  const reg = await navigator.serviceWorker.getRegistration("/");
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+
+// "activo", "inactivo", "bloqueado" o "no" (el navegador no puede: en iPhone, solo desde la pantalla de inicio)
+async function estadoAvisos(para) {
+  if (!avisosPosibles()) return "no";
+  if (Notification.permission === "denied") return "bloqueado";
+  const sub = await suscripcionActual().catch(() => null);
+  return sub && Notification.permission === "granted" && tieneMarcaAvisos(para) ? "activo" : "inactivo";
+}
+
+function llaveABytes(b64) {
+  const base = (b64 + "=".repeat((4 - b64.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(base), c => c.charCodeAt(0));
+}
+
+async function activarAvisos(para) {
+  if (!avisosPosibles()) throw new Error(esIphone()
+    ? "En iPhone, primero agrega Necutla a tu pantalla de inicio (Compartir, Agregar a inicio) y ábrela desde ahí."
+    : "Tu navegador no permite avisos. Prueba con Chrome, Edge, Firefox o Safari.");
+  const permiso = await Notification.requestPermission();
+  if (permiso !== "granted") throw new Error("Bloqueaste los avisos para Necutla. Para activarlos, toca el candado junto a la dirección de la página y permite las notificaciones.");
+  const { llave } = await api("/notificaciones/llave");
+  if (!llave) throw new Error("Los avisos todavía no están listos. Inténtalo más tarde.");
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription()
+    || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: llaveABytes(llave) });
+  const datos = sub.toJSON();
+  await api("/notificaciones/suscribir", { method: "POST", body: { para, tipo: "web", endpoint: datos.endpoint, p256dh: datos.keys.p256dh, auth: datos.keys.auth } });
+  marcaAvisos(para, true);
+}
+
+async function quitarAvisos(para) {
+  const sub = await suscripcionActual();
+  if (sub) await api("/notificaciones/quitar", { method: "POST", body: { para, tipo: "web", endpoint: sub.endpoint } });
+  marcaAvisos(para, false);
+  // Si ni el cliente ni el admin los quieren en este navegador, se suelta la suscripción
+  if (sub && !tieneMarcaAvisos("cliente") && !tieneMarcaAvisos("admin")) await sub.unsubscribe();
+}
+
+async function pintarAvisos(caja) {
+  const para = caja.dataset.avisos;
+  const textos = AVISOS_TEXTOS[para];
+  const texto = caja.querySelector("[data-avisos-texto]");
+  const botones = caja.querySelector("[data-avisos-botones]");
+  if (!texto.dataset.original) texto.dataset.original = texto.textContent;
+  const estado = await estadoAvisos(para);
+  caja.dataset.estado = estado;
+  if (estado === "activo") {
+    texto.textContent = textos.listo;
+    botones.innerHTML = `<button type="button" class="btn ghost" data-action="avisos-quitar" data-para="${para}">${icon("bell-off")}Desactivar avisos</button>`;
+  } else if (estado === "no") {
+    texto.textContent = esIphone()
+      ? "En iPhone, los avisos solo llegan si agregas Necutla a tu pantalla de inicio (Compartir, Agregar a inicio) y la abres desde ahí."
+      : "Este navegador no permite avisos. Prueba con Chrome, Edge, Firefox o Safari.";
+    botones.innerHTML = "";
+  } else if (estado === "bloqueado") {
+    texto.textContent = "Bloqueaste los avisos para Necutla. Para activarlos, toca el candado junto a la dirección de la página, permite las notificaciones y vuelve a cargar.";
+    botones.innerHTML = "";
+  } else {
+    texto.textContent = texto.dataset.original;
+    botones.innerHTML = `<button type="button" class="btn secondary" data-action="avisos-activar" data-para="${para}">${icon("bell")}${textos.activar}</button>`;
+  }
+}
+
+function pintarTodasLasCajasDeAvisos() {
+  document.querySelectorAll("[data-avisos]").forEach(caja => { pintarAvisos(caja); });
+}
+
+Object.assign(ACCIONES, {
+  "avisos-activar": async el => {
+    botonOcupado(el, "Activando los avisos");
+    try {
+      await activarAvisos(el.dataset.para);
+      showToast("Avisos activados en este navegador.", "bell");
+    } catch (e) {
+      avisarError(e.message);
+    }
+    pintarTodasLasCajasDeAvisos();
+  },
+  "avisos-quitar": async el => {
+    botonOcupado(el, "Desactivando los avisos");
+    try {
+      await quitarAvisos(el.dataset.para);
+      showToast("Avisos desactivados en este navegador.", "bell-off");
+    } catch (e) {
+      avisarError(e.message);
+    }
+    pintarTodasLasCajasDeAvisos();
+  }
+});
+
+// Tarjeta que invita a activar los avisos (después de mandar un pedido). Solo si todavía no están activos.
+async function ofrecerAvisos(contenedor, para = "cliente") {
+  if (!contenedor || contenedor.querySelector("[data-avisos]")) return;
+  const estado = await estadoAvisos(para);
+  if (estado === "activo" || estado === "bloqueado") return;
+  contenedor.insertAdjacentHTML("beforeend", `
+    <div class="avisos-caja" data-avisos="${para}">
+      <h3>¿Te avisamos cuando cambie tu pedido?</h3>
+      <p class="avisos-texto" data-avisos-texto>Te llega un aviso en este navegador cuando la tienda lo marque como pagado, te deje una nota o ajuste las piezas.</p>
+      <div class="form-actions" data-avisos-botones></div>
+    </div>`);
+  pintarAvisos(contenedor.querySelector("[data-avisos]"));
+}
+
+document.addEventListener("DOMContentLoaded", pintarTodasLasCajasDeAvisos);
+
 // ================= Buscadores: botón para borrar lo escrito (plan 2026-11-22) =================
 // Cada campo de búsqueda lleva una X que aparece al escribir. Borra, avisa con "input" (la portada quita los
 // resultados) y regresa el foco al campo.

@@ -256,6 +256,7 @@ function enviar(boton) {
   if (!enviarPorWhatsApp(boton, grupo.whatsapp, mensajeDe(grupo), contenedor, "Pedido abierto en WhatsApp")) return;
   registrarPedido(grupo);
   medirPedido(grupo);
+  ofrecerAvisos(contenedor); // ¿Te avisamos cuando cambie tu pedido? (si aún no hay avisos en este navegador)
   const claves = grupo.items.map(claveDe).join(",");
   contenedor.insertAdjacentHTML("beforeend", `
     <div class="form-actions">

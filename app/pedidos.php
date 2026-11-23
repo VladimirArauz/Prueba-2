@@ -372,6 +372,7 @@ function rutas_pedidos(): void
             }
             return $pedidoId;
         });
+        avisar_tienda($nuevo); // a los vendedores de la tienda, después de responder (app/notificaciones.php)
         return json_respuesta(['id' => $nuevo], 201);
     });
 
@@ -405,7 +406,7 @@ function rutas_pedidos(): void
         $admin = requiere_admin();
         $estadoNuevo = existe('estado') ? v_opcion(campo('estado'), ESTADOS_PEDIDO, 'un estado') : null;
         $notaNueva = existe('nota') ? (v_texto(campo('nota'), 'la nota', 200) ?: null) : null;
-        return en_transaccion(function () use ($admin, $idRuta, $estadoNuevo, $notaNueva) {
+        $r = en_transaccion(function () use ($admin, $idRuta, $estadoNuevo, $notaNueva) {
             $pedido = exigir_pedido_admin($admin, $idRuta, true);
             $id = $pedido['id'];
             $antes = $pedido['estado'];
@@ -420,15 +421,20 @@ function rutas_pedidos(): void
             }
             q('UPDATE pedidos SET estado = ?, nota = ?, actualizado_en = UTC_TIMESTAMP(6) WHERE id = ?', [$estado, $nota, $id]);
             anotar($admin, 'editar', 'pedidos', $id, ($estado !== $antes ? "$antes → $estado" : $estado) . ($nota ? ", nota: $nota" : ''));
-            return ['id' => $id, 'estado' => $estado, 'nota' => $nota];
+            return ['id' => $id, 'estado' => $estado, 'nota' => $nota, 'cambio_estado' => $estado !== $antes,
+                    'nota_nueva' => $nota !== null && $nota !== $pedido['nota']];
         });
+        // Al cliente, después de guardar: un aviso por el estado y otro si la nota es nueva o cambió
+        if ($r['cambio_estado']) avisar_cliente($r['id'], 'estado');
+        if ($r['nota_nueva']) avisar_cliente($r['id'], 'nota');
+        return ['id' => $r['id'], 'estado' => $r['estado'], 'nota' => $r['nota']];
     });
 
     // ================= Necutools: cambiar los artículos de un pedido en proceso =================
     put('/api/admin/pedidos/:id/items', function ($idRuta) {
         $admin = requiere_admin();
         $lista = campo('items');
-        return en_transaccion(function () use ($admin, $idRuta, $lista) {
+        $r = en_transaccion(function () use ($admin, $idRuta, $lista) {
             $pedido = exigir_pedido_admin($admin, $idRuta, true);
             if ($pedido['estado'] !== 'en_proceso') throw new ErrorHttp(409, 'Solo se puede editar un pedido en proceso. Si está pagado, regrésalo a en proceso.');
             $lineas = leer_lineas_nuevas($pedido, $lista);
@@ -439,6 +445,8 @@ function rutas_pedidos(): void
             $f = fila('SELECT ' . COLUMNAS_PEDIDO . ' ' . UNIR_PEDIDO . ' WHERE pe.id = ?', [$pedido['id']]);
             return pedido_admin($f, lineas_de_pedidos([$pedido['id']])[$pedido['id']] ?? []);
         });
+        if ($r['id'] ?? null) avisar_cliente((int) $r['id'], 'articulos');
+        return $r;
     });
 
     // ================= Necutools: artículos que se pueden agregar a un pedido de una tienda =================

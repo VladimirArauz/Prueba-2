@@ -195,6 +195,7 @@ async function enviarCodigo(event) {
 
 async function cerrarSesion() {
   try {
+    if (tieneMarcaAvisos("admin")) await quitarAvisos("admin").catch(() => {});
     await api("/auth/logout", { method: "POST" });
   } catch (e) { /* la sesión ya no existe */ }
   st.sesion = null;
@@ -2009,6 +2010,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   campo($("form-promo"), "inicio").value = hoyISO();
-  mostrarPanel("resumen");
+  // /necutools.html?seccion=pedidos (al tocar el aviso de un pedido nuevo)
+  const seccion = new URLSearchParams(location.search).get("seccion");
+  mostrarPanel(Object.hasOwn(TITULOS_PANEL, seccion || "") ? seccion : "resumen");
   cargarTodo();
 });
