@@ -905,6 +905,33 @@ document.addEventListener("click", event => {
   if (el && ACCIONES[el.dataset.action]) ACCIONES[el.dataset.action](el, event);
 });
 
+// ================= Buscadores: botón para borrar lo escrito (plan 2026-11-22) =================
+// Cada campo de búsqueda lleva una X que aparece al escribir. Borra, avisa con "input" (la portada quita los
+// resultados) y regresa el foco al campo.
+function conBotonBorrar(input) {
+  if (input.nextElementSibling && input.nextElementSibling.classList.contains("campo-borrar")) return;
+  const boton = document.createElement("button");
+  boton.type = "button";
+  boton.className = "btn ghost btn-icon btn-sm campo-borrar";
+  boton.dataset.action = "borrar-campo";
+  boton.setAttribute("aria-label", "Borrar búsqueda");
+  boton.innerHTML = icon("x");
+  boton.hidden = !input.value;
+  input.insertAdjacentElement("afterend", boton);
+  input.addEventListener("input", () => { boton.hidden = !input.value; });
+}
+
+ACCIONES["borrar-campo"] = el => {
+  const input = el.previousElementSibling;
+  input.value = "";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus();
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('input[type="search"]').forEach(conBotonBorrar);
+});
+
 // ================= Tiendas (una sola petición por página) =================
 let tiendasPromesa = null;
 function obtenerTiendas() {

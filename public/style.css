@@ -445,7 +445,7 @@ body {
 .side-search input {
   width: 100%;
   height: 44px;
-  padding: 0 12px 0 40px;
+  padding: 0 48px 0 40px;
   background: var(--gis);
   border: 1px solid transparent;
   border-radius: var(--r-btn);
@@ -466,6 +466,11 @@ body {
 .side-search input::placeholder {
   opacity: 0;
   transition: opacity var(--t-fast);
+}
+
+/* Barra cerrada: solo cabe la lupa; la X sale al abrirla */
+.sidebar:not(:hover):not(:focus-within):not(.is-open) .side-search .campo-borrar {
+  visibility: hidden;
 }
 
 .sidebar:hover .side-search input::placeholder,
@@ -2431,8 +2436,82 @@ textarea {
   margin-bottom: 28px;
 }
 
-.search-form input {
+.search-campo {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+
+.search-campo input {
+  width: 100%;
+}
+
+/* Buscadores con la X propia (comun.js, conBotonBorrar): se quita la del navegador y se deja lugar a la nuestra */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-campo input,
+.side-search input {
+  padding-right: 48px;
+}
+
+.campo-borrar {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+}
+
+.search-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  max-width: 40rem;
+  min-height: 36px;
+  margin: -16px 0 20px;
+  color: var(--texto-2);
+  font-size: var(--letra-chica);
+}
+
+.search-estado.is-error {
+  color: var(--aviso);
+}
+
+/* Resultados anteriores atenuados mientras llegan los nuevos (sin animación) */
+.grid.is-buscando {
+  opacity: 0.5;
+}
+
+.search-recientes {
+  max-width: 40rem;
+  margin: -8px 0 28px;
+}
+
+.search-recientes-titulo {
+  margin-bottom: 4px;
+  color: var(--texto-2);
+  font-size: var(--letra-chica);
+  font-weight: 600;
+}
+
+.search-recientes-lista {
+  list-style: none;
+  margin-bottom: 4px;
+}
+
+.search-recientes-lista li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.search-recientes-lista li .btn:first-child {
+  flex: 1;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .search-results {

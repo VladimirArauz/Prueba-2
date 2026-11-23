@@ -167,39 +167,80 @@ async function cargarPruebaSocial() {
 
 // Cada búsqueda lleva su turno: si llega tarde la respuesta de una vieja, no se pinta encima de la nueva
 let turnoBusqueda = 0;
+let ultimaBusqueda = "";
+let conResultados = "";
 
-// alEscribir: la busca el debounce mientras escribes; no mueve la página ni avisa si faltan letras
+// Buscador que siempre dice qué está pasando (plan 2026-11-22, reel Df3FZ0BIK66): la línea de estado bajo el
+// campo cambia entre "escribe más", "buscando", resultados, sin resultados y error con "Reintentar".
+function estadoBusqueda(texto, { error = false } = {}) {
+  document.getElementById("search-estado-texto").textContent = texto;
+  document.getElementById("search-estado").classList.toggle("is-error", error);
+  document.getElementById("search-reintentar").hidden = !error;
+}
+
+const ESTADO_INICIAL = "Busca en todas las tiendas a la vez.";
+
+// alEscribir: la busca el debounce mientras escribes; no mueve la página
 async function buscar(event, alEscribir = false) {
   if (event) event.preventDefault();
   buscarConEspera.cancelar();
-  const q = document.getElementById("search-input").value.trim();
+  const input = document.getElementById("search-input");
+  const q = input.value.trim();
   const bloque = document.getElementById("search-results");
   const grid = document.getElementById("search-grid");
   const vacio = document.getElementById("search-empty");
   if (q.length < 2) {
-    if (!alEscribir) showToast("Escribe al menos 2 letras para buscar.", "info");
+    estadoBusqueda(q ? "Escribe al menos 2 letras." : ESTADO_INICIAL);
+    if (!alEscribir) input.focus();
     return;
   }
   const turno = ++turnoBusqueda;
+  ultimaBusqueda = q;
+  ocultarRecientes();
+  estadoBusqueda(`Buscando «${q}» en todas las tiendas…`);
+  // Si ya hay resultados, se quedan atenuados mientras llegan los nuevos; esqueletos solo la primera vez
+  const habia = !bloque.hidden && grid.querySelector(".card:not(.esqueleto-card)");
   bloque.hidden = false;
   document.getElementById("search-title").textContent = `Resultados para “${q}”`;
-  document.getElementById("search-desc").textContent = "Buscando en todas las tiendas.";
-  vacio.innerHTML = "";
-  pintarEsqueletos(grid, 3);
+  if (habia) {
+    grid.classList.add("is-buscando");
+    grid.setAttribute("aria-busy", "true");
+  } else {
+    document.getElementById("search-desc").textContent = "";
+    vacio.innerHTML = "";
+    pintarEsqueletos(grid, 3);
+  }
   try {
     const resultados = await api(`/buscar?q=${encodeURIComponent(q)}`);
     if (turno !== turnoBusqueda) return;
-    document.getElementById("search-desc").textContent = resultados.length === 20
+    const cuantos = resultados.length === 20
       ? "Mostramos los primeros 20. Escribe algo más específico para afinar."
       : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"} en todas las tiendas.`;
+    document.getElementById("search-desc").textContent = cuantos;
     grid.innerHTML = resultados.map(p => tarjetaProducto(p, { conTienda: true })).join("");
-    vacio.innerHTML = resultados.length ? "" : `<p>No encontramos nada con “${escapeHTML(q)}”. Prueba con otra palabra o entra a una tienda.</p>`;
+    vacio.innerHTML = resultados.length ? "" : `<p>No encontramos nada con “${escapeHTML(q)}”. Prueba con otra palabra o entra a una tienda.</p>
+      <a class="btn secondary" href="#tiendas-head">${icon("store")}Explorar las tiendas</a>`;
+    estadoBusqueda(resultados.length
+      ? `${resultados.length === 20 ? "20 o más resultados" : cuantos.replace(" en todas las tiendas.", "")} para «${q}».`
+      : `No encontramos «${q}».`);
+    // Mientras escribes no se guarda cada pedazo ("ca", "cab"…): se guarda al buscar con el botón o Enter,
+    // o al salir del campo (ver el focusout de abajo)
+    conResultados = resultados.length ? q : "";
+    if (resultados.length && !alEscribir) guardarReciente(q);
   } catch (error) {
     if (turno !== turnoBusqueda) return;
+    // El error y "Reintentar" van en la línea de estado; el bloque de resultados vacío solo estorbaría
     grid.innerHTML = "";
-    vacio.innerHTML = `<p>${escapeHTML(error.message)}</p>`;
+    vacio.innerHTML = "";
+    bloque.hidden = true;
+    estadoBusqueda(`No pudimos buscar: ${error.message}`, { error: true });
+  } finally {
+    if (turno === turnoBusqueda) {
+      grid.classList.remove("is-buscando");
+      grid.removeAttribute("aria-busy");
+    }
   }
-  if (!alEscribir) bloque.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!alEscribir && !bloque.hidden) bloque.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // Mientras escribes: busca 400 ms después de la última tecla. Al borrar todo, se quitan los resultados.
@@ -211,15 +252,92 @@ function alEscribirBusqueda() {
     buscarConEspera.cancelar();
     turnoBusqueda++;
     document.getElementById("search-results").hidden = true;
+    estadoBusqueda(ESTADO_INICIAL);
+    mostrarRecientes();
     return;
   }
-  if (q.length >= 2) buscarConEspera();
+  ocultarRecientes();
+  if (q.length < 2) {
+    buscarConEspera.cancelar();
+    turnoBusqueda++;
+    estadoBusqueda("Escribe al menos 2 letras.");
+    return;
+  }
+  // Se avisa al momento, aunque la petición salga 400 ms después
+  estadoBusqueda(`Buscando «${q}» en todas las tiendas…`);
+  buscarConEspera();
+}
+
+// ================= Búsquedas recientes (plan 2026-11-22): solo en este navegador =================
+// Las últimas 5 que dieron resultados. No se mandan al servidor ni a Analytics.
+const CLAVE_RECIENTES = "necutla_busquedas";
+
+function leerRecientes() {
+  try {
+    const lista = JSON.parse(localStorage.getItem(CLAVE_RECIENTES) || "[]");
+    return Array.isArray(lista) ? lista.filter(t => typeof t === "string").slice(0, 5) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function escribirRecientes(lista) {
+  try {
+    if (lista.length) localStorage.setItem(CLAVE_RECIENTES, JSON.stringify(lista));
+    else localStorage.removeItem(CLAVE_RECIENTES);
+  } catch (e) { /* sin almacenamiento, no se guardan */ }
+}
+
+function guardarReciente(q) {
+  const lista = leerRecientes().filter(t => t.toLowerCase() !== q.toLowerCase());
+  escribirRecientes([q.slice(0, 60), ...lista].slice(0, 5));
+}
+
+function mostrarRecientes() {
+  const caja = document.getElementById("search-recientes");
+  const input = document.getElementById("search-input");
+  const lista = leerRecientes();
+  if (!lista.length || input.value.trim()) { caja.hidden = true; return; }
+  caja.innerHTML = `<p class="search-recientes-titulo">Búsquedas recientes</p>
+    <ul class="search-recientes-lista">${lista.map(t => `
+      <li>
+        <button type="button" class="btn ghost btn-sm" data-action="buscar-reciente" data-q="${escapeHTML(t)}">${icon("history")}${escapeHTML(t)}</button>
+        <button type="button" class="btn ghost btn-sm btn-icon" data-action="quitar-reciente" data-q="${escapeHTML(t)}" aria-label="Quitar «${escapeHTML(t)}» de las recientes">${icon("x")}</button>
+      </li>`).join("")}
+    </ul>
+    <button type="button" class="btn ghost btn-sm" data-action="borrar-recientes">${icon("trash-2")}Borrar historial</button>`;
+  caja.hidden = false;
+}
+
+function ocultarRecientes() {
+  document.getElementById("search-recientes").hidden = true;
 }
 
 Object.assign(ACCIONES, {
   "limpiar-busqueda": () => {
-    document.getElementById("search-results").hidden = true;
-    document.getElementById("search-input").value = "";
+    const input = document.getElementById("search-input");
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  },
+  "reintentar-busqueda": () => {
+    document.getElementById("search-input").value = ultimaBusqueda || document.getElementById("search-input").value;
+    buscar(null, true);
+  },
+  "buscar-reciente": el => {
+    document.getElementById("search-input").value = el.dataset.q;
+    document.getElementById("search-input").dispatchEvent(new Event("input", { bubbles: true }));
+    buscar(null);
+  },
+  "quitar-reciente": el => {
+    escribirRecientes(leerRecientes().filter(t => t !== el.dataset.q));
+    mostrarRecientes();
+    const sigue = document.querySelector("#search-recientes [data-action='buscar-reciente']");
+    (sigue || document.getElementById("search-input")).focus();
+  },
+  "borrar-recientes": () => {
+    escribirRecientes([]);
+    ocultarRecientes();
     document.getElementById("search-input").focus();
   }
 });
@@ -248,7 +366,20 @@ async function cargarVersionApp() {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("search-form").addEventListener("submit", buscar);
-  document.getElementById("search-input").addEventListener("input", alEscribirBusqueda);
+  const campo = document.getElementById("search-input");
+  campo.addEventListener("input", alEscribirBusqueda);
+  campo.addEventListener("focus", mostrarRecientes);
+  campo.addEventListener("blur", () => {
+    if (conResultados && campo.value.trim() === conResultados) guardarReciente(conResultados);
+  });
+  // Al salir del buscador (y de sus recientes) se esconden las recientes
+  // Se van al pasar el foco o tocar fuera del buscador (con pointerdown: en Safari un botón no toma el foco)
+  document.getElementById("search-form").parentElement.addEventListener("focusout", event => {
+    if (event.relatedTarget && !event.relatedTarget.closest("#search-form, #search-recientes")) ocultarRecientes();
+  });
+  document.addEventListener("pointerdown", event => {
+    if (!event.target.closest("#search-form, #search-recientes")) ocultarRecientes();
+  });
   const barra = document.querySelector(".side-search");
   if (barra) {
     barra.addEventListener("submit", event => {

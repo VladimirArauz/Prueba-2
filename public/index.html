@@ -153,16 +153,26 @@
         </div>
       </div>
 
-      <form class="search-form" id="search-form" role="search">
+      <form class="search-form" id="search-form" role="search" novalidate>
         <label class="visually-hidden" for="search-input">Buscar productos y servicios</label>
-        <input type="search" id="search-input" minlength="2" maxlength="60" placeholder="Busca un producto o servicio, ej. cable, playera, piñata" autocomplete="off">
+        <div class="search-campo">
+          <input type="search" id="search-input" minlength="2" maxlength="60" placeholder="Busca un producto o servicio, ej. cable, playera, piñata" autocomplete="off" aria-describedby="search-estado">
+        </div>
         <button type="submit" class="btn">
           <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
           Buscar
         </button>
       </form>
+      <div class="search-estado" id="search-estado" role="status">
+        <span id="search-estado-texto">Busca en todas las tiendas a la vez.</span>
+        <button type="button" class="btn secondary btn-sm" data-action="reintentar-busqueda" id="search-reintentar" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-rotate-cw"></use></svg>
+          Reintentar
+        </button>
+      </div>
+      <div class="search-recientes" id="search-recientes" hidden></div>
 
-      <section class="search-results" id="search-results" aria-live="polite" hidden>
+      <section class="search-results" id="search-results" hidden>
         <div class="section-header-row">
           <div>
             <h2 class="section-title" id="search-title">Resultados</h2>
