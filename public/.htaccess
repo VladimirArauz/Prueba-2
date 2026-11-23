@@ -33,7 +33,7 @@ RewriteRule ^ - [R=405,L]
 # la cabecera X-Forwarded-Proto la puede mandar cualquiera, así que no sirve para saltarse la redirección.
 # Además, www.necutla.com y la dirección temporal de IONOS van a https://necutla.com, para que la sesión
 # (cookie __Host-, una por dirección) y la vista previa de WhatsApp usen siempre la misma.
-RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|10\.0\.2\.2)(:[0-9]+)?$ [NC]
 RewriteCond %{HTTPS} !=on [OR]
 RewriteCond %{HTTP_HOST} !^necutla\.com$ [NC]
 RewriteRule ^ https://necutla.com%{REQUEST_URI} [R=301,L]

@@ -1261,6 +1261,61 @@ async function main() {
     });
   }
 
+  // ---------- Avisos de pedidos (plan 2026-11-22-icono-actualizador-y-notificaciones) ----------
+  // Llaves válidas de un "navegador" de prueba. Cada suscripción se quita al final, para no mandar nada a Google.
+  const ecdh = require("crypto").createECDH("prime256v1");
+  ecdh.generateKeys();
+  const b64u = b => Buffer.from(b).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const llavesNav = { p256dh: b64u(ecdh.getPublicKey()), auth: b64u(require("crypto").randomBytes(16)) };
+  const endpointPrueba = `https://fcm.googleapis.com/fcm/send/prueba-seguridad-${SUFIJO}`;
+  await prueba("NOT", "la llave pública de avisos es pública y sin caché", async () => {
+    const r = await pedir("GET", "/api/notificaciones/llave");
+    return espera(r.status === 200 && (r.json.llave === null || /^[A-Za-z0-9_-]{87}$/.test(r.json.llave)) && r.headers.get("cache-control") === "no-store",
+      `${r.status} ${r.headers.get("cache-control")}`);
+  });
+  await prueba("NOT", "suscribirse sin sesión → 401", async () => {
+    const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: {}, body: { para: "cliente", tipo: "web", endpoint: endpointPrueba, ...llavesNav } });
+    return espera(r.status === 401, r.status);
+  });
+  await prueba("NOT", "un cliente no se suscribe como admin → 401", async () => {
+    const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: comprador, body: { para: "admin", tipo: "web", endpoint: endpointPrueba, ...llavesNav } });
+    return espera(r.status === 401, r.status);
+  });
+  // El servidor manda a esa dirección: solo se aceptan los servicios de push de los navegadores (sin SSRF)
+  for (const malo of ["https://evil.example/push", "http://fcm.googleapis.com/fcm/send/x", "https://127.0.0.1/push", "https://fcm.googleapis.com:8443/x",
+    "https://user@fcm.googleapis.com/x", "https://fcm.googleapis.com.evil.example/x", "javascript:alert(1)", "x".repeat(800)]) {
+    await prueba("NOT", `endpoint no permitido (${malo.slice(0, 40)}) → 400`, async () => {
+      const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: comprador, body: { para: "cliente", tipo: "web", endpoint: malo, ...llavesNav } });
+      return espera(r.status === 400, `${r.status} ${r.texto.slice(0, 120)}`);
+    });
+  }
+  for (const [campo, valor] of [["p256dh", "AAAA"], ["p256dh", b64u(Buffer.alloc(65, 1))], ["auth", "corto"], ["auth", "!!!!"]]) {
+    await prueba("NOT", `llaves inválidas (${campo}) → 400`, async () => {
+      const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: comprador, body: { para: "cliente", tipo: "web", endpoint: endpointPrueba, ...llavesNav, [campo]: valor } });
+      return espera(r.status === 400, `${r.status} ${r.texto.slice(0, 120)}`);
+    });
+  }
+  for (const malo of ["corto", "con espacios en el token de la app", "<script>x</script>aaaaaaaaaaaaaa", "a".repeat(501)]) {
+    await prueba("NOT", `token de la app inválido (${malo.slice(0, 20)}) → 400`, async () => {
+      const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: comprador, body: { para: "cliente", tipo: "fcm", token: malo } });
+      return espera(r.status === 400, r.status);
+    });
+  }
+  await prueba("NOT", "tipo desconocido → 400", async () => {
+    const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: comprador, body: { para: "cliente", tipo: "sms", endpoint: endpointPrueba } });
+    return espera(r.status === 400, r.status);
+  });
+  await prueba("NOT", "suscribirse y quitarse con sesión (sin caché)", async () => {
+    const r = await pedir("POST", "/api/notificaciones/suscribir", { sesion: comprador, body: { para: "cliente", tipo: "web", endpoint: endpointPrueba, ...llavesNav } });
+    const q = await pedir("POST", "/api/notificaciones/quitar", { sesion: comprador, body: { para: "cliente", tipo: "web", endpoint: endpointPrueba } });
+    return espera(r.status === 200 && q.status === 200 && r.headers.get("cache-control") === "no-store", `${r.status} ${q.status} ${r.texto.slice(0, 120)}`);
+  });
+  await prueba("NOT", "quitar sin sesión → 401 y desde otro origen → 403", async () => {
+    const a = await pedir("POST", "/api/notificaciones/quitar", { sesion: {}, body: { para: "cliente", tipo: "web", endpoint: endpointPrueba } });
+    const b = await pedir("POST", "/api/notificaciones/quitar", { sesion: comprador, origin: "https://evil.example", body: { para: "cliente", tipo: "web", endpoint: endpointPrueba } });
+    return espera(a.status === 401 && b.status === 403, `${a.status} ${b.status}`);
+  });
+
   // ---------- Caché de fotos (plan 2026-11-11-carga-progresiva-y-cache-de-fotos) ----------
   const datosFoto = { stand_id: A.id, tipo: "producto", nombre: `Prueba seguridad ${SUFIJO}`, stock: 100, visible: true };
   const prodFoto = await ctx.producto(A, { imagen: dataUrl("image/png", PNG_1x1) });
