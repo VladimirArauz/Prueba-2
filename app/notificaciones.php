@@ -217,7 +217,7 @@ function token_fcm(array $c): ?string
     return $json['access_token'];
 }
 
-/** Status de FCM; 404 (UNREGISTERED) = la app ya no está o cambió de token. */
+/** Status de FCM; 404 (UNREGISTERED) = la app ya no está o cambió de FID. */
 function enviar_fcm(array $destino, array $carga): int
 {
     $c = cuenta_fcm();
@@ -225,11 +225,13 @@ function enviar_fcm(array $destino, array $carga): int
     $token = token_fcm($c);
     if (!$token) return 0;
     // Mensaje solo de datos y prioridad alta: la app arma la notificación con su canal y su destino al tocarla
-    $mensaje = ['message' => ['token' => $destino['endpoint'], 'android' => ['priority' => 'high', 'ttl' => PUSH_TTL . 's'],
+    // El destino es el ID de instalación de Firebase (FID): 'token' está obsoleto en HTTP v1 (lo indica la referencia de FCM)
+    $mensaje = ['message' => ['fid' => $destino['endpoint'], 'android' => ['priority' => 'high', 'ttl' => PUSH_TTL . 's'],
         'data' => array_map('strval', $carga)]];
     [$status, $texto] = post_saliente("https://fcm.googleapis.com/v1/projects/{$c['proyecto']}/messages:send",
         ['Content-Type' => 'application/json', 'Authorization' => "Bearer $token"], json_encode($mensaje, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-    if ($status === 400 && str_contains($texto, 'registration token')) return 404;
+    // 404 UNREGISTERED: ya no existe. 400 por un FID que FCM no reconoce: igual de muerto
+    if ($status === 400 && preg_match('/registration token|installation id|\\bfid\\b/i', $texto)) return 404;
     return $status;
 }
 
