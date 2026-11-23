@@ -103,7 +103,7 @@ Lo nuevo debe ser sobrio y no competir con él.
 - Siempre con clase `.btn` y una variante: `.btn` (principal, amarillo), `.secondary`, `.danger`,
   `.wa`, `.ghost`; tamaño `.btn-sm` si hace falta.
 - **Borde de 2px sólido visible siempre.** Sin degradados, sin sombras, sin levantarse en hover.
-- Radio 6px. Alto mínimo 44px (36px el chico).
+- Radio 6px. Alto mínimo 44px (36px el chico); en pantallas de 640px o menos, 48px (44px el chico), como pide Android.
 - Un solo botón principal (amarillo) por grupo de acciones.
 - Texto = la acción exacta ("Guardar producto", "Enviar pedido por WhatsApp"), sin flechas "→"
   ni "←" en el texto; la dirección se indica con icono.

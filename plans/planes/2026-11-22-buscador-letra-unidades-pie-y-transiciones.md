@@ -1,6 +1,6 @@
 # Plan: buscador claro, menos tamaños de letra, unidades flexibles, pie de la app y transiciones Shared Element
 
-Fecha: 2026-11-22 · Estado: propuesto · Prompts: `plans/prompts/2026-11-22-buscador-letra-unidades-pie-y-transiciones.md`
+Fecha: 2026-11-22 · Estado: en curso · Prompts: `plans/prompts/2026-11-22-buscador-letra-unidades-pie-y-transiciones.md`
 Alcance: web (`public/`) y app de Android (`~/AndroidStudioProjects/NecutlaMovil`), sin cambios en la API ni en la base.
 
 ## Context
@@ -64,7 +64,13 @@ Cada tamaño viejo pasa al token más cercano (`0.75rem` y `0.9375rem` → chica
 
 **7. App: revisión de diseño móvil** (checklist de las guías oficiales de Android: core app quality, edge-to-edge, accesibilidad). Contenido detrás de las barras del sistema y botones fuera de ellas (insets), objetivos de 48 dp, el teclado no tapa campos (`imePadding`), cuadrícula adaptable en pantallas anchas (`GridCells.Adaptive` ya está), TalkBack con etiquetas, letra al 200 %. Corregir lo que falle.
 
-**8. Versión, APK y cierre.** App 2.1.0 (`versionCode` 3), `assembleRelease` con `JAVA_HOME=/opt/android-studio/jbr` como el usuario, `apksigner verify` con la misma llave, copia a `~/Escritorio/Versiones Necutla Movil/Android/Necutla-2.1.0.apk` (sin borrar las anteriores), `public/app/necutla-android.apk` y `version.json`. `README.md` (escala de letra, unidades). `plans/MEMORIA.md`. Commit con `runuser`; el push lo hace el usuario desde VS Code. Subir a IONOS solo con permiso, con respaldo y md5 previos.
+**8. Extras pedidos por el usuario el 2026-11-22** (antes eran recomendaciones):
+- **Búsquedas recientes** (web y app): las últimas 5 búsquedas con resultados, guardadas solo en el dispositivo (`localStorage` con `try/catch` en la web, `SharedPreferences` en la app), visibles con el campo vacío y enfocado, cada una con su botón para quitarla y un "Borrar historial". Nunca se mandan al servidor ni a Analytics.
+- **Foto que crece en la web** (View Transitions entre páginas): `@view-transition { navigation: auto; }` dentro de `@media (prefers-reduced-motion: no-preference)` y `view-transition-name` en la foto de la tarjeta (`foto-producto-<id>`) y en la foto principal de `/p/<id>`, igual con la foto de la tienda y el encabezado de `/t/<slug>`. El nombre cambia por producto, así que se pone desde JS con `el.style.viewTransitionName` (la CSP bloquea `style="…"` en el HTML, pero no las propiedades puestas desde JS). Los navegadores sin soporte navegan igual que hoy. Es respuesta a un toque, así que cumple la regla de movimiento.
+- **Pie de la web en 2 columnas en el celular**: a 40em o menos, los enlaces del pie en una cuadrícula de 2 columnas; marca, lugar y horario siguen arriba a todo lo ancho.
+- **Botones de 48 px en el celular**: a 40em o menos, `.btn` con alto mínimo de 48px y `.btn-sm` de 44px, y lo tocable de solo icono también. El usuario pidió cambiar la regla, así que `plans/CLAUDE.md` se actualiza en esa línea.
+
+**9. Versión, APK y cierre.** App 2.1.0 (`versionCode` 3), `assembleRelease` con `JAVA_HOME=/opt/android-studio/jbr` como el usuario, `apksigner verify` con la misma llave, copia a `~/Escritorio/Versiones Necutla Movil/Android/Necutla-2.1.0.apk` (sin borrar las anteriores), `public/app/necutla-android.apk` y `version.json`. `README.md` (escala de letra, unidades). `plans/MEMORIA.md`. Commit con `runuser`; el push lo hace el usuario desde VS Code. Subir a IONOS solo con permiso, con respaldo y md5 previos.
 
 **E (opcional, pide permiso). Emulador para probar la app.** Hay `emulator` y `/dev/kvm`, pero no hay imagen del sistema (unos 1.5 GB) y el equipo tiene 5 GB de RAM. Si el usuario acepta, bajar una imagen x86_64 de API 36 con `sdkmanager`, crear un AVD chico y probar ahí las transiciones, el pie y la letra al 200 %. Sin emulador, la app solo se compila.
 
@@ -81,10 +87,6 @@ Cada tamaño viejo pasa al token más cercano (`0.75rem` y `0.9375rem` → chica
 - App: compila sin advertencias, `apksigner verify` y SHA-256 igual en las 3 copias; con emulador (si se aprueba el prompt E): foto que crece y se encoge, fade entre pestañas, pie en banda azul, letra al 200 %, "Quitar animaciones".
 - `ataques.js` no hace falta: no cambian la API ni las rutas.
 
-## Recomendaciones extra (no están en el plan; se hacen solo si el usuario las pide)
+## Recomendaciones extra
 
-1. **Búsquedas recientes** en la web y la app (las últimas 5, guardadas solo en el dispositivo, con "Borrar historial"): las guías de Apple y Carbon las recomiendan.
-2. **View Transitions en la web** (`@view-transition { navigation: auto; }`): el mismo efecto de foto que crece entre tienda y producto, sin JS. El usuario pidió la animación solo para la app.
-3. **Emulador o un teléfono para probar**: la 2.0.0 aún no se abre en ningún teléfono (pendiente de la memoria); cada versión nueva suma riesgo sin probar.
-4. **Pie de la web en móvil**: a 360 px el pie lleva muchas filas; agrupar enlaces en 2 columnas.
-5. **Objetivos táctiles de 48 px en la web en móvil**: hoy el mínimo es 44 px (regla del proyecto); Android pide 48 dp. Cambiarlo requiere actualizar `plans/CLAUDE.md`.
+Las 4 que había aquí (búsquedas recientes, View Transitions en la web, pie en 2 columnas y botones de 48 px) pasaron al prompt 8 a pedido del usuario. Queda una: probar la app en un teléfono o emulador (prompt E).
