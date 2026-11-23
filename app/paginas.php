@@ -90,6 +90,10 @@ function og_de_producto(int $id): ?array
         'descripcion' => recortar($p['descripcion'] ?: "Pídelo en Necutla y mándale tu pedido por WhatsApp a {$f['tienda']}.", 150),
         'pagina' => titulo_pagina($sin_punto, "$sin_punto en {$f['tienda']}"),
         'varias_fotos' => count($p['fotos']) > 1,
+        // La foto principal y el nombre llegan pintados (plan 2026-11-22): la transición entre páginas (View
+        // Transitions) llega a la foto real y no al dibujo de relleno
+        'foto_principal' => $p['fotos'][0] ?? $p['imagen_url'],
+        'nombre_h1' => $p['nombre'],
         'meta' => descripcion_meta($p['descripcion'] ?: "{$p['nombre']} de {$f['tienda']} en Necutla" . ($precio ? ", $precio" : '') . '.',
             "Pídelo en Necutla y manda tu pedido por WhatsApp a {$f['tienda']}."),
         'jsonld' => [
@@ -371,6 +375,13 @@ function pagina_publica(string $ruta): ?Respuesta
     }
     // Los controles del carrusel llegan visibles: si aparecieran con el JS, en celular empujarían el texto
     if (!empty($og['varias_fotos'])) $html = str_replace('id="producto-fotos" hidden', 'id="producto-fotos"', $html);
+    if (!empty($og['foto_principal'])) {
+        $html = str_replace('<img id="producto-img" src="/imagenes/producto.svg" alt=""',
+            '<img id="producto-img" src="' . $e($og['foto_principal']) . '" alt="' . $e($og['nombre_h1'] ?? '') . '"', $html);
+    }
+    if (isset($og['nombre_h1'])) {
+        $html = preg_replace_callback('#<h1 id="producto-nombre">.*?</h1>#s', fn() => '<h1 id="producto-nombre">' . $e($og['nombre_h1']) . '</h1>', $html, 1);
+    }
     if ($archivo === 'index.html') $html = con_tablero($html);
     if ($archivo === 'tienda.html' && !empty($og)) $html = con_encabezado_tienda($html, $m[1]);
     $html = con_web_analytics($html);

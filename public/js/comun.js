@@ -905,6 +905,47 @@ document.addEventListener("click", event => {
   if (el && ACCIONES[el.dataset.action]) ACCIONES[el.dataset.action](el, event);
 });
 
+// ================= Transición entre páginas (plan 2026-11-22) =================
+// style.css activa @view-transition; aquí se nombra solo la tarjeta tocada (si dos elementos llevan el mismo nombre,
+// el navegador cancela la transición). Al regresar, se nombra la tarjeta del producto o tienda de donde se viene.
+// Los que ya llevan el nombre fijo en style.css: si en la misma página hay una tarjeta del mismo tipo, ceden su nombre
+const NOMBRES_FIJOS = { producto: ["producto-img", "producto-nombre"], tienda: ["store-title"] };
+
+function nombrarTarjeta(card, tipo) {
+  NOMBRES_FIJOS[tipo].forEach(id => { const el = document.getElementById(id); if (el) el.style.viewTransitionName = "none"; });
+  const img = tipo === "producto" ? card.querySelector(".card-img-wrap img") : null;
+  const titulo = card.querySelector("h3");
+  if (img) img.style.viewTransitionName = `foto-${tipo}`;
+  if (titulo) titulo.style.viewTransitionName = `nombre-${tipo}`;
+}
+
+function limpiarNombresTransicion() {
+  const ids = Object.values(NOMBRES_FIJOS).flat().map(id => `#${id}`).join(", ");
+  document.querySelectorAll(`.card img, .card h3, ${ids}`).forEach(el => { if (el.style.viewTransitionName) el.style.viewTransitionName = ""; });
+}
+
+document.addEventListener("click", event => {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const enlace = event.target.closest('a[href^="/p/"], a[href^="/t/"]');
+  const card = enlace && enlace.closest(".card");
+  if (!card) return;
+  limpiarNombresTransicion();
+  nombrarTarjeta(card, enlace.getAttribute("href").startsWith("/p/") ? "producto" : "tienda");
+});
+
+window.addEventListener("pagereveal", event => {
+  limpiarNombresTransicion();
+  const desde = window.navigation && navigation.activation && navigation.activation.from;
+  if (!event.viewTransition || !desde || !desde.url) return;
+  const ruta = new URL(desde.url).pathname.replace(/\/$/, "");
+  const m = ruta.match(/^\/(p|t)\/[a-z0-9-]+$/);
+  if (!m) return;
+  const enlace = [...document.querySelectorAll(".card a[href]")].find(a => a.getAttribute("href") === ruta);
+  if (!enlace) return;
+  nombrarTarjeta(enlace.closest(".card"), m[1] === "p" ? "producto" : "tienda");
+  event.viewTransition.finished.finally(limpiarNombresTransicion);
+});
+
 // ================= Buscadores: botón para borrar lo escrito (plan 2026-11-22) =================
 // Cada campo de búsqueda lleva una X que aparece al escribir. Borra, avisa con "input" (la portada quita los
 // resultados) y regresa el foco al campo.

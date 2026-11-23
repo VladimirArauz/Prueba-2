@@ -5013,3 +5013,86 @@ img.admin-thumb.foto-completa {
 .footer-app:hover {
   color: var(--senal);
 }
+
+/* ================= Transición entre páginas (plan 2026-11-22) =================
+   La foto y el nombre de la tarjeta tocada viajan a la página del producto (y el nombre de la tienda a su
+   encabezado); lo demás se desvanece. comun.js nombra solo la tarjeta tocada (los nombres no pueden repetirse).
+   Solo responde a un toque. Con movimiento reducido no hay transición. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 0.3s;
+    animation-timing-function: var(--curva-mueve);
+  }
+  ::view-transition-old(root) {
+    animation: vista-sale 0.2s var(--curva-sale) both;
+  }
+  ::view-transition-new(root) {
+    animation: vista-entra 0.3s var(--curva-entra) both;
+  }
+}
+
+@keyframes vista-sale {
+  to { opacity: 0; }
+}
+
+@keyframes vista-entra {
+  from { opacity: 0; }
+}
+
+#producto-img {
+  view-transition-name: foto-producto;
+}
+
+#producto-nombre {
+  view-transition-name: nombre-producto;
+}
+
+#store-title {
+  view-transition-name: nombre-tienda;
+}
+
+/* ================= Celular: objetivos táctiles de 48px y pie en 2 columnas (plan 2026-11-22) ================= */
+@media (max-width: 40em) {
+  .btn {
+    min-height: 48px;
+  }
+  .btn.btn-sm {
+    min-height: 44px;
+  }
+  .btn.btn-icon,
+  .topbar .btn.btn-icon {
+    width: 48px;
+  }
+  .btn.btn-sm.btn-icon {
+    width: 44px;
+  }
+  input,
+  select,
+  textarea {
+    min-height: 48px;
+  }
+  .side-search input,
+  .side-link {
+    height: 48px;
+  }
+  .qty-control button,
+  .toast-cerrar,
+  .campo-ver {
+    width: 44px;
+    height: 44px;
+  }
+  /* Los enlaces del pie en 2 columnas, cada uno con su renglón de 44px para tocarlo */
+  .footer-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+  }
+  .footer-links a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
