@@ -1,6 +1,6 @@
 # Plan: buscador claro, menos tamaños de letra, unidades flexibles, pie de la app y transiciones Shared Element
 
-Fecha: 2026-11-22 · Estado: en curso · Prompts: `plans/prompts/2026-11-22-buscador-letra-unidades-pie-y-transiciones.md`
+Fecha: 2026-11-22 · Estado: aplicado · Prompts: `plans/prompts/2026-11-22-buscador-letra-unidades-pie-y-transiciones.md`
 Alcance: web (`public/`) y app de Android (`~/AndroidStudioProjects/NecutlaMovil`), sin cambios en la API ni en la base.
 
 ## Context

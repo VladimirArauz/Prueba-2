@@ -197,6 +197,18 @@ botones + y − del carrito cambian el número al momento y piden los precios 35
 (mientras tanto el botón de WhatsApp dice "Actualizando el total"), y el buscador de la portada busca
 mientras escribes, 400 ms después de la última tecla.
 
+El buscador de la portada (`portada.js`) siempre dice qué pasa en `#search-estado` ("Escribe al menos 2 letras",
+"Buscando…", cuántos resultados, "No encontramos…" o el error con "Reintentar"); mientras llega una búsqueda nueva,
+los resultados anteriores se quedan atenuados (`.grid.is-buscando`). Todo `input[type="search"]` lleva una X para
+borrar (`conBotonBorrar()` de `comun.js`). Las búsquedas recientes (las últimas 5 con resultados, al buscar con
+Enter o el botón, o al salir del campo) se guardan solo en el navegador (`localStorage` `necutla_busquedas`).
+
+Transición entre páginas: `@view-transition` en `style.css` (solo sin movimiento reducido). `comun.js` nombra la
+foto y el nombre de la tarjeta tocada (`foto-producto`, `nombre-producto`, `nombre-tienda`) y la página de destino
+los lleva fijos (`#producto-img`, `#producto-nombre`, `#store-title`); `app/paginas.php` manda la foto y el nombre
+del producto ya pintados para que la foto llegue a la foto real. Dos elementos con el mismo nombre cancelan la
+transición: no se pone `view-transition-name` a mano en otras tarjetas.
+
 Secciones con más de 2 partes (Necutools → Mi cuenta, Productos y servicios, Tiendas, y la página Mi cuenta)
 se dividen con botones `data-action="subseccion"` (`data-grupo`, `data-sub`) y envoltorios `.subseccion`;
 `mostrarSubseccion(grupo, sub)` de `comun.js` cambia la vista y avisa con el evento `subseccion`. Los
@@ -355,6 +367,18 @@ Cómo se publica una versión nueva:
 
 La llave de firma (`~/.necutla-firma/necutla-release.jks`) y `keystore.properties` no van a git: sin ellas no se
 puede actualizar la app instalada.
+
+Diseño y movimiento en la app (plan `2026-11-22-buscador-letra-unidades-pie-y-transiciones.md`):
+
+- Misma escala de letra que el sitio (`Letra` en `ui/tema/Tema.kt`), botones de 48 dp (44 el chico) y la barra de
+  abajo en 14 sp: si "Promociones" no cabe (pantalla angosta o letra grande), solo la pestaña elegida muestra texto.
+- Pie (`Pie()` en `ui/pantallas/Comunes.kt`): banda `N.Tinta` de orilla a orilla, como `.site-footer`.
+- Transiciones (`ui/Transiciones.kt`): la foto y el nombre de una tarjeta viajan a la pantalla del producto o de la
+  tienda con `Modifier.compartido(clave)` (shared element; claves `foto-producto-<id>`, `nombre-producto-<id>`,
+  `foto-tienda-<slug>`, `nombre-tienda-<slug>`); `Previa` guarda la tarjeta tocada para pintarla mientras carga el
+  detalle. Fade entre pestañas y slide al entrar a Buscar, Necutools y sus secciones de "Más". Con "Quitar
+  animaciones" del sistema no se mueve nada (`LocalSinMovimiento`).
+- Búsquedas recientes (`Recientes` en `data/Estado.kt`): las últimas 5, solo en el teléfono.
 
 ## Seguridad
 
