@@ -203,7 +203,25 @@ se dividen con botones `data-action="subseccion"` (`data-grupo`, `data-sub`) y e
 formularios largos llevan el guardar pegado abajo (`.form-actions.is-fija`); el de productos usa
 `.barra-guardar`, que dice si hay cambios sin guardar.
 
-Texto mínimo: 14 px (`0.875rem`). Solo el número del contador del carrito va en 12 px, para caber en su globo.
+Texto mínimo: 14 px. Solo hay 6 tamaños de letra, como variables de `:root` en `style.css`:
+`--letra-chica` (14), `--letra-base` (16, cuerpo y botones), `--letra-media` (18), `--letra-h3` (22),
+`--letra-h2` (28) y `--letra-titulo` (de 36 a 56, el h1). Un `font-size` nuevo usa una de ellas; la jerarquía
+se hace con el ancho (`wdth`) y el peso, no con más tamaños. La app de Android usa la misma escala (`Letra` en
+`Tema.kt`).
+
+Unidades (para que la página crezca con la letra que elige el usuario en su navegador):
+
+| Qué | Unidad |
+|---|---|
+| Tamaño de letra | `rem`, por las variables de arriba |
+| Cortes de `@media` | `em` (62em = 992px, 53.75em = 860px, 47.5em = 760px, 40em = 640px, 25em = 400px) |
+| Anchos y altos de contenido, columnas fijas | `rem`, `%`, `min()` (ej. `min(26.25rem, calc(100% - 32px))`) |
+| Relleno de botones | `em` (crece con su letra) |
+| Bordes, radios, divisores, altos mínimos de botón, sombras | `px` |
+| Columnas de grid | `minmax(0, 1fr)`, nunca `1fr` solo (una palabra larga ensanchaba la columna) |
+
+Se prueba con Chrome → Configuración → Apariencia → Tamaño de fuente en "Muy grande" (o el tamaño
+predeterminado a 32 px): a 360 px de ancho no debe haber scroll horizontal.
 
 ### Preguntar y avisar (sin `alert`, `confirm` ni `prompt`)
 

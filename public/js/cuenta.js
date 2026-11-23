@@ -132,7 +132,7 @@ function ajustarAlto() {
   const auth = $("cuenta-fuera");
   if (auth.hidden) return;
   const form = auth.classList.contains("is-registro") ? $("auth-registro") : $("auth-entrar");
-  const panel = matchMedia("(max-width: 760px)").matches ? auth.querySelector(".auth-panel").offsetHeight : 0;
+  const panel = matchMedia("(max-width: 47.5em)").matches ? auth.querySelector(".auth-panel").offsetHeight : 0;
   auth.style.setProperty("--alto-auth", `${form.offsetHeight + panel + 16}px`);
 }
 
