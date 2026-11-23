@@ -56,6 +56,7 @@ Cómo se usa:
 | `2026-11-21-servicios-carrusel-y-mensaje-whatsapp.md` | Aplicado (prompts 1 a 4) y subido a IONOS (2026-11-21). Falta que el usuario agregue fotos a un servicio y pruebe el mensaje en WhatsApp | 2026-11-21 |
 | `2026-11-22-app-android-studio.md` | Descartado: lo reemplaza `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` (al usuario no le gustó la app WebView 1.0.0) | 2026-11-22 |
 | `2026-11-22-app-nativa-mis-pedidos-y-descarga.md` | Aplicado (prompts 1 a 10) y subido a IONOS (2026-11-22). Falta probar la app 2.0.0 en un teléfono | 2026-11-22 |
+| `2026-11-22-buscador-letra-unidades-pie-y-transiciones.md` | Propuesto (prompts 1 a 8 y E, sin correr) | 2026-11-22 |
 
 ---
 
@@ -129,6 +130,12 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-22: plan de buscador, escala de letra, unidades, pie de la app y transiciones
+- Pedido del usuario: aplicar 4 reels (Df3FZ0BIK66 y DfsvuchIp2F de @jiron.design, DfuZApgB38D de @codingwithabdullah, Dftu2zGj6i2 de @ale.uiux), leídos con `/embed/captioned/`, y corregir el pie de la app, que parece una sección más. No se cambió código.
+- Nuevo plan `plans/planes/2026-11-22-buscador-letra-unidades-pie-y-transiciones.md` y sus prompts (1 a 8 y E) en `plans/prompts/` (mismo nombre).
+- Decisiones del usuario: los tips del buscador salen del texto del post y de guías (el video no se puede leer y vidIQ pide sesión); escala de 7 tamaños de letra en web y app; Shared Element y otras transiciones solo en la app, según el reel Dftu2zGj6i2 (el primer enlace que dio para eso era el de los tamaños de letra).
+- Hallazgos: 17 `font-size` distintos en `style.css` (dos de 12 px); `@media` y varios anchos y altos en px; la barra inferior de la app a 12 sp; el pie de la app sin fondo propio; ninguna transición entre pantallas. Hay `emulator` y `/dev/kvm`, pero no hay imagen del sistema (prompt E, con permiso).
 
 ### 2026-11-22: Mis pedidos, app 2.0.0 y descarga subidos a IONOS (prompt 10)
 - Con permiso del usuario. Commit `8cdab59`. Los 16 archivos que ya existían en el servidor eran la versión de `b385924`; respaldo en `~/necutla/respaldos/2026-11-22-app-nativa/antes.tar` (permisos 600). Subidos 21 archivos por rsync a `~/necutla/` (con `app/clientes.php` y `public/js/cuenta.js` de Mis pedidos, `public/app/`, `app-captcha.js` y `assetlinks.json`), idénticos. Sin cambios en la base.
