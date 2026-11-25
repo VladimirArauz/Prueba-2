@@ -279,6 +279,25 @@ function con_tag_manager(string $html, string $archivo): string
 // Portada (plan 2026-11-08): el tablero y "Explorar las N tiendas" llegan ya pintados en el HTML, así la página
 // no salta cuando hay más o menos tiendas que las 7 filas de esqueleto. portada.js los vuelve a pintar igual.
 // Si la base falla, se queda el HTML de siempre (esqueletos y "Explorar las tiendas").
+// Fila de tiendas de la barra de la tienda (plan 2026-11-24-rediseno-tienda-en-linea): llega pintada en todas las
+// páginas para que no empuje el contenido. comun.js la llena solo si el servidor no pudo.
+function con_departamentos(string $html, string $actual = ''): string
+{
+    try {
+        $tiendas = filas('SELECT nombre, slug, icono FROM stands WHERE visible ORDER BY orden, nombre');
+    } catch (Throwable $e) {
+        error_log('Necutla: departamentos sin datos: ' . $e->getMessage());
+        return $html;
+    }
+    if (!$tiendas) return $html;
+    $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    $icono = fn($n) => '<svg class="icon" aria-hidden="true"><use href="#i-' . $e($n) . '"></use></svg>';
+    $filas = implode('', array_map(fn($t) => '<li><a href="/t/' . $e($t['slug']) . '"' . ($t['slug'] === $actual ? ' aria-current="page"' : '') . '>'
+        . $icono($t['icono'] ?: 'store') . $e($t['nombre']) . '</a></li>', $tiendas));
+    $filas .= '<li><a href="/promociones.html"' . ($actual === 'promociones' ? ' aria-current="page"' : '') . '>' . $icono('tag') . 'Promociones</a></li>';
+    return str_replace('<ul id="departamentos-lista"></ul>', '<ul id="departamentos-lista">' . $filas . '</ul>', $html);
+}
+
 function con_tablero(string $html): string
 {
     try {
@@ -383,6 +402,7 @@ function pagina_publica(string $ruta): ?Respuesta
         $html = preg_replace_callback('#<h1 id="producto-nombre">.*?</h1>#s', fn() => '<h1 id="producto-nombre">' . $e($og['nombre_h1']) . '</h1>', $html, 1);
     }
     if ($archivo === 'index.html') $html = con_tablero($html);
+    $html = con_departamentos($html, $archivo === 'tienda.html' ? $m[1] : ($archivo === 'promociones.html' ? 'promociones' : ''));
     if ($archivo === 'tienda.html' && !empty($og)) $html = con_encabezado_tienda($html, $m[1]);
     $html = con_web_analytics($html);
     $html = con_tag_manager($html, $archivo);

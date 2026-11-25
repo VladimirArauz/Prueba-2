@@ -121,6 +121,13 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   servicios y opiniones visibles hay, y las 3 opiniones visibles más nuevas de 4 o 5 estrellas con comentario
   (mismo nombre que en la página del producto; sin correos, teléfonos ni usuarios). Los pedidos pagados solo
   salen cuando son 20 o más (`MINIMO_PEDIDOS_PUBLICOS` en `app/api.php`). Sin opiniones, la sección no se ve.
+- **Tienda en línea** (portada, plan `2026-11-24-rediseno-tienda-en-linea.md`): barra de la tienda con el buscador
+  grande y los departamentos (`con_departamentos` en `app/paginas.php` los pinta desde el servidor), banner con la
+  bienvenida y las promociones, beneficios, tiendas en fila, "Ofertas de hoy" con reloj hasta el cierre (de
+  `/api/vitrina`), rejilla de productos y "Conócenos" con la información de antes en pestañas (`/#que-es`,
+  `/#como-funciona`, `/#app-android`, `/#preguntas`). `GET /api/portada/productos` da hasta 10 productos: los más
+  pedidos de la semana (pedidos pagados, si hay 5 o más; `criterio: "pedidos"`) o los más nuevos
+  (`criterio: "nuevos"`), con su oferta de hoy; sin datos de clientes, `private, max-age=300`.
 - **Carrito**: guarda solo `{tipo, id, cantidad, color}` en el navegador. Nombres, precios y descuentos
   los calcula siempre el servidor (`POST /api/carrito/precios`).
 - **Pedidos**: al tocar "Enviar pedido por WhatsApp" se guarda el pedido (`POST /api/pedidos`) con los

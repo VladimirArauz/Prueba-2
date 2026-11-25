@@ -527,7 +527,8 @@ function mostrarSubseccion(grupo, sub) {
 // ================= Fotos que no caben en su marco (plan 2026-11-09-fotos-editor-carrusel-color-y-footer) =================
 // Solo cambia cómo se muestran: el archivo guardado no se toca. Las proporciones son fijas porque hay imágenes en paneles ocultos.
 const MARCOS_DE_FOTO = [
-  [".producto-img img", 4 / 3],
+  [".producto-img img", 1],
+  [".card-producto .card-img-wrap img", 1],
   [".card-img-wrap img, .card > img, .letrero-img img", 16 / 10],
   [".admin-thumb", 1]
 ];
@@ -695,16 +696,17 @@ function tarjetaProducto(p, opciones = {}) {
   const detalle = p.oferta ? detalleOferta(p.oferta) : "";
   const fotos = fotosDe(p);
   const carrusel = fotos.length > 1 ? ` carrusel-marco" data-fotos="${escapeHTML(fotos.join(" "))}` : "";
+  // Tarjeta de tienda en línea (plan 2026-11-24-rediseno-tienda-en-linea): foto cuadrada, precio primero,
+  // nombre en dos líneas, tienda, calificación y la acción. La descripción se lee en la página del producto.
   return `
-    <article class="card">
+    <article class="card card-producto">
       <a class="card-img-wrap${carrusel}" href="${enlace}" tabindex="-1" aria-hidden="true"><img src="${escapeHTML(fotos[0])}" alt="" ${opciones.primera ? "" : `loading="lazy" `}decoding="async"></a>
-      ${opciones.conTienda ? `<a class="card-sub" href="/t/${escapeHTML(p.slug)}">${escapeHTML(p.tienda)}</a>` : ""}
+      ${precioProducto(p)}
       <h3><a class="card-link" href="${enlace}">${escapeHTML(p.nombre)}</a></h3>
+      ${opciones.conTienda ? `<a class="card-sub" href="/t/${escapeHTML(p.slug)}">${escapeHTML(p.tienda)}</a>` : ""}
       ${estrellas(p.calificacion, p.resenas)}
       ${etiquetas ? `<div class="card-tags">${etiquetas}</div>` : ""}
       ${detalle ? `<div class="offer-detail">${escapeHTML(detalle)}</div>` : ""}
-      <p>${escapeHTML(p.descripcion)}</p>
-      ${precioProducto(p)}
       ${accionProducto(p, opciones)}
       <div data-wa-for="${Number(p.id)}"></div>
     </article>`;
@@ -759,7 +761,7 @@ function textosBloque(bloque, dia, deTienda) {
 function bloqueVitrina(bloque, i, dia, deTienda) {
   const { titulo, desc } = textosBloque(bloque, dia, deTienda);
   const tarjetas = bloque.productos.map((p, j) => tarjetaProducto(p, { conTienda: !deTienda })
-    .replace('<article class="card">', `<article class="card"${j >= VITRINA_INICIAL ? " hidden" : ""}>`)).join("");
+    .replace('<article class="card card-producto">', `<article class="card card-producto"${j >= VITRINA_INICIAL ? " hidden" : ""}>`)).join("");
   const ocultas = bloque.productos.length - VITRINA_INICIAL;
   return `
     <section class="vitrina-bloque" aria-labelledby="vitrina-${i}">
@@ -767,7 +769,7 @@ function bloqueVitrina(bloque, i, dia, deTienda) {
         <h3 id="vitrina-${i}">${escapeHTML(titulo)}</h3>
         <p>${escapeHTML(desc)}</p>
       </div>
-      <div class="grid">${tarjetas}</div>
+      <div class="grid grid-productos">${tarjetas}</div>
       ${ocultas > 0 ? `
         <div class="list-more">
           <button type="button" class="btn secondary" data-action="vitrina-mas">${icon("chevron-down")}Mostrar ${ocultas} más</button>
@@ -828,7 +830,7 @@ function botonListo(boton) {
 // Mientras llega la API, el contenedor muestra bloques planos con la forma de lo que va a llegar.
 // aria-busy se quita solo cuando se pinta otra cosa en el contenedor (datos, vacío o error).
 const PIEZAS_ESQUELETO = {
-  tarjeta: () => `<div class="card esqueleto-card"><span class="esqueleto esqueleto-img"></span>
+  tarjeta: () => `<div class="card card-producto esqueleto-card"><span class="esqueleto esqueleto-img"></span>
     <span class="esqueleto esqueleto-linea is-larga"></span><span class="esqueleto esqueleto-linea"></span>
     <span class="esqueleto esqueleto-linea is-corta"></span><span class="esqueleto esqueleto-boton"></span></div>`,
   fila: () => `<li class="board-row esqueleto-fila"><span class="esqueleto esqueleto-linea is-larga"></span></li>`,
@@ -1263,6 +1265,16 @@ function enfocablesCajon(nav) {
     .filter(el => el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : el.offsetParent !== null);
 }
 
+async function cargarDepartamentos() {
+  const lista = document.getElementById("departamentos-lista");
+  if (!lista || lista.children.length) return;
+  try {
+    const tiendas = await obtenerTiendas();
+    lista.innerHTML = tiendas.map(t => `<li><a href="/t/${escapeHTML(t.slug)}">${icon(t.icono || "store")}${escapeHTML(t.nombre)}</a></li>`).join("")
+      + `<li><a href="/promociones.html">${icon("tag")}Promociones</a></li>`;
+  } catch (e) { /* sin la fila, quedan la barra lateral y el buscador */ }
+}
+
 async function cargarTiendasMenu() {
   const lista = document.getElementById("side-tiendas-list");
   const boton = document.getElementById("side-tiendas-btn");
@@ -1352,6 +1364,7 @@ function initBarraLateral() {
   });
 
   cargarTiendasMenu();
+  cargarDepartamentos();
 }
 
 ACCIONES.subseccion = el => mostrarSubseccion(el.dataset.grupo, el.dataset.sub);

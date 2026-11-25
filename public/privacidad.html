@@ -18,22 +18,38 @@
 </head>
 <body>
 
-  <div class="topbar">
-    <a class="nav-brand" href="/">
-      <img class="brand-emblem" src="/imagenes/logo.png" alt="" width="40" height="40">
-      <span class="brand-title">Necutla</span>
-    </a>
-    <div class="topbar-actions">
-      <a class="btn secondary btn-icon side-carrito" href="/carrito.html" aria-label="Carrito">
-        <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
-        <span class="cart-pill cart-count" aria-hidden="true">0</span>
-      </a>
-      <button type="button" class="btn secondary btn-icon" id="menu-abrir" data-action="menu-abrir" aria-label="Abrir menú" aria-controls="main-navbar" aria-expanded="false">
+  <header class="barra-tienda on-tinta">
+    <div class="barra-fila">
+      <button type="button" class="btn ghost btn-icon barra-menu" id="menu-abrir" data-action="menu-abrir" aria-label="Abrir menú" aria-controls="main-navbar" aria-expanded="false">
         <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
       </button>
+      <a class="barra-marca" href="/">
+        <img class="brand-emblem" src="/imagenes/logo.png" alt="" width="36" height="36">
+        <span class="brand-title">Necutla</span>
+      </a>
+      <div class="buscador-zona">
+        <form class="buscador" action="/" method="get" role="search">
+          <label class="visually-hidden" for="barra-q">Buscar productos y servicios</label>
+          <input type="search" id="barra-q" name="q" minlength="2" maxlength="60" placeholder="Busca playeras, cables, dulces, volantes…" required>
+          <button type="submit"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg><span class="barra-texto">Buscar</span></button>
+        </form>
+      </div>
+      <nav class="barra-acciones" aria-label="Tu cuenta y carrito">
+        <a class="barra-enlace" href="/cuenta.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+          <span class="barra-texto">Mi cuenta</span>
+        </a>
+        <a class="barra-enlace side-carrito" href="/carrito.html" aria-label="Carrito">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span class="cart-pill cart-count" aria-hidden="true">0</span>
+          <span class="barra-texto">Carrito</span>
+        </a>
+      </nav>
     </div>
-  </div>
-
+    <nav class="departamentos" aria-label="Tiendas">
+      <ul id="departamentos-lista"></ul>
+    </nav>
+  </header>
   <nav class="sidebar" id="main-navbar" aria-label="Principal">
     <div class="side-top">
       <a class="side-brand" href="/">
@@ -48,11 +64,6 @@
       </button>
     </div>
 
-    <form class="side-search" action="/" method="get" role="search">
-      <label class="visually-hidden" for="side-q">Buscar productos</label>
-      <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
-      <input id="side-q" name="q" type="search" placeholder="Buscar productos" minlength="2" maxlength="60" required>
-    </form>
 
     <div class="side-scroll">
       <ul class="side-nav">
@@ -66,6 +77,7 @@
         </li>
         <li><a class="side-link" href="/promociones.html" aria-current="page"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg></span><span class="side-text">Promociones</span></a></li>
         <li><a class="side-link" href="/carrito.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg><span class="cart-pill cart-count" aria-label="productos en el carrito">0</span></span><span class="side-text">Carrito</span></a></li>
+        <li><a class="side-link" href="/cuenta.html?sub=pedidos"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-receipt"></use></svg></span><span class="side-text">Mis pedidos</span></a></li>
         <li><a class="side-link" href="/cuenta.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg></span><span class="side-text">Mi cuenta</span></a></li>
       </ul>
       <ul class="side-nav side-abajo">

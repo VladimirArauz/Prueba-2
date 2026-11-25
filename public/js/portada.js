@@ -1,8 +1,9 @@
 /**
- * NECUTLA — Portada: tablero de tiendas, promociones de temporada, buscador y vitrina de ofertas al final.
+ * NECUTLA — Portada como tienda en línea (plan 2026-11-24-rediseno-tienda-en-linea): banner de promociones con el
+ * tablero, tiendas, ofertas de hoy, lo más pedido, opiniones y Conócenos. El buscador vive en la barra de la tienda.
  */
 
-const MAX_PROMOS_PORTADA = 3;
+const MAX_PROMOS_PORTADA = 4;
 
 // Fotos de Unsplash (Unsplash License) para las tarjetas de la portada, por slug de tienda.
 // Plan 2026-10-31-fotos-tiendas-portada; origen de cada una en recursos/fotos-unsplash/creditos.md.
@@ -17,8 +18,8 @@ const FOTOS_TIENDAS = {
   otra: { alt: "Puesto de mercado con artesanías tejidas de colores", autor: "Aron Weerakoon", perfil: "https://unsplash.com/@aron781n" }
 };
 
-// Ancho que ocupa la foto según la cuadrícula: 3 columnas, 2 (≤992px) y 1 (≤640px)
-const TAMANOS_FOTO = "(max-width: 640px) 92vw, (max-width: 992px) 46vw, 384px";
+// Ancho de la foto de cada tienda: 7 en fila, 4 (≤992px) y casi 3 en celular
+const TAMANOS_FOTO = "(max-width: 640px) 30vw, (max-width: 992px) 23vw, 160px";
 
 // La foto de Unsplash de la tienda, o null si tiene portada propia o no hay foto para ella
 function fotoDe(t) {
@@ -29,11 +30,11 @@ function fotoDe(t) {
 function imagenTarjeta(t) {
   const foto = fotoDe(t);
   if (!foto) {
-    return `<div class="card-img-wrap"><img src="${escapeHTML(t.imagen_url || "/imagenes/otra.svg")}" alt="Tienda ${escapeHTML(t.nombre)}" loading="lazy"></div>`;
+    return `<span class="tienda-tile-foto"><img src="${escapeHTML(t.imagen_url || "/imagenes/otra.svg")}" alt="" loading="lazy" decoding="async"></span>`;
   }
   const base = `/imagenes/tiendas/${escapeHTML(t.slug)}`;
-  return `<div class="card-img-wrap"><img src="${base}-640.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w"
-    sizes="${TAMANOS_FOTO}" width="1280" height="800" alt="${escapeHTML(foto.alt)}" loading="lazy" decoding="async"></div>`;
+  return `<span class="tienda-tile-foto"><img src="${base}-640.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w"
+    sizes="${TAMANOS_FOTO}" width="1280" height="800" alt="" loading="lazy" decoding="async"></span>`;
 }
 
 // "Fotos de Unsplash: Nombre, Nombre…" con los fotógrafos de las tarjetas que se ven
@@ -51,26 +52,32 @@ function filaTablero(t) {
   return `<li><a class="board-row" href="/t/${escapeHTML(t.slug)}">${icon(t.icono || "store")}<span class="board-name">${escapeHTML(t.nombre)}</span>${icon("chevron-right", "board-go")}</a></li>`;
 }
 
+// Compra por tienda: foto cuadrada, nombre y cuántos productos tiene (como los departamentos de una tienda en línea)
 function tarjetaTienda(t) {
   const partes = [];
   if (t.productos) partes.push(`${t.productos} ${t.productos === 1 ? "producto" : "productos"}`);
   if (t.servicios) partes.push(`${t.servicios} ${t.servicios === 1 ? "servicio" : "servicios"}`);
   return `
-    <article class="card">
+    <a class="tienda-tile" href="/t/${escapeHTML(t.slug)}">
       ${imagenTarjeta(t)}
-      <h3>${icon(t.icono || "store")}${escapeHTML(t.nombre)}</h3>
       ${t.ofertas_hoy ? `<span class="tag-oferta">${icon("tag")}${t.ofertas_hoy === 1 ? "1 oferta hoy" : `${t.ofertas_hoy} ofertas hoy`}</span>` : ""}
-      <p>${escapeHTML(t.descripcion || "Catálogo de la tienda.")}</p>
-      ${partes.length ? `<div class="card-sub">${partes.join(" · ")}</div>` : ""}
-      <a class="btn secondary" href="/t/${escapeHTML(t.slug)}">Entrar a ${escapeHTML(t.nombre)}</a>
-    </article>`;
+      <strong>${escapeHTML(t.nombre)}</strong>
+      <span>${escapeHTML(partes.join(" · ") || "Catálogo de la tienda")}</span>
+    </a>`;
+}
+
+// Lugar apartado para las tiendas mientras llegan: tantas como filas trae el tablero (lo pinta el servidor)
+function esqueletoTiendas(grid) {
+  const n = document.querySelectorAll("#board-list .board-row").length || 7;
+  grid.innerHTML = Array.from({ length: n }, () => `
+    <span class="tienda-tile esqueleto-tile" aria-hidden="true"><span class="tienda-tile-foto"></span><strong>&nbsp;</strong><span>&nbsp;</span></span>`).join("");
 }
 
 async function cargarTiendas() {
   const grid = document.getElementById("stores-grid");
   // El servidor ya manda el tablero pintado (app/paginas.php, con_tablero); los esqueletos solo si no llegó
   if (!document.querySelector("#board-list .board-row")) pintarEsqueletos(document.getElementById("board-list"), 7, "fila");
-  pintarEsqueletos(grid, 6);
+  esqueletoTiendas(grid);
   try {
     const tiendas = await obtenerTiendas();
     // Si el servidor ya lo pintó igual, no se toca: así las filas no repiten su entrada
@@ -87,46 +94,133 @@ async function cargarTiendas() {
   }
 }
 
+// ================= Banner (carrusel de promociones) =================
+// La primera diapositiva viene en el HTML (con el h1); las promociones de temporada se agregan detrás.
+// Solo cambia cuando el estudiante toca las flechas o los puntos. Todas ocupan el mismo lugar: no hay saltos.
+function diapositivaPromo(promo) {
+  const vigencia = promo.inicio === promo.fin ? `Solo el ${fechaCorta(promo.fin)}` : `Hasta el ${fechaCorta(promo.fin)}`;
+  const foto = promo.imagen_url
+    ? `<img src="${escapeHTML(promo.imagen_url)}" alt="${escapeHTML(promo.titulo)}" loading="lazy" decoding="async">`
+    : `<img src="/imagenes/tiendas/regalos-640.webp" alt="" loading="lazy" decoding="async">`;
+  return `
+    <article class="banner-slide" aria-roledescription="diapositiva" aria-hidden="true" inert>
+      <div class="banner-texto">
+        <span class="tag-oferta">${icon("tag")}Promoción de temporada</span>
+        <h2>${escapeHTML(promo.titulo)}</h2>
+        ${promo.descripcion ? `<p>${escapeHTML(promo.descripcion)}</p>` : ""}
+        <div class="banner-precio"><strong>${money(promo.precio)}</strong>${promo.precio_normal ? `<s>${money(promo.precio_normal)}</s>` : ""}<span>${escapeHTML(vigencia)}</span></div>
+        <a class="btn" href="/promociones.html">Ver la promoción</a>
+      </div>
+      <div class="banner-foto">${foto}</div>
+    </article>`;
+}
+
+let bannerActual = 0;
+
+function irABanner(i) {
+  const slides = [...document.querySelectorAll("#banner-pista .banner-slide")];
+  if (slides.length < 2) return;
+  bannerActual = (i + slides.length) % slides.length;
+  slides.forEach((s, j) => {
+    const es = j === bannerActual;
+    s.classList.toggle("is-actual", es);
+    s.toggleAttribute("inert", !es);
+    if (es) s.removeAttribute("aria-hidden"); else s.setAttribute("aria-hidden", "true");
+    s.setAttribute("aria-label", `${j + 1} de ${slides.length}`);
+  });
+  document.querySelectorAll("#banner-puntos button").forEach((b, j) => b.setAttribute("aria-current", String(j === bannerActual)));
+}
+
 async function cargarPromociones() {
   try {
     let promos = await api("/promociones?destacadas=1");
     if (!promos.length) promos = await api("/promociones");
     if (!promos.length) return;
-    document.getElementById("promos-grid").innerHTML = promos.slice(0, MAX_PROMOS_PORTADA).map(tarjetaPromocion).join("");
-    document.getElementById("promos").hidden = false;
-  } catch (e) { /* sin promociones, la portada sigue igual */ }
+    const lista = promos.slice(0, MAX_PROMOS_PORTADA);
+    document.getElementById("banner-pista").insertAdjacentHTML("beforeend", lista.map(diapositivaPromo).join(""));
+    const total = lista.length + 1;
+    document.getElementById("banner-puntos").innerHTML = Array.from({ length: total }, (_, j) =>
+      `<button type="button" data-action="banner-ir" data-i="${j}" aria-label="Ver diapositiva ${j + 1} de ${total}" aria-current="${j === 0}"></button>`).join("");
+    document.getElementById("banner-controles").hidden = false;
+    irABanner(0);
+  } catch (e) { /* sin promociones, el banner se queda con la bienvenida */ }
 }
 
-// ================= Letrero "Encuentra ___" (plan 2026-11-08-letrero-giratorio-hero) =================
-// Pasa por todas las palabras y vuelve a empezar, sin fin. Se pausa con el mouse encima o si la pestaña no se ve. Con movimiento reducido no gira. El lector de pantalla lee la frase fija del HTML.
-const PALABRAS_GIRO = ["playeras", "audífonos", "dulces", "volantes", "cuadernos", "regalos", "engargolados", "lo que necesitas"];
-const PAUSA_GIRO = 2500;
+// ================= Ofertas de hoy (riel) =================
+// Junta los productos de la vitrina (temporada, de este día y remates) en una sola fila que se desliza.
+const MAX_OFERTAS_HOY = 15;
+const CIERRE_STANDS = 22; // Lun a vie, 9:00 a 22:00
 
-function iniciarGiro() {
-  const palabra = document.getElementById("hero-giro-palabra");
-  if (!palabra) return;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    palabra.textContent = PALABRAS_GIRO.at(-1);
+// Cuánto falta para que cierren los stands hoy; null si hoy no abren o ya cerraron
+function faltaParaCerrar(ahora = new Date()) {
+  const dia = ahora.getDay();
+  if (dia === 0 || dia === 6) return null;
+  const cierre = new Date(ahora);
+  cierre.setHours(CIERRE_STANDS, 0, 0, 0);
+  const ms = cierre - ahora;
+  if (ms <= 0 || ahora.getHours() < 9) return null;
+  return ms;
+}
+
+let relojHoy = null;
+
+function pintarReloj() {
+  const caja = document.getElementById("reloj-hoy");
+  const ms = faltaParaCerrar();
+  if (ms === null) {
+    caja.hidden = true;
+    clearInterval(relojHoy);
     return;
   }
-  const letrero = palabra.closest(".hero-giro");
-  let indice = 0;
-  let pausado = false;
-  letrero.addEventListener("mouseenter", () => { pausado = true; });
-  letrero.addEventListener("mouseleave", () => { pausado = false; });
-  const siguiente = () => {
-    if (pausado || document.hidden) return void setTimeout(siguiente, PAUSA_GIRO);
-    indice = (indice + 1) % PALABRAS_GIRO.length;
-    palabra.classList.remove("is-entrando");
-    palabra.classList.add("is-saliendo");
-    palabra.addEventListener("animationend", () => {
-      palabra.textContent = PALABRAS_GIRO[indice];
-      palabra.classList.remove("is-saliendo");
-      palabra.classList.add("is-entrando");
-      setTimeout(siguiente, PAUSA_GIRO);
-    }, { once: true });
-  };
-  setTimeout(siguiente, PAUSA_GIRO);
+  const s = Math.floor(ms / 1000);
+  const dos = n => String(n).padStart(2, "0");
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), seg = s % 60;
+  caja.innerHTML = `<span class="reloj-texto">Cierran en</span><b>${dos(h)}</b><b>${dos(m)}</b><b>${dos(seg)}</b>`;
+  caja.setAttribute("aria-label", `Los stands cierran en ${h} h ${m} min`);
+  caja.hidden = false;
+}
+
+async function cargarOfertasHoy() {
+  try {
+    const { bloques } = await api("/vitrina");
+    const vistos = new Set();
+    const productos = [];
+    bloques.forEach(b => b.productos.forEach(p => {
+      if (!vistos.has(p.id)) { vistos.add(p.id); productos.push(p); }
+    }));
+    if (!productos.length) return;
+    document.getElementById("ofertas-hoy-pista").innerHTML = productos.slice(0, MAX_OFERTAS_HOY)
+      .map(p => tarjetaProducto(p, { conTienda: true })).join("");
+    document.getElementById("ofertas-hoy").hidden = false;
+    pintarReloj();
+    relojHoy = setInterval(pintarReloj, 1000);
+  } catch (e) { /* sin ofertas, la sección se queda oculta */ }
+}
+
+// ================= Lo más pedido esta semana (o lo nuevo) =================
+async function cargarMasPedidos() {
+  try {
+    const { criterio, productos } = await api("/portada/productos");
+    if (!productos.length) return;
+    if (criterio === "nuevos") {
+      document.getElementById("mas-pedidos-title").textContent = "Lo nuevo en las tiendas";
+      document.getElementById("mas-pedidos-desc").textContent = "Lo último que subieron las tiendas de Necutla.";
+    }
+    document.getElementById("mas-pedidos-grid").innerHTML = productos.map(p => tarjetaProducto(p, { conTienda: true })).join("");
+    document.getElementById("mas-pedidos").hidden = false;
+  } catch (e) { /* sin productos, la sección se queda oculta */ }
+}
+
+// ================= Conócenos =================
+const PANELES_CONOCENOS = ["que-es", "como-funciona", "app-android", "preguntas"];
+
+function abrirPanel(id, enfocar = false) {
+  if (!PANELES_CONOCENOS.includes(id)) return false;
+  PANELES_CONOCENOS.forEach(p => { document.getElementById(p).hidden = p !== id; });
+  document.querySelectorAll('[data-action="conocenos"]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.panel === id)));
+  if (id === "app-android") cargarVersionApp();
+  if (enfocar) document.getElementById("conocenos").scrollIntoView({ block: "start" });
+  return true;
 }
 
 // ================= Lo que dicen otros estudiantes (plan 2026-11-08) =================
@@ -178,7 +272,7 @@ function estadoBusqueda(texto, { error = false } = {}) {
   document.getElementById("search-reintentar").hidden = !error;
 }
 
-const ESTADO_INICIAL = "Busca en todas las tiendas a la vez.";
+const ESTADO_INICIAL = "";
 
 // alEscribir: la busca el debounce mientras escribes; no mueve la página
 async function buscar(event, alEscribir = false) {
@@ -314,6 +408,12 @@ function ocultarRecientes() {
 }
 
 Object.assign(ACCIONES, {
+  "banner-anterior": () => irABanner(bannerActual - 1),
+  "banner-siguiente": () => irABanner(bannerActual + 1),
+  "banner-ir": el => irABanner(Number(el.dataset.i)),
+  "riel-anterior": el => { const p = el.closest(".riel").querySelector(".riel-pista"); p.scrollBy({ left: -p.clientWidth, behavior: "smooth" }); },
+  "riel-siguiente": el => { const p = el.closest(".riel").querySelector(".riel-pista"); p.scrollBy({ left: p.clientWidth, behavior: "smooth" }); },
+  conocenos: el => abrirPanel(el.dataset.panel),
   "limpiar-busqueda": () => {
     const input = document.getElementById("search-input");
     input.value = "";
@@ -380,32 +480,26 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("pointerdown", event => {
     if (!event.target.closest("#search-form, #search-recientes")) ocultarRecientes();
   });
-  const barra = document.querySelector(".side-search");
-  if (barra) {
-    barra.addEventListener("submit", event => {
-      event.preventDefault();
-      abrirCajon(false);
-      buscarDesdeBarra(barra.elements.q.value.trim());
-    });
-  }
   const q = (new URLSearchParams(location.search).get("q") || "").trim();
   if (q) buscarDesdeBarra(q);
-  iniciarGiro();
+  // Un enlace a una parte de Conócenos (/#como-funciona, /#preguntas) abre su panel
+  const abrirDesdeHash = () => { if (abrirPanel(location.hash.slice(1))) document.getElementById(location.hash.slice(1)).scrollIntoView({ block: "start" }); };
+  abrirDesdeHash();
   const tiendas = cargarTiendas();
   cargarPromociones();
+  cargarOfertasHoy();
   // Opiniones y vitrina van debajo del directorio: se piden al acercarse (plan 2026-11-11). Con un #ancla o una
   // búsqueda en la dirección se piden de una vez, para que no aparezcan arriba de donde salta la página.
   let pedidas = false;
   const abajo = () => {
     if (pedidas) return;
     pedidas = true;
+    cargarMasPedidos();
     cargarPruebaSocial();
-    cargarVitrina();
   };
   // Se empieza a observar ya con las tarjetas de tiendas pintadas: antes, la marca queda arriba y se pediría de una vez
   if (location.hash || q) abajo();
   else Promise.resolve(tiendas).finally(() => alAcercarse(document.getElementById("portada-centinela"), abajo, { margen: "800px" }));
   // Un salto sin scroll suave (#como-funciona con movimiento reducido) puede brincarse la marca
-  window.addEventListener("hashchange", abajo);
-  alAcercarse(document.getElementById("app-android"), cargarVersionApp, { margen: "800px" });
+  window.addEventListener("hashchange", () => { abajo(); abrirDesdeHash(); });
 });

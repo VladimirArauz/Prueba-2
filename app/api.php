@@ -9,6 +9,10 @@ const MAX_POR_BLOQUE_VITRINA = 12;
 // Portada (plan 2026-11-08): los pedidos solo se publican cuando ya son una cifra que da confianza
 const MINIMO_PEDIDOS_PUBLICOS = 20;
 const OPINIONES_PORTADA = 3;
+// Rejilla de la portada (plan 2026-11-24-rediseno-tienda-en-linea): 10 productos; "lo más pedido" solo si al menos
+// 5 productos distintos se pagaron en la semana, si no, lo más nuevo
+const PRODUCTOS_PORTADA = 10;
+const MINIMO_MAS_PEDIDOS = 5;
 
 // ================= Formato de salida =================
 function imagen_producto(array $f): ?string
@@ -509,6 +513,39 @@ function rutas_api(): void
                 'producto' => ['id' => $f['producto_id'], 'nombre' => $f['producto']],
                 'tienda' => ['nombre' => $f['tienda'], 'slug' => $f['tienda_slug']],
             ], $recientes),
+        ]);
+        $r->cabeceras['Cache-Control'] = 'private, max-age=300';
+        return $r;
+    });
+
+    // ================= Portada: lo más pedido o lo nuevo (plan 2026-11-24-rediseno-tienda-en-linea) =================
+    // Solo productos visibles de tiendas visibles; no publica cuántas piezas se vendieron.
+    get('/api/portada/productos', function () {
+        $pedidos = array_map('intval', array_column(filas("SELECT i.producto_id AS id
+            FROM pedido_items i
+            JOIN pedidos pe ON pe.id = i.pedido_id
+            JOIN productos p ON p.id = i.producto_id
+            JOIN stands s ON s.id = p.stand_id
+            WHERE pe.estado = ? AND pe.creado_en >= NOW() - INTERVAL 7 DAY AND p.visible AND s.visible AND p.tipo = 'producto'
+            GROUP BY i.producto_id
+            ORDER BY SUM(i.cantidad) DESC, i.producto_id DESC
+            LIMIT ?", ['pagado', PRODUCTOS_PORTADA]), 'id'));
+        $criterio = count($pedidos) >= MINIMO_MAS_PEDIDOS ? 'pedidos' : 'nuevos';
+        $sql = 'SELECT ' . COLUMNAS_PRODUCTO . ", s.nombre AS tienda, s.slug, s.icono
+            FROM productos p JOIN stands s ON s.id = p.stand_id
+            WHERE p.visible AND s.visible AND p.tipo = 'producto'";
+        if ($criterio === 'pedidos') {
+            $filas = filas($sql . ' AND p.id IN (' . marcas($pedidos) . ')', $pedidos);
+            $lugar = array_flip($pedidos);
+            usort($filas, fn($a, $b) => $lugar[(int) $a['id']] <=> $lugar[(int) $b['id']]);
+        } else {
+            $filas = filas($sql . ' ORDER BY agotado, p.creado_en DESC, p.id DESC LIMIT ?', [PRODUCTOS_PORTADA]);
+        }
+        $standIds = array_values(array_unique(array_map(fn($f) => (int) $f['stand_id'], $filas)));
+        $ofertas = ofertas_de_hoy($standIds);
+        $r = json_respuesta([
+            'criterio' => $criterio,
+            'productos' => array_map(fn($f) => [...producto_publico(producto_de_fila($f), $ofertas), 'tienda' => $f['tienda'], 'slug' => $f['slug'], 'icono' => $f['icono']], $filas),
         ]);
         $r->cabeceras['Cache-Control'] = 'private, max-age=300';
         return $r;

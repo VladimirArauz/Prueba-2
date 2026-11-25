@@ -5128,3 +5128,862 @@ img.admin-thumb.foto-completa {
 .avisos-caja-admin {
   margin-top: 0;
 }
+
+/* ======================================================================================================
+   TIENDA EN LÍNEA (plan 2026-11-24-rediseno-tienda-en-linea)
+   Barra de la tienda con el buscador grande, banner de promociones, beneficios, tiendas en fila, ofertas
+   de hoy en riel, rejilla densa de productos (5 → 3 → 2), Conócenos y la ficha del producto.
+   ====================================================================================================== */
+
+/* ----- Barra de la tienda: arriba del contenido, junto a la barra lateral ----- */
+.barra-tienda {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  margin-left: calc(-1 * var(--side-margen));
+  background: var(--tinta);
+  color: var(--hoja);
+}
+
+.barra-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 24px;
+  width: min(1200px, 92%);
+  min-height: 72px;
+  margin: 0 auto;
+}
+
+.barra-menu,
+.barra-marca {
+  display: none;
+}
+
+.barra-tienda :focus-visible {
+  outline-color: var(--hoja);
+}
+
+.buscador-zona {
+  position: relative;
+  min-width: 0;
+}
+
+.buscador {
+  display: flex;
+  height: 48px;
+  border: 2px solid var(--senal);
+  border-radius: var(--r-btn);
+  background: var(--hoja);
+  overflow: hidden;
+}
+
+.buscador:focus-within {
+  outline: 3px solid var(--hoja);
+  outline-offset: 2px;
+}
+
+.buscador input,
+.buscador input:focus {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 48px 0 16px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.buscador .campo-borrar {
+  right: auto;
+}
+
+.buscador button[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 1.125em;
+  border: 0;
+  border-left: 2px solid var(--tinta);
+  background: var(--senal);
+  color: var(--tinta);
+  font-family: var(--font);
+  font-size: var(--letra-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--t-fast);
+}
+
+.buscador button[type="submit"]:hover {
+  background: var(--senal-hover);
+}
+
+/* Búsquedas recientes: caen bajo el buscador, encima de la página */
+.buscador-zona .search-recientes {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-width: none;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+  color: var(--tinta);
+  box-shadow: var(--sombra-2);
+}
+
+.buscador-zona .search-recientes :focus-visible {
+  outline-color: var(--senal);
+}
+
+.barra-acciones {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.barra-enlace {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  border-radius: var(--r-btn);
+  color: var(--hoja);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.barra-enlace:hover {
+  border-color: var(--linea-tinta);
+}
+
+.barra-enlace .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.barra-enlace .cart-pill {
+  position: static;
+  margin-left: -4px;
+}
+
+/* Fila de tiendas */
+.departamentos {
+  border-top: 1px solid var(--linea-tinta);
+}
+
+.departamentos ul {
+  display: flex;
+  gap: 4px;
+  width: min(1200px, 92%);
+  min-height: 52px;
+  margin: 0 auto;
+  padding: 4px 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.departamentos ul::-webkit-scrollbar {
+  display: none;
+}
+
+.departamentos a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  border-radius: var(--r-btn);
+  color: var(--hoja);
+  font-size: var(--letra-chica);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.departamentos a:hover {
+  border-color: var(--linea-tinta);
+}
+
+.departamentos .icon {
+  color: var(--senal);
+}
+
+.departamentos a[aria-current="page"] {
+  background: var(--senal);
+  border-color: var(--senal);
+  color: var(--tinta);
+}
+
+.departamentos a[aria-current="page"] .icon {
+  color: var(--tinta);
+}
+
+/* La línea de estado de la búsqueda solo se ve cuando hay algo que decir */
+.search-estado:has(#search-estado-texto:empty):has(#search-reintentar[hidden]) {
+  display: none;
+}
+
+#contenido > .search-estado {
+  margin: 0 0 12px;
+  max-width: none;
+}
+
+#contenido > .search-results {
+  margin-bottom: 40px;
+}
+
+/* ----- Portada ----- */
+.inicio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.inicio-grid .board {
+  animation: none;
+}
+
+/* Banner: todas las diapositivas ocupan el mismo lugar; solo se ve la actual */
+.banner {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+  overflow: hidden;
+}
+
+.banner-pista {
+  display: grid;
+  height: 100%;
+}
+
+.banner-slide {
+  grid-area: 1 / 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--t-media), visibility 0s linear 0.25s;
+}
+
+.banner-slide.is-actual {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity var(--t-media);
+}
+
+.banner-texto {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 32px 36px 76px;
+}
+
+.banner-texto h1,
+.banner-texto h2 {
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.05;
+  font-variation-settings: 'wdth' 125;
+  text-wrap: balance;
+}
+
+.banner-texto p {
+  max-width: 40ch;
+}
+
+.banner-precio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner-precio strong {
+  font-size: var(--letra-h2);
+  font-weight: 800;
+}
+
+.banner-precio s,
+.banner-precio span {
+  color: var(--texto-2);
+  font-size: var(--letra-chica);
+}
+
+.banner-foto {
+  min-height: 100%;
+  background: var(--gis);
+}
+
+.banner-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.banner-controles {
+  position: absolute;
+  left: 36px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-puntos {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.banner-puntos button {
+  width: 32px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.banner-puntos button::before {
+  content: "";
+  display: block;
+  height: 6px;
+  border: 1px solid var(--tinta);
+  border-radius: 999px;
+  background: var(--hoja);
+}
+
+.banner-puntos button[aria-current="true"]::before {
+  background: var(--tinta);
+}
+
+/* Beneficios: cómo se compra, en una franja */
+.beneficios {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+}
+
+.beneficio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.beneficio + .beneficio {
+  border-left: 1px solid var(--linea);
+}
+
+.beneficio > .icon {
+  width: 28px;
+  height: 28px;
+  color: var(--tinta);
+}
+
+.beneficio strong {
+  display: block;
+  color: var(--tinta);
+  line-height: 1.3;
+}
+
+.beneficio span {
+  display: block;
+  color: var(--texto-2);
+  font-size: var(--letra-chica);
+  line-height: 1.35;
+}
+
+.seccion {
+  margin-top: 48px;
+}
+
+/* Compra por tienda */
+.tiendas-fila {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tienda-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.tienda-tile-foto {
+  display: block;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 6px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--gis);
+  overflow: hidden;
+  transition: border-color var(--t-fast);
+}
+
+.tienda-tile:hover .tienda-tile-foto {
+  border-color: var(--tinta);
+}
+
+.tienda-tile-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tienda-tile strong {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.tienda-tile > span:last-child {
+  color: var(--texto-2);
+  font-size: var(--letra-chica);
+  line-height: 1.4;
+}
+
+.tienda-tile .tag-oferta {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+/* Ofertas de hoy: franja con el reloj y riel que se desliza */
+.franja-hoy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+  padding: 16px 24px;
+  border-radius: var(--r-panel);
+  background: var(--tinta);
+}
+
+.franja-hoy h2 {
+  color: var(--senal);
+  font-size: var(--letra-h2);
+}
+
+.franja-hoy p {
+  color: var(--tinta-suave);
+  font-size: var(--letra-chica);
+}
+
+.reloj {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.franja-hoy .reloj-texto {
+  margin-right: 4px;
+  color: var(--tinta-suave);
+}
+
+.reloj b {
+  min-width: 44px;
+  padding: 4px 8px;
+  border-radius: var(--r-btn);
+  background: var(--senal);
+  color: var(--tinta);
+  font-size: var(--letra-media);
+  text-align: center;
+}
+
+.riel {
+  position: relative;
+}
+
+.riel-pista {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 4 * 16px) / 5);
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.riel-pista::-webkit-scrollbar {
+  display: none;
+}
+
+.riel-pista > * {
+  scroll-snap-align: start;
+}
+
+.riel-flecha {
+  position: absolute;
+  top: 30%;
+  z-index: 2;
+}
+
+.riel-flecha.is-izq {
+  left: -18px;
+}
+
+.riel-flecha.is-der {
+  right: -18px;
+}
+
+/* Rejilla densa de productos */
+.grid.grid-productos {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Tarjeta de producto: foto cuadrada, precio primero, nombre en dos líneas */
+.card.card-producto {
+  gap: 6px;
+  padding: 12px;
+}
+
+.card-producto .card-img-wrap {
+  aspect-ratio: 1 / 1;
+  margin-bottom: 4px;
+}
+
+.card-producto .esqueleto-img {
+  aspect-ratio: 1 / 1;
+  height: auto;
+}
+
+.card-producto .price,
+.card-producto .price-row .price {
+  font-size: var(--letra-h3);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.card-producto h3 {
+  display: block;
+  font-size: var(--letra-base);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.card-producto h3 .card-link {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.7em;
+}
+
+.card-producto .card-sub {
+  font-size: var(--letra-chica);
+}
+
+.card-producto .rating {
+  font-size: var(--letra-chica);
+}
+
+.card-producto .offer-detail {
+  font-size: var(--letra-chica);
+}
+
+.card-producto > .btn {
+  align-self: stretch;
+  min-height: 40px;
+  margin-top: auto;
+  padding: 6px 0.75em;
+  font-size: var(--letra-chica);
+  white-space: normal;
+  text-align: center;
+}
+
+.card-producto [data-wa-for]:empty {
+  display: none;
+}
+
+/* Conócenos: menú a la izquierda y un panel a la vez */
+.conocenos-caja {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 32px;
+  padding: 24px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+}
+
+.conocenos-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conocenos-menu .btn {
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: left;
+}
+
+.conocenos-panel {
+  margin: 0;
+}
+
+.conocenos-panel .section-header-row {
+  margin-bottom: 20px;
+}
+
+.conocenos-panel h3.section-title {
+  font-size: var(--letra-h3);
+}
+
+/* ----- Ficha del producto: foto grande y caja de compra ----- */
+.producto-detalle {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.producto-img {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+}
+
+.producto-info {
+  position: sticky;
+  top: 140px;
+  padding: 24px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-card);
+  background: var(--hoja);
+}
+
+.producto-info .price,
+.producto-info .price-row .price {
+  font-size: var(--letra-h2);
+  font-weight: 800;
+}
+
+/* ----- Tableta ----- */
+@media (max-width: 62em) {
+  .grid.grid-productos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .riel-pista {
+    grid-auto-columns: calc((100% - 2 * 16px) / 3);
+  }
+  .tiendas-fila {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .beneficios {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .beneficio:nth-child(3) {
+    border-left: 0;
+  }
+  .beneficio:nth-child(n+3) {
+    border-top: 1px solid var(--linea);
+  }
+  .inicio-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inicio-grid .board {
+    display: none;
+  }
+}
+
+/* ----- Celular y tableta chica: barra lateral en cajón, buscador en su propia fila ----- */
+@media (max-width: 53.75em) {
+  .barra-tienda {
+    margin-left: 0;
+  }
+  .barra-fila {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 0 12px;
+  }
+  .barra-menu {
+    display: inline-flex;
+    color: var(--hoja);
+  }
+  .barra-menu:hover {
+    border-color: var(--linea-tinta);
+  }
+  .barra-marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--senal);
+    text-decoration: none;
+  }
+  .barra-marca .brand-title {
+    color: var(--senal);
+    font-size: var(--letra-h3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .barra-fila .buscador-zona {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .barra-texto {
+    display: none;
+  }
+  .barra-enlace {
+    padding: 0 10px;
+  }
+  .producto-detalle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .producto-info {
+    position: static;
+  }
+}
+
+@media (max-width: 40em) {
+  .buscador {
+    height: 48px;
+  }
+  .barra-enlace {
+    min-height: 48px;
+  }
+  .banner-slide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .banner-foto {
+    order: -1;
+    aspect-ratio: 16 / 10;
+  }
+  .banner-texto {
+    padding: 20px 20px 80px;
+  }
+  .banner-controles {
+    left: 20px;
+  }
+  .grid.grid-productos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .card.card-producto {
+    padding: 8px;
+  }
+  .card-producto .price,
+  .card-producto .price-row .price {
+    font-size: var(--letra-media);
+  }
+  .riel-pista {
+    grid-auto-columns: 46%;
+    gap: 10px;
+  }
+  .riel-flecha {
+    display: none;
+  }
+  .tiendas-fila {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 30%;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .tienda-tile {
+    scroll-snap-align: start;
+  }
+  .beneficio {
+    padding: 12px;
+    gap: 8px;
+  }
+  .franja-hoy {
+    padding: 16px;
+  }
+  .conocenos-caja {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 16px;
+  }
+  .conocenos-menu {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .conocenos-menu .btn {
+    flex: none;
+    white-space: nowrap;
+  }
+  .producto-info {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-slide,
+  .banner-slide.is-actual {
+    transition: none;
+  }
+}
+
+.main-content:has(> .inicio-grid) {
+  padding-top: 20px;
+}
+
+/* Tablero junto al banner: filas más bajas para que el banner no crezca de más */
+.inicio-grid {
+  align-items: start;
+}
+
+.inicio-grid .board-row {
+  padding: 9px 20px;
+  font-size: var(--letra-media);
+}
+
+.inicio-grid .board-list:empty {
+  min-height: calc(46px * 7);
+}
+
+.inicio-grid .banner {
+  height: 100%;
+}
+
+
+/* Que el cambio a Archivo no mueva la portada (CLS de la primera visita, 2026-11-24):
+   con la letra de respaldo, "La ciudad del estudiante" partía en 2 líneas y el título del banner ocupaba 2 en
+   lugar de 3. Junto al banner el tablero mide 300px y el lema cabe en una línea con Archivo. */
+@media (min-width: 62.01em) {
+  .inicio-grid .board-marca span {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 40em) {
+  .banner-slide.is-actual .banner-texto h1 {
+    min-height: 3lh;
+  }
+}

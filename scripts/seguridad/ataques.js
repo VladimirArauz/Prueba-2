@@ -1148,6 +1148,26 @@ async function main() {
       && recientes.length <= 3 && suya.producto.id === prodA, r.texto.slice(0, 300));
   });
 
+  // ---------- Productos de la portada (plan 2026-11-24-rediseno-tienda-en-linea) ----------
+  await prueba("PRT", "los productos de la portada: máximo 10, sin datos de clientes ni números, en caché privada", async () => {
+    const r = await pedir("GET", "/api/portada/productos");
+    const lista = r.json?.productos || [];
+    const llaves = JSON.stringify(r.json).match(/"(correo|telefono|usuario|password|password_hash|cliente_id|whatsapp|numeros|imagen)"/);
+    return espera(r.status === 200 && ["pedidos", "nuevos"].includes(r.json.criterio) && lista.length <= 10 && !llaves
+      && /^private, max-age=\d+$/.test(r.headers.get("cache-control") || "") && !/\d{10}/.test(r.texto),
+      `${r.status} ${r.json?.criterio} ${lista.length} ${llaves} ${r.headers.get("cache-control")}`);
+  });
+  await prueba("PRT", "los productos de la portada no traen productos ocultos ni servicios", async () => {
+    const r = await pedir("GET", "/api/portada/productos");
+    const lista = r.json?.productos || [];
+    return espera(lista.every(p => p.tipo === undefined || p.tipo === "producto") && lista.every(p => p.visible !== false),
+      JSON.stringify(lista.map(p => [p.id, p.tipo, p.visible])));
+  });
+  await prueba("PRT", "los productos de la portada no aceptan escribir", async () => {
+    const r = await pedir("POST", "/api/portada/productos", { body: {} });
+    return espera([403, 404, 405].includes(r.status), r.status);
+  });
+
   // ---------- Carrusel de cada color (plan 2026-11-09-fotos-editor-carrusel-color-y-footer) ----------
   const productoColor = await ctx.producto(A);
   const colorA = (await pedir("POST", `/api/admin/productos/${productoColor}/colores`, { sesion: dueno,

@@ -64,8 +64,9 @@ en `style.css`. Si algo de verdad no cabe, se propone al usuario antes de crearl
 ### Concepto
 
 Señalética de ciudad: letreros planos, colores de seguridad, bordes firmes, letra ancha y legible.
-Nada brilla; todo se lee. La única pieza llamativa del sitio es el tablero directorio del hero.
-Lo nuevo debe ser sobrio y no competir con él.
+Nada brilla; todo se lee. La portada se lee como tienda en línea: los productos, sus precios y el banner
+de promociones van al frente, con el tablero directorio a un lado (plan `2026-11-24-rediseno-tienda-en-linea.md`).
+Lo nuevo debe ser sobrio y no competir con los productos.
 
 ### Colores (únicos permitidos)
 
@@ -125,7 +126,9 @@ Lo nuevo debe ser sobrio y no competir con él.
 - Tarjetas: fondo `--hoja`, borde 1px `--linea`, sin sombra; hover solo cambia el borde a `--tinta`.
 - Sin sombras, excepto el toast.
 - Contenido alineado a la izquierda. Contenedor `min(1200px, 92%)`.
-- Grids: 3 columnas → 2 (≤992px) → 1 (≤640px).
+- Grids: 3 columnas → 2 (≤992px) → 1 (≤640px). Rejillas de productos: 5 → 3 (≤992px) → 2 (≤640px), con la
+  foto del producto cuadrada (1:1).
+- El buscador principal va en la barra de la tienda (arriba, en `--tinta`); la navegación, en la barra lateral.
 - Encabezado de sección: h2 a la izquierda, descripción debajo, acción a la derecha, divisor 1px `--linea`.
 - Sin numeraciones decorativas (01, 02, 03) si el contenido no es una secuencia real.
 - Sin `style="…"` inline: todo estilo va en `style.css` como clase.
@@ -133,6 +136,7 @@ Lo nuevo debe ser sobrio y no competir con él.
 ### Movimiento
 
 - Solo como respuesta a una acción del usuario (toast al agregar, pulso del contador del carrito).
+  Excepción: el reloj de "Ofertas de hoy" cambia sus números cada segundo (sin animación).
 - Prohibido: animaciones de entrada por sección, tarjetas que suben, zoom de imágenes en hover.
 - Respetar `prefers-reduced-motion`.
 

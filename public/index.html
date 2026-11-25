@@ -19,22 +19,39 @@
 </head>
 <body>
 
-  <div class="topbar">
-    <a class="nav-brand" href="/">
-      <img class="brand-emblem" src="/imagenes/logo.png" alt="" width="40" height="40">
-      <span class="brand-title">Necutla</span>
-    </a>
-    <div class="topbar-actions">
-      <a class="btn secondary btn-icon side-carrito" href="/carrito.html" aria-label="Carrito">
-        <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
-        <span class="cart-pill cart-count" aria-hidden="true">0</span>
-      </a>
-      <button type="button" class="btn secondary btn-icon" id="menu-abrir" data-action="menu-abrir" aria-label="Abrir menú" aria-controls="main-navbar" aria-expanded="false">
+  <header class="barra-tienda on-tinta">
+    <div class="barra-fila">
+      <button type="button" class="btn ghost btn-icon barra-menu" id="menu-abrir" data-action="menu-abrir" aria-label="Abrir menú" aria-controls="main-navbar" aria-expanded="false">
         <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
       </button>
+      <a class="barra-marca" href="/">
+        <img class="brand-emblem" src="/imagenes/logo.png" alt="" width="36" height="36">
+        <span class="brand-title">Necutla</span>
+      </a>
+      <div class="buscador-zona">
+        <form class="buscador" id="search-form" action="/" method="get" role="search" novalidate>
+          <label class="visually-hidden" for="search-input">Buscar productos y servicios</label>
+          <input type="search" id="search-input" name="q" minlength="2" maxlength="60" placeholder="Busca playeras, cables, dulces, volantes…" autocomplete="off" aria-describedby="search-estado">
+          <button type="submit"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg><span class="barra-texto">Buscar</span></button>
+        </form>
+        <div class="search-recientes" id="search-recientes" hidden></div>
+      </div>
+      <nav class="barra-acciones" aria-label="Tu cuenta y carrito">
+        <a class="barra-enlace" href="/cuenta.html">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+          <span class="barra-texto">Mi cuenta</span>
+        </a>
+        <a class="barra-enlace side-carrito" href="/carrito.html" aria-label="Carrito">
+          <svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg>
+          <span class="cart-pill cart-count" aria-hidden="true">0</span>
+          <span class="barra-texto">Carrito</span>
+        </a>
+      </nav>
     </div>
-  </div>
-
+    <nav class="departamentos" aria-label="Tiendas">
+      <ul id="departamentos-lista"></ul>
+    </nav>
+  </header>
   <nav class="sidebar" id="main-navbar" aria-label="Principal">
     <div class="side-top">
       <a class="side-brand" href="/">
@@ -49,11 +66,6 @@
       </button>
     </div>
 
-    <form class="side-search" action="/" method="get" role="search">
-      <label class="visually-hidden" for="side-q">Buscar productos</label>
-      <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
-      <input id="side-q" name="q" type="search" placeholder="Buscar productos" minlength="2" maxlength="60" required>
-    </form>
 
     <div class="side-scroll">
       <ul class="side-nav">
@@ -67,6 +79,7 @@
         </li>
         <li><a class="side-link" href="/promociones.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-tag"></use></svg></span><span class="side-text">Promociones</span></a></li>
         <li><a class="side-link" href="/carrito.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-shopping-cart"></use></svg><span class="cart-pill cart-count" aria-label="productos en el carrito">0</span></span><span class="side-text">Carrito</span></a></li>
+        <li><a class="side-link" href="/cuenta.html?sub=pedidos"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-receipt"></use></svg></span><span class="side-text">Mis pedidos</span></a></li>
         <li><a class="side-link" href="/cuenta.html"><span class="side-ico"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg></span><span class="side-text">Mi cuenta</span></a></li>
       </ul>
       <ul class="side-nav side-abajo">
@@ -88,31 +101,53 @@
   </nav>
   <div class="side-fondo" id="side-fondo" data-action="menu-cerrar"></div>
 
-  <header class="hero" id="inicio">
-    <div class="container hero-grid">
-      <div class="hero-copy">
-        <h1>Las tiendas de estudiantes en un solo lugar</h1>
-        <p>Ropa, tecnología, dulces, papelería, servicios y más de los stands del CECyT&nbsp;9. Arma tu pedido y cada tienda te lo confirma por WhatsApp.</p>
-        <div class="hero-actions">
-          <a class="btn" href="#directorio" id="hero-explorar">Explorar las tiendas</a>
-          <a class="btn secondary" href="#como-funciona">
-            <svg class="icon" aria-hidden="true"><use href="#i-message-circle"></use></svg>
-            Cómo pedir por WhatsApp
-          </a>
-        </div>
-        <p class="hero-giro">
-          <span class="visually-hidden">Encuentra playeras, audífonos, dulces, volantes, cuadernos, regalos, engargolados y lo que necesitas.</span>
-          <span class="hero-giro-texto" aria-hidden="true">
-            Encuentra
-            <span class="hero-giro-caja">
-              <span class="hero-giro-medida">lo que necesitas</span>
-              <span class="hero-giro-palabra" id="hero-giro-palabra">playeras</span>
-            </span>
-          </span>
-        </p>
-      </div>
+  <main class="main-content container" id="contenido">
 
-      <nav class="board on-tinta" aria-label="Directorio de tiendas">
+    <div class="search-estado" id="search-estado" role="status">
+      <span id="search-estado-texto"></span>
+      <button type="button" class="btn secondary btn-sm" data-action="reintentar-busqueda" id="search-reintentar" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-rotate-cw"></use></svg>
+        Reintentar
+      </button>
+    </div>
+      <section class="search-results" id="search-results" hidden>
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title" id="search-title">Resultados</h2>
+            <p class="section-desc" id="search-desc"></p>
+          </div>
+          <button type="button" class="btn secondary btn-sm" data-action="limpiar-busqueda">
+            <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+            Quitar búsqueda
+          </button>
+        </div>
+        <div class="grid grid-productos" id="search-grid"></div>
+        <div id="search-empty"></div>
+      </section>
+
+    <div class="inicio-grid">
+      <section class="banner" id="banner" aria-roledescription="carrusel" aria-label="Promociones">
+        <div class="banner-pista" id="banner-pista">
+          <article class="banner-slide is-actual" aria-roledescription="diapositiva">
+            <div class="banner-texto">
+              <h1>Todo lo de los stands del CECyT&nbsp;9</h1>
+              <p>Ropa, tecnología, dulces, papelería, servicios y más. Arma tu pedido y cada tienda te lo confirma por WhatsApp.</p>
+              <a class="btn" href="#directorio" id="hero-explorar">Explorar las tiendas</a>
+            </div>
+            <div class="banner-foto">
+              <img src="/imagenes/tiendas/ropa-640.webp" srcset="/imagenes/tiendas/ropa-640.webp 640w, /imagenes/tiendas/ropa-1280.webp 1280w"
+                sizes="(max-width: 640px) 92vw, 440px" width="1280" height="800" alt="Camisas de colores colgadas en un perchero" fetchpriority="high">
+            </div>
+          </article>
+        </div>
+        <div class="banner-controles" id="banner-controles" hidden>
+          <div class="banner-puntos" id="banner-puntos"></div>
+          <button type="button" class="btn secondary btn-icon" data-action="banner-anterior" aria-label="Promoción anterior"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"></use></svg></button>
+          <button type="button" class="btn secondary btn-icon" data-action="banner-siguiente" aria-label="Promoción siguiente"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+        </div>
+      </section>
+
+    <nav class="board on-tinta" aria-label="Directorio de tiendas">
         <p class="board-marca">
           <img class="brand-emblem" src="/imagenes/logo.png" alt="" width="48" height="48">
           <span><strong>Necutla</strong> La ciudad del estudiante</span>
@@ -130,68 +165,51 @@
         </div>
       </nav>
     </div>
-  </header>
 
-  <main class="main-content container" id="contenido">
+    <ul class="beneficios" aria-label="Cómo compras en Necutla">
+      <li class="beneficio"><svg class="icon" aria-hidden="true"><use href="#i-message-circle"></use></svg><div><strong>Pide por WhatsApp</strong><span>Cada tienda te confirma tu pedido</span></div></li>
+      <li class="beneficio"><svg class="icon" aria-hidden="true"><use href="#i-map-pin"></use></svg><div><strong>Entrega en el CECyT&nbsp;9</strong><span>Acuerdas dónde y cuándo con el vendedor</span></div></li>
+      <li class="beneficio"><svg class="icon" aria-hidden="true"><use href="#i-receipt"></use></svg><div><strong>Pagas directo al vendedor</strong><span>En efectivo o por transferencia</span></div></li>
+      <li class="beneficio"><svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg><div><strong>Lun a vie</strong><span>De 9:00 a 22:00</span></div></li>
+    </ul>
 
-    <section class="letrero" id="promos" aria-labelledby="promos-title" hidden>
-      <div class="letrero-head">
-        <div>
-          <h2 id="promos-title">Promociones de temporada</h2>
-          <p>Paquetes por tiempo limitado que juntan productos de varias tiendas.</p>
-        </div>
-        <a href="/promociones.html">Ver todas las promociones</a>
-      </div>
-      <div class="letrero-grid" id="promos-grid"></div>
-    </section>
-
-    <section id="directorio" aria-labelledby="tiendas-title">
+    <section class="seccion" id="directorio" aria-labelledby="tiendas-title">
       <div class="section-header-row" id="tiendas-head">
         <div>
-          <h2 class="section-title" id="tiendas-title">Tiendas</h2>
+          <h2 class="section-title" id="tiendas-title">Compra por tienda</h2>
           <p class="section-desc">Entra a una tienda para ver su catálogo, sus servicios y sus ofertas.</p>
         </div>
       </div>
-
-      <form class="search-form" id="search-form" role="search" novalidate>
-        <label class="visually-hidden" for="search-input">Buscar productos y servicios</label>
-        <div class="search-campo">
-          <input type="search" id="search-input" minlength="2" maxlength="60" placeholder="Busca un producto o servicio, ej. cable, playera, piñata" autocomplete="off" aria-describedby="search-estado">
-        </div>
-        <button type="submit" class="btn">
-          <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
-          Buscar
-        </button>
-      </form>
-      <div class="search-estado" id="search-estado" role="status">
-        <span id="search-estado-texto">Busca en todas las tiendas a la vez.</span>
-        <button type="button" class="btn secondary btn-sm" data-action="reintentar-busqueda" id="search-reintentar" hidden>
-          <svg class="icon" aria-hidden="true"><use href="#i-rotate-cw"></use></svg>
-          Reintentar
-        </button>
-      </div>
-      <div class="search-recientes" id="search-recientes" hidden></div>
-
-      <section class="search-results" id="search-results" hidden>
-        <div class="section-header-row">
-          <div>
-            <h2 class="section-title" id="search-title">Resultados</h2>
-            <p class="section-desc" id="search-desc"></p>
-          </div>
-          <button type="button" class="btn secondary btn-sm" data-action="limpiar-busqueda">
-            <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
-            Quitar búsqueda
-          </button>
-        </div>
-        <div class="grid" id="search-grid"></div>
-        <div id="search-empty"></div>
-      </section>
-
-      <div class="grid" id="stores-grid" aria-live="polite"></div>
+      <div class="tiendas-fila" id="stores-grid"></div>
       <p class="creditos-fotos" id="creditos-fotos" hidden></p>
     </section>
 
+    <section class="seccion ofertas-hoy" id="ofertas-hoy" aria-labelledby="ofertas-hoy-title" hidden>
+      <div class="franja-hoy on-tinta">
+        <div>
+          <h2 id="ofertas-hoy-title">Ofertas de hoy</h2>
+          <p id="ofertas-hoy-desc">Descuentos de las tiendas que valen hoy. El precio de oferta se aplica en tu carrito.</p>
+        </div>
+        <p class="reloj" id="reloj-hoy" hidden></p>
+      </div>
+      <div class="riel">
+        <div class="riel-pista" id="ofertas-hoy-pista"></div>
+        <button type="button" class="btn secondary btn-icon riel-flecha is-izq" data-action="riel-anterior" aria-label="Ofertas anteriores"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"></use></svg></button>
+        <button type="button" class="btn secondary btn-icon riel-flecha is-der" data-action="riel-siguiente" aria-label="Más ofertas"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      </div>
+    </section>
+
     <div class="centinela" id="portada-centinela" aria-hidden="true"></div>
+    <section class="seccion" id="mas-pedidos" aria-labelledby="mas-pedidos-title" hidden>
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-title" id="mas-pedidos-title">Lo más pedido esta semana</h2>
+          <p class="section-desc" id="mas-pedidos-desc">Lo que más han pedido otros estudiantes en los últimos 7 días.</p>
+        </div>
+      </div>
+      <div class="grid grid-productos" id="mas-pedidos-grid"></div>
+    </section>
+
     <section class="prueba-social" id="prueba-social" aria-labelledby="prueba-social-title" hidden>
       <div class="section-header-row">
         <div>
@@ -203,20 +221,25 @@
       <ul class="grid opiniones-portada" id="opiniones-portada"></ul>
     </section>
 
-    <section class="vitrina" id="vitrina" aria-labelledby="vitrina-title" hidden>
+    <section class="seccion conocenos" id="conocenos" aria-labelledby="conocenos-title">
       <div class="section-header-row">
         <div>
-          <h2 class="section-title" id="vitrina-title">Ofertas de temporada, de hoy y remates</h2>
-          <p class="section-desc">Lo que las tiendas tienen con descuento hoy. El precio de oferta se aplica solo en tu carrito.</p>
+          <h2 class="section-title" id="conocenos-title">Conócenos</h2>
+          <p class="section-desc">Qué es Necutla, cómo pedir y lo que más nos preguntan.</p>
         </div>
       </div>
-      <div id="vitrina-bloques"></div>
-    </section>
-
-    <section class="info-portada" id="que-es" aria-labelledby="que-es-title">
+      <div class="conocenos-caja">
+        <div class="conocenos-menu" role="group" aria-label="Temas">
+          <button type="button" class="btn ghost" data-action="conocenos" data-panel="que-es" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-store"></use></svg>Qué es Necutla</button>
+          <button type="button" class="btn ghost" data-action="conocenos" data-panel="como-funciona" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-clipboard-list"></use></svg>Cómo funciona</button>
+          <button type="button" class="btn ghost" data-action="conocenos" data-panel="app-android" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-smartphone"></use></svg>Necutla en tu celular</button>
+          <button type="button" class="btn ghost" data-action="conocenos" data-panel="preguntas" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg>Preguntas frecuentes</button>
+        </div>
+        <div class="conocenos-paneles">
+    <section class="info-portada conocenos-panel" id="que-es" aria-labelledby="que-es-title">
       <div class="section-header-row">
         <div>
-          <h2 class="section-title" id="que-es-title">Qué es Necutla</h2>
+          <h3 class="section-title" id="que-es-title">Qué es Necutla</h3>
           <p class="section-desc">Las tiendas de la comunidad estudiantil, juntas en un solo lugar.</p>
         </div>
       </div>
@@ -227,10 +250,10 @@
       </div>
     </section>
 
-    <section class="info-portada" id="como-funciona" aria-labelledby="como-funciona-title">
+    <section class="info-portada conocenos-panel" id="como-funciona" hidden aria-labelledby="como-funciona-title">
       <div class="section-header-row">
         <div>
-          <h2 class="section-title" id="como-funciona-title">Cómo funciona</h2>
+          <h3 class="section-title" id="como-funciona-title">Cómo funciona</h3>
           <p class="section-desc">Tres pasos para pedir con tu cuenta.</p>
         </div>
       </div>
@@ -253,10 +276,10 @@
       </ol>
     </section>
 
-    <section class="info-portada" id="app-android" aria-labelledby="app-android-title">
+    <section class="info-portada conocenos-panel" id="app-android" hidden aria-labelledby="app-android-title">
       <div class="section-header-row">
         <div>
-          <h2 class="section-title" id="app-android-title">Necutla en tu celular</h2>
+          <h3 class="section-title" id="app-android-title">Necutla en tu celular</h3>
           <p class="section-desc">Por ahora solo para Android.</p>
         </div>
         <a class="btn" href="/app/necutla-android.apk">
@@ -271,10 +294,10 @@
       </div>
     </section>
 
-    <section class="info-portada" id="preguntas" aria-labelledby="preguntas-title">
+    <section class="info-portada conocenos-panel" id="preguntas" hidden aria-labelledby="preguntas-title">
       <div class="section-header-row">
         <div>
-          <h2 class="section-title" id="preguntas-title">Preguntas frecuentes</h2>
+          <h3 class="section-title" id="preguntas-title">Preguntas frecuentes</h3>
           <p class="section-desc">Lo que más nos preguntan antes de hacer su primer pedido.</p>
         </div>
       </div>
@@ -313,6 +336,9 @@
         </details>
       </div>
     </section>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer on-tinta">
@@ -331,6 +357,7 @@
           <h4>Navegación</h4>
           <ul class="footer-links">
             <li><a href="/">Tiendas</a></li>
+            <li><a href="/#conocenos">Conócenos</a></li>
             <li><a href="/promociones.html">Promociones</a></li>
             <li><a href="/carrito.html">Carrito</a></li>
             <li><a href="/cuenta.html">Mi cuenta</a></li>
