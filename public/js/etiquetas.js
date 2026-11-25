@@ -90,7 +90,17 @@
     lugarBoton.appendChild(boton);
   }
 
+  // El aviso sale cuando ya cargó Archivo: si saliera con la letra de respaldo, al llegar Archivo cambiaría de alto
+  // y movería la página (CLS de la primera visita). Con un tope, para que nunca se quede sin aviso.
+  function cuandoCargueLaLetra(fn) {
+    const tope = new Promise(r => setTimeout(r, 2500));
+    const letra = document.fonts
+      ? document.fonts.load('600 16px "Archivo"').then(() => document.fonts.ready)
+      : Promise.resolve();
+    Promise.race([letra, tope]).catch(() => {}).then(fn);
+  }
+
   const decision = decisionGuardada();
   if (decision === "si") cargarTagManager();
-  else if (decision !== "no") mostrarAviso();
+  else if (decision !== "no") cuandoCargueLaLetra(mostrarAviso);
 })();

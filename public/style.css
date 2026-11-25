@@ -5524,7 +5524,8 @@ img.admin-thumb.foto-completa {
 /* Compra por tienda */
 .tiendas-fila {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  /* Las que quepan en una fila (8 a 1280px); al haber más, siguen abajo */
+  grid-template-columns: repeat(auto-fit, minmax(min(7.5rem, 100%), 1fr));
   gap: 16px;
 }
 
@@ -5985,5 +5986,29 @@ img.admin-thumb.foto-completa {
 @media (max-width: 40em) {
   .banner-slide.is-actual .banner-texto h1 {
     min-height: 3lh;
+  }
+}
+
+/* Tienda sin portada ni foto: su propio icono (plan 2026-11-24-cookies-metro-libros-y-nombre) */
+.tienda-tile-icono {
+  display: grid;
+  place-items: center;
+  color: var(--tinta);
+}
+
+.tienda-tile-icono .icon {
+  width: 40%;
+  height: 40%;
+}
+
+/* Primer nombre del cliente en lugar de "Mi cuenta": si es largo, se corta (en celular la barra solo lleva iconos) */
+@media (min-width: 53.76em) {
+  .barra-nombre {
+    display: inline-block;
+    max-width: 14ch;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    vertical-align: middle;
   }
 }

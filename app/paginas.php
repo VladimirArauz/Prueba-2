@@ -15,11 +15,11 @@ const PAGINAS_FIJAS = [
 ];
 
 // Se sube cuando cambian las cabeceras de las imágenes: la caché de IONOS guarda cada dirección con las de antes
-const OG_VERSION = '3';
+const OG_VERSION = '4';
 
 const OG_GENERAL = [
     'titulo' => 'Necutla: tiendas de estudiantes con pedidos por WhatsApp',
-    'descripcion' => 'Directorio de las tiendas de estudiantes del CECyT 9 Juan de Dios Bátiz: ropa, tecnología, dulces, papelería, regalos y más. Arma tu carrito y manda tu pedido por WhatsApp directo al vendedor.',
+    'descripcion' => 'Directorio de tiendas de estudiantes con entrega en las líneas azul y naranja del Metro de la CDMX: ropa, tecnología, dulces, papelería, regalos y más. Arma tu carrito y manda tu pedido por WhatsApp directo al vendedor.',
     'imagen' => '/imagenes/og-necutla.png',
     'ancho' => 1200,
     'alto' => 630,
@@ -363,6 +363,28 @@ function con_encabezado_tienda(string $html, string $slug): string
 }
 
 // Devuelve la respuesta de la página, o null si la ruta no es una página (la atiende la API)
+// Con sesión de cliente, el enlace "Mi cuenta" de la barra de la tienda dice su primer nombre (plan
+// 2026-11-24-cookies-metro-libros-y-nombre). Lee la sesión sin guardarla: no la renueva ni manda cookie, y si la
+// base falla la página sale igual, con "Mi cuenta".
+function con_nombre_cuenta(string $html): string
+{
+    if (leer_cookie(Sesion::nombreCookie()) === null) return $html;
+    try {
+        Sesion::cargar();
+        $cliente = cargar_cliente();
+    } catch (Throwable $e) {
+        return $html;
+    }
+    $nombre = $cliente ? (preg_split('/\s+/u', trim((string) $cliente['nombre']))[0] ?? '') : '';
+    if ($nombre === '') return $html;
+    $e = htmlspecialchars($nombre, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    return preg_replace_callback(
+        '#<a class="barra-enlace" href="/cuenta.html">(\s*<svg[^>]*><use href="\#i-user"></use></svg>\s*)<span class="barra-texto">Mi cuenta</span>#',
+        fn($m) => '<a class="barra-enlace barra-cuenta" href="/cuenta.html" aria-label="Mi cuenta: ' . $e . '">' . $m[1]
+            . '<span class="barra-texto barra-nombre">' . $e . '</span>',
+        $html, 1);
+}
+
 function pagina_publica(string $ruta): ?Respuesta
 {
     if ($ruta === '/sitemap.xml') return respuesta_sitemap();
@@ -404,10 +426,11 @@ function pagina_publica(string $ruta): ?Respuesta
     if ($archivo === 'index.html') $html = con_tablero($html);
     $html = con_departamentos($html, $archivo === 'tienda.html' ? $m[1] : ($archivo === 'promociones.html' ? 'promociones' : ''));
     if ($archivo === 'tienda.html' && !empty($og)) $html = con_encabezado_tienda($html, $m[1]);
+    $html = con_nombre_cuenta($html);
     $html = con_web_analytics($html);
     $html = con_tag_manager($html, $archivo);
-    // Igual que el HTML estático (public/.htaccess): se revalida siempre
-    $respuesta = binaria($html, 'text/html; charset=utf-8', ['Cache-Control' => 'no-cache']);
+    // Se revalida siempre y, como puede llevar el nombre del cliente, solo se guarda en su navegador
+    $respuesta = binaria($html, 'text/html; charset=utf-8', ['Cache-Control' => 'private, no-cache']);
     if (!empty($og['no_existe'])) $respuesta->status = 404; // la página se ve igual ("no encontrada"), pero no cuenta como página
     return $respuesta;
 }

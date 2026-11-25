@@ -1163,6 +1163,24 @@ async function main() {
     return espera(lista.every(p => p.tipo === undefined || p.tipo === "producto") && lista.every(p => p.visible !== false),
       JSON.stringify(lista.map(p => [p.id, p.tipo, p.visible])));
   });
+  // ---------- Nombre del cliente en la barra (plan 2026-11-24-cookies-metro-libros-y-nombre) ----------
+  await prueba("NOM", "sin sesión la barra dice Mi cuenta y la página solo se guarda en el navegador", async () => {
+    const r = await pedir("GET", "/t/" + A.slug, { origin: null });
+    return espera(r.status === 200 && /<span class="barra-texto">Mi cuenta<\/span>/.test(r.texto) && !/barra-nombre/.test(r.texto)
+      && /^private, no-cache$/.test(r.headers.get("cache-control") || ""), `${r.status} ${r.headers.get("cache-control")}`);
+  });
+  await prueba("NOM", "con sesión sale solo su primer nombre, no el de otro cliente, y la página no renueva la sesión", async () => {
+    const [uno, dos] = await Promise.all([pedir("GET", "/", { sesion: cli1.sesion, origin: null }), pedir("GET", "/", { sesion: cli2.sesion, origin: null })]);
+    const nombre = t => (t.match(/<span class="barra-texto barra-nombre">([^<]*)<\/span>/) || [])[1];
+    return espera(nombre(uno.texto) === "cliente1" && nombre(dos.texto) === "cliente2" && !uno.texto.includes("cliente2")
+      && !uno.galletas.length && !dos.galletas.length && !uno.texto.includes(`cliente1-${SUFIJO}`),
+      `${nombre(uno.texto)} ${nombre(dos.texto)} ${uno.galletas.length}`);
+  });
+  await prueba("NOM", "una cookie de sesión inventada no rompe la página ni muestra nombre", async () => {
+    const r = await pedir("GET", "/", { origin: null, headers: { Cookie: "necutla.sid=" + "a".repeat(43) } });
+    return espera(r.status === 200 && !/barra-nombre/.test(r.texto), r.status);
+  });
+
   await prueba("PRT", "los productos de la portada no aceptan escribir", async () => {
     const r = await pedir("POST", "/api/portada/productos", { body: {} });
     return espera([403, 404, 405].includes(r.status), r.status);

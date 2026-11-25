@@ -128,6 +128,13 @@ Cambiar la estructura de la base: agrega sentencias que se puedan repetir sin er
   `/#como-funciona`, `/#app-android`, `/#preguntas`). `GET /api/portada/productos` da hasta 10 productos: los más
   pedidos de la semana (pedidos pagados, si hay 5 o más; `criterio: "pedidos"`) o los más nuevos
   (`criterio: "nuevos"`), con su oferta de hoy; sin datos de clientes, `private, max-age=300`.
+- **Nombre en la barra** (plan `2026-11-24-cookies-metro-libros-y-nombre.md`): con sesión de cliente, el enlace
+  "Mi cuenta" de la barra de la tienda dice su primer nombre. Lo pinta el servidor (`con_nombre_cuenta` en
+  `app/paginas.php`, que lee la sesión sin renovarla) y `pintarCuentaBarra()` (`comun.js`) lo cambia al entrar o salir.
+  Por eso las páginas salen con `Cache-Control: private, no-cache`.
+- **Fotos de las tiendas**: las de Unsplash están en `FOTOS_TIENDAS` (`portada.js`) y en
+  `recursos/fotos-unsplash/creditos.md`; una tienda sin portada ni foto muestra su propio icono.
+- **Aviso de cookies**: sale cuando ya cargó la letra Archivo (o a los 2.5 s), para no mover la página.
 - **Carrito**: guarda solo `{tipo, id, cantidad, color}` en el navegador. Nombres, precios y descuentos
   los calcula siempre el servidor (`POST /api/carrito/precios`).
 - **Pedidos**: al tocar "Enviar pedido por WhatsApp" se guarda el pedido (`POST /api/pedidos`) con los

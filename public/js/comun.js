@@ -1399,6 +1399,19 @@ function puedePedir() {
   return !compra || Boolean(compra.pausa) || (compra.autenticado === true && !compra.incompleta);
 }
 
+// El enlace "Mi cuenta" de la barra de la tienda dice el primer nombre del cliente (el servidor ya lo pinta al cargar,
+// app/paginas.php con_nombre_cuenta); esto lo cambia al entrar o salir sin recargar.
+function pintarCuentaBarra(nombre) {
+  const enlace = document.querySelector('.barra-acciones a[href="/cuenta.html"]');
+  const texto = enlace && enlace.querySelector(".barra-texto");
+  if (!texto) return;
+  const primero = String(nombre || "").trim().split(/\s+/)[0];
+  texto.textContent = primero || "Mi cuenta";
+  texto.classList.toggle("barra-nombre", Boolean(primero));
+  if (primero) enlace.setAttribute("aria-label", `Mi cuenta: ${primero}`);
+  else enlace.removeAttribute("aria-label");
+}
+
 function rutaACuenta(volver = location.pathname + location.search) {
   return `/cuenta.html?volver=${encodeURIComponent(volver)}`;
 }

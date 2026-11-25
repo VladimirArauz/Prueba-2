@@ -167,6 +167,7 @@ function render(sesion) {
     return;
   }
   const dentro = Boolean(sesion && sesion.autenticado);
+  pintarCuentaBarra(dentro ? sesion.nombre : null);
   $("cuenta-dentro").hidden = !dentro;
   if (!dentro) {
     vista("fuera");

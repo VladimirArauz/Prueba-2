@@ -15,7 +15,8 @@ const FOTOS_TIENDAS = {
   propaganda: { alt: "Hojas impresas de colores abiertas en abanico", autor: "Andrew Pons", perfil: "https://unsplash.com/@imandrewpons" },
   papeleria: { alt: "Plumas y marcadores de colores acomodados en filas", autor: "Caroline", perfil: "https://unsplash.com/@carolinentmt" },
   regalos: { alt: "Caja de regalo de papel kraft con moño rosa", autor: "Jess Bailey", perfil: "https://unsplash.com/@jessbaileydesigns" },
-  otra: { alt: "Puesto de mercado con artesanías tejidas de colores", autor: "Aron Weerakoon", perfil: "https://unsplash.com/@aron781n" }
+  otra: { alt: "Puesto de mercado con artesanías tejidas de colores", autor: "Aron Weerakoon", perfil: "https://unsplash.com/@aron781n" },
+  libros: { alt: "Estantería de madera llena de libros", autor: "Pickawood", perfil: "https://unsplash.com/@pickawood" }
 };
 
 // Ancho de la foto de cada tienda: 7 en fila, 4 (≤992px) y casi 3 en celular
@@ -30,7 +31,10 @@ function fotoDe(t) {
 function imagenTarjeta(t) {
   const foto = fotoDe(t);
   if (!foto) {
-    return `<span class="tienda-tile-foto"><img src="${escapeHTML(t.imagen_url || "/imagenes/otra.svg")}" alt="" loading="lazy" decoding="async"></span>`;
+    // Sin portada propia ni foto de Unsplash: su propio icono, para que no se repita el dibujo de otra tienda
+    const relleno = !t.imagen_url || /^\/imagenes\/[a-z0-9-]+\.svg$/.test(t.imagen_url);
+    if (relleno) return `<span class="tienda-tile-foto tienda-tile-icono">${icon(t.icono || "store")}</span>`;
+    return `<span class="tienda-tile-foto"><img src="${escapeHTML(t.imagen_url)}" alt="" loading="lazy" decoding="async"></span>`;
   }
   const base = `/imagenes/tiendas/${escapeHTML(t.slug)}`;
   return `<span class="tienda-tile-foto"><img src="${base}-640.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w"

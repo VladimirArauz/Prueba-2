@@ -13,6 +13,7 @@ Archivos: `public/imagenes/tiendas/<tienda>-640.webp` y `<tienda>-1280.webp` (re
 | Papelería | [ddAn2tozJvk](https://unsplash.com/photos/ddAn2tozJvk) | [Caroline](https://unsplash.com/@carolinentmt) | Plumas y marcadores de colores acomodados en filas | [KigTvXqetXA](https://unsplash.com/photos/KigTvXqetXA) (Tim Gouw) |
 | Regalos | [f94JPVrDbnY](https://unsplash.com/photos/f94JPVrDbnY) | [Jess Bailey](https://unsplash.com/@jessbaileydesigns) | Caja de regalo de papel kraft con moño rosa | [PxM8aeJbzvk](https://unsplash.com/photos/PxM8aeJbzvk) (freestocks) |
 | Otra | [Cm-Jt6d7Sms](https://unsplash.com/photos/Cm-Jt6d7Sms) | [Aron Weerakoon](https://unsplash.com/@aron781n) | Puesto de mercado con artesanías tejidas de colores | [1L6u2vnLEWA](https://unsplash.com/photos/1L6u2vnLEWA) (Janice Liao) |
+| Libros | [YbLitAY8bPA](https://unsplash.com/photos/YbLitAY8bPA) | [Pickawood](https://unsplash.com/@pickawood) | Estantería de madera llena de libros | (sin respaldo; agregada el 2026-11-24) |
 
 Dirección de descarga de cada una (CDN de Unsplash; `unsplash.com/photos/<id>/download` bloquea a `curl`):
 
@@ -25,6 +26,7 @@ Dirección de descarga de cada una (CDN de Unsplash; `unsplash.com/photos/<id>/d
 | Papelería | `https://images.unsplash.com/photo-1774878520736-6cacbcce1b7b` |
 | Regalos | `https://images.unsplash.com/photo-1513201099705-a9746e1e201f` |
 | Otra | `https://images.unsplash.com/photo-1788102264117-94e5bffea0db` |
+| Libros | `https://images.unsplash.com/photo-1593430980369-68efc5a5eb34` |
 
 Para cambiar una: buscar otra con "Unsplash License", descargarla con `?fm=jpg&q=85&w=1600`, recortarla a 16:10,
 guardarla en WebP a 640 y 1280 px con el mismo nombre y actualizar esta tabla y `FOTOS_TIENDAS` en
