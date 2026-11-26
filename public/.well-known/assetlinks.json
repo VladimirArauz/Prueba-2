@@ -1,8 +1,26 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.necutla.app",
-    "sha256_cert_fingerprints": ["41:38:B7:7B:68:8D:61:C3:17:66:11:1C:31:4F:23:6B:62:A6:35:EF:5A:52:9F:9D:69:2C:1D:17:9B:7C:16:7D"]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.yancore.necutla",
+      "sha256_cert_fingerprints": [
+        "41:38:B7:7B:68:8D:61:C3:17:66:11:1C:31:4F:23:6B:62:A6:35:EF:5A:52:9F:9D:69:2C:1D:17:9B:7C:16:7D"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.necutla.app",
+      "sha256_cert_fingerprints": [
+        "41:38:B7:7B:68:8D:61:C3:17:66:11:1C:31:4F:23:6B:62:A6:35:EF:5A:52:9F:9D:69:2C:1D:17:9B:7C:16:7D"
+      ]
+    }
   }
-}]
+]

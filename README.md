@@ -396,6 +396,13 @@ La app nativa (Kotlin + Jetpack Compose) vive en `~/AndroidStudioProjects/Necutl
 (el XAMPP de esta compu visto desde el emulador). Turnstile corre en una hoja con WebView sobre
 `/app/captcha.html` (`public/js/app-captcha.js`), que entrega el token a la app.
 
+Desde la 2.5.0 el paquete (`applicationId`) es `com.yancore.necutla` (`com.yancore.necutla.debug` en pruebas), el
+que está registrado en el Android Developer Console. Antes era `com.necutla.app`: para Android es otra app, así que
+quien tenga la vieja la desinstala y baja la nueva una vez (el actualizador no cambia de paquete). El `namespace` del
+código sigue en `com.necutla.app`. `app/google-services.json` trae los 4 paquetes del proyecto `necutla` de Firebase,
+y `public/.well-known/assetlinks.json` lleva el nuevo y el viejo con la misma huella. El servidor no cambió: FCM manda
+por proyecto.
+
 Cómo se publica una versión nueva:
 
 1. Sube `versionName` (corrección = parche, función nueva = menor) y `versionCode` (+1) en `app/build.gradle.kts`.

@@ -1,8 +1,8 @@
 {
-  "version": "2.4.0",
-  "versionCode": 8,
-  "tamano": 2984070,
-  "sha256": "fc5c8af75d6ac94e5ab59933fc69fc23743adec5fed65dad1d658f156795bc49",
+  "version": "2.5.0",
+  "versionCode": 10,
+  "tamano": 2984082,
+  "sha256": "1e3143b791061bcf6ec750f2c097d59526eddb8540d546d87459e1c93942c6a2",
   "fecha": "2026-11-25",
   "minimo_android": "8.0"
 }
