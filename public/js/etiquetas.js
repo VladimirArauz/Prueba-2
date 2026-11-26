@@ -53,7 +53,10 @@
       // Tag Manager ya corre en esta página: recargar es la única forma de detenerlo
       borrarCookiesDeAnalytics();
       location.reload();
+      return;
     }
+    // El panel de permisos (permisos.js) espera a que el aviso de cookies se cierre
+    document.dispatchEvent(new Event("necutla:cookies-decididas"));
   }
 
   function mostrarAviso() {

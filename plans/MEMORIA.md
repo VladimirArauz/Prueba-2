@@ -60,12 +60,16 @@ Cómo se usa:
 | `2026-11-22-icono-actualizador-y-notificaciones.md` | Aplicado (prompts 1 a 7) y subido a IONOS con la app 2.2.0 (2026-11-22). Falta que el usuario active los avisos y haga un pedido de prueba | 2026-11-22 |
 | `2026-11-24-rediseno-tienda-en-linea.md` | Aplicado, subido a IONOS con la app 2.3.0 y con commit `c768f58` (push hecho) | 2026-11-24 |
 | `2026-11-24-cookies-metro-libros-y-nombre.md` | Aplicado y subido a IONOS con la app 2.3.1 (2026-11-25). Sin commit | 2026-11-24 |
+| `2026-11-25-avisos-errores-y-permisos-al-inicio.md` | Aplicado (prompts 1 a 4) y subido a IONOS con la app 2.4.0 (2026-11-25). Sin commit | 2026-11-25 |
+| `2026-11-25-descripcion-con-renglones.md` | Aplicado y subido a IONOS con la app 2.4.0 (2026-11-25). Sin commit | 2026-11-25 |
 
 ---
 
 ## Pendientes
 
 **Regla de trabajo vigente (2026-11-22, pedida por el usuario):** todo cambio de Necutla (web, API o Necutools) se aplica también a la app de Android en la misma tarea, y cada modificación genera un APK nuevo con versión subida (`versionName` semver y `versionCode` +1) en `~/Escritorio/Versiones Necutla Movil/Android/Necutla-X.Y.Z.apk`, sin borrar los anteriores. Desde el prompt 9 del plan de la app nativa, también se actualizan `public/app/necutla-android.apk` y `public/app/version.json` para que el botón de descarga baje la última. Lo que solo existe en la web no cambia la app. `plans/CLAUDE.md` no se tocó: si la quiere ahí, que lo pida.
+
+**Errores al activar avisos, permisos al abrir, descripción con renglones y Play Protect (2026-11-25, subido):** (a) (Resuelto 2026-11-25: subido a IONOS, ver "Cambios hechos".) (a2) Sin commit (web ni app). (b) Si el usuario usa Brave, para que lleguen los avisos tiene que activar en `brave://settings/privacy` la opción de servicios de Google para mensajes push. (c) `beacon.min.js … ERR_BLOCKED_BY_CLIENT` es su bloqueador frenando a Cloudflare Web Analytics: no es una falla. (d) **Play Protect:** al actualizar a la 2.3.1, el usuario vio un aviso de que la app era peligrosa. En el APK no hay nada que corregir (firma, alineación, targetSdk 37 y sin permisos de SMS, accesibilidad ni lectura de notificaciones). El usuario va a actualizar a la 2.4.0 y pasará el texto exacto del aviso. Si es "Se recomienda analizar la app" o "Enviar la app para una revisión de seguridad", se toca "Analizar app"; si es "Se bloqueó una app dañina", hay que apelar en https://support.google.com/googleplay/android-developer/contact/protectappeals con el SHA-256 de cada APK (2.3.1 `433b242d…ddf2f75a9`, 2.4.0 `fc5c8af7…6795bc49`). (e) **Verificación de desarrolladores de Google:** empieza el 30 de septiembre de 2026 en Brasil, Indonesia, Singapur y Tailandia y llega a todo el mundo en 2027. Para que la app se siga instalando fuera de Play Store, el usuario debe registrarse en el Android Developer Console (hay cuentas para estudiantes) y registrar `com.necutla.app` con su firma. (f) La 2.4.0 se probó en el emulador contra el XAMPP local, no en un teléfono.
 
 **Aviso de cookies, entrega en el Metro, foto de Libros y nombre en la barra (2026-11-24, subido el 2026-11-25):** (a) (Resuelto 2026-11-25: subido a IONOS, ver "Cambios hechos".) (a2) El nombre en la barra no se probó en vivo con sesión (Turnstile): lo revisa el usuario entrando a su cuenta. (b) Sin commit (web ni app). (c) Ya no queda "CECyT" ni "Bátiz" en la web ni en la app; el título de la portada es "Necutla: tiendas de estudiantes con entrega en el Metro" y `OG_VERSION` pasó a 4 (WhatsApp y Google tardarán en tomar la descripción nueva). Si se quiere decir qué líneas son (2 y 7, o las que sean), es un cambio de texto. (d) En celular la barra solo lleva iconos: el nombre se ve a más de 53.75em. (e) Las páginas ahora salen con `Cache-Control: private, no-cache`. (f) La 2.3.1 se probó en el emulador contra el XAMPP local; no en un teléfono.
 
@@ -141,6 +145,53 @@ Cómo se usa:
 ---
 
 ## Cambios hechos
+
+### 2026-11-25: permisos al abrir, errores de los avisos, descripción con renglones y app 2.4.0 subidos a IONOS
+- Con permiso del usuario. Los 16 archivos que ya existían en el servidor eran la versión de `dca9588` (comparados por SHA-256), y `public/js/permisos.js` todavía no existía.
+- Respaldo en `~/necutla/respaldos/2026-11-25-permisos/antes.tar` (16 archivos, permisos 600). Se subieron 17 archivos por rsync (con permisos 644) y quedaron idénticos. Sin cambios en `app/` del servidor ni en la base.
+- En vivo con `curl`: `/healthz`, la portada, `permisos.js` y `version.json` responden 200; `version.json` dice 2.4.0 y el SHA-256 del APK es igual; la portada carga `permisos.js` y Necutools tiene la ayuda de la descripción.
+- En Chrome a 1280, 360 y movimiento reducido, 30 de 30:
+  - El aviso de cookies sale primero y, al decidirlo, sale el panel de permisos; "Ahora no" no vuelve a mostrarlo en otras páginas.
+  - Sin `InvalidStateError` ni errores de CSP, con CLS menor a 0.02 y sin peticiones a Google sin aceptar.
+- Credenciales leídas a variables con un script de la carpeta temporal (`sshpass -e`), sin imprimirlas. Primero se leyeron solo las etiquetas de `secrets.md`: host en la línea 5, puerto en la 6, usuario en la 8 y contraseña en la 9.
+
+### 2026-11-25: errores de los avisos, permisos al abrir, descripción con renglones y app 2.4.0 (planes `2026-11-25-avisos-errores-y-permisos-al-inicio.md`, prompts 1 a 3, y `2026-11-25-descripcion-con-renglones.md`; solo en local)
+- **Prompt 1:**
+  - `comun.js`: el listener `pagereveal` atiende siempre `ready`, `finished` y `updateCallbackDone` de la transición, así que una transición cancelada ya no deja `Uncaught (in promise) InvalidStateError`.
+  - `activarAvisos()` pasa los errores del navegador por `mensajeErrorAvisos()`: en Brave (`navigator.brave.isBrave()`) dice que hay que activar "Usar los servicios de Google para mensajes push" en `brave://settings/privacy`; con `AbortError` o con `NotAllowedError` da su mensaje en español. En Brave, la caja de avisos lo dice antes de tocar el botón.
+  - `README.md`: `beacon.min.js` bloqueado es el bloqueador del navegador.
+  - Pruebas: 21 de 21 a 1280, 360 y movimiento reducido.
+- **Prompt 2:**
+  - `public/js/permisos.js` (nuevo, en las 9 páginas públicas, no en Necutools): panel "Permisos de Necutla" con "Permitir notificaciones" y "Ahora no". Sale una vez (`necutla_permisos` = `si`, `no` o `despues`), solo con el permiso aún sin decidir, y después del aviso de cookies (`etiquetas.js` lanza `necutla:cookies-decididas`).
+  - Sin sesión, guarda `necutla_avisos_pendiente`, y `cuenta.js` (`activarAvisosPendientes`) suscribe sola al entrar.
+  - Archivos: `.aviso-permisos h2` en `style.css` y `README.md`. `privacidad.html` sigue siendo cierto sin cambios.
+  - Pruebas: 81 de 81 a 1280, 360 y movimiento reducido (orden con el aviso de cookies inyectado, "Ahora no", permitir sin sesión y luego entrar con un cliente temporal, permitir con sesión, negado, sin Push, CLS menor a 0.02, sin errores). La suscripción del navegador se simuló.
+  - `ataques.js`: 351 de 351. Lo que creó se borró por `creado_en` y quedan 62 productos.
+- **Prompt 3 (app 2.4.0, `versionCode` 8):**
+  - `HojaPermisos()` en `ui/App.kt`: una vez, después de "Ya puedes borrar Necutla.apk". Pide notificaciones con la ventana de Android 13+ (si se niegan, ofrece abrir los ajustes) e "Instalar actualizaciones" (abre el ajuste; al volver dice "Permitido").
+  - `AvisosPush.activarSiSeAcepto()`: si se permitieron en la hoja, los avisos se activan solos la primera vez que se entra a Mi cuenta o a Necutools. Al cerrar sesión, `olvidarAutomatico()`.
+  - Probado en el emulador contra el XAMPP local:
+    - La hoja sale en orden y la ventana de Android pide el permiso.
+    - El ajuste de instalar vuelve con "Permitido".
+    - Al entrar con un cliente temporal (código leído de `/tmp/necutla-correos/`), el destino quedó en la base sin tocar la caja, y al cerrar sesión se quitó.
+    - Negar el permiso ofrece abrir los ajustes. Con "Quitar animaciones" funciona igual.
+    - La 2.4.0 se instala encima de la 2.3.1.
+  - "Permitir instalar actualizaciones" se partía en dos renglones: ahora dice "Permitir actualizaciones".
+  - Misma firma (`41:38:B7…7C:16:7D`), 2 984 070 bytes, SHA-256 `fc5c8af7…6795bc49`, en `~/Escritorio/Versiones Necutla Movil/Android/Necutla-2.4.0.apk` y `public/app/` con `version.json`.
+- **Descripción con renglones (pedido del usuario a media tarea):**
+  - El servidor y la app ya guardaban y mostraban los `\n`. En la web, el `<p>` los juntaba: `#producto-desc` ahora usa `white-space: pre-wrap`.
+  - En Necutools (web y app), el campo tiene 6 renglones y la ayuda "Usa Enter para separar renglones. Se verá tal como la escribas."
+  - Probado con renglones, renglón vacío, sangría y espacios dobles en Chrome a 1280 y 360 y en el emulador. Se restauró la descripción del producto de prueba.
+- El cliente temporal `prueba_permisos` y sus sesiones y destinos se borraron, y la tabla `limites` local se vació.
+
+### 2026-11-25: plan para los errores al activar avisos y los permisos al abrir (sin cambios de código)
+- El usuario reportó dos errores en la consola de producción al activar los avisos en `cuenta.html?sub=pedidos`:
+  - `beacon.min.js` bloqueado por el cliente: es Cloudflare Web Analytics, frenado por el bloqueador del navegador.
+  - `InvalidStateError … ViewTransition opt-in disabled`: es una transición entre páginas cancelada. Su promesa no se atiende fuera de `/p/` y `/t/` (listener `pagereveal` de `comun.js`).
+- También pidió que la web y la app pidan al abrir todos los permisos que puedan necesitar:
+  - Web: solo notificaciones, con un panel y un botón, porque el navegador exige un toque.
+  - App: notificaciones e "Instalar apps desconocidas".
+- Se crearon `plans/planes/2026-11-25-avisos-errores-y-permisos-al-inicio.md` y sus prompts (0 a 4) en `plans/prompts/`. No se cambió código.
 
 ### 2026-11-25: aviso de cookies, Metro, foto de Libros y nombre en la barra subidos a IONOS
 - Con permiso del usuario. Los 18 archivos que ya existían en el servidor eran la versión de `c768f58` (comparados por SHA-256). Respaldo en `~/necutla/respaldos/2026-11-24-cookies-metro-libros/antes.tar` (18 archivos, permisos 600). Se subieron 20 archivos por rsync (con las 2 fotos de Libros) y quedaron idénticos. Sin cambios en la base.

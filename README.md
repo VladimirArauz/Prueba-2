@@ -277,7 +277,7 @@ sección "VENTANAS DE CONFIRMACIÓN" de `style.css`).
 | `url_publica` | Dirección del sitio sin `/` al final (ej. `https://necutla.com`). Arma las direcciones completas de la vista previa del enlace (`og:url`, `og:image`). Vacía: la vista previa sale sin imagen |
 | `correo` | Buzón que manda los códigos de las cuentas de cliente: `modo` (`smtp`, o `archivo` solo en local: guarda los correos en `/tmp/necutla-correos/`), `host` (`smtp.ionos.mx`), `puerto` (465), `usuario` y `password` del buzón, `remitente` y `nombre` |
 | `turnstile` | Captcha de Cloudflare: `site_key` (pública) y `secret`. Vacías = sin captcha. En local, las llaves de prueba de Cloudflare (ver `app/config.ejemplo.php`) |
-| `cloudflare_analytics` | Token de Cloudflare Web Analytics (público). Vacío = no se cuentan visitas |
+| `cloudflare_analytics` | Token de Cloudflare Web Analytics (público). Vacío = no se cuentan visitas. Si en la consola sale `beacon.min.js … ERR_BLOCKED_BY_CLIENT`, es el bloqueador del navegador (Brave Shields, uBlock): no es una falla y no afecta al sitio |
 | `google_tag_manager` | Id del contenedor de Google Tag Manager (`GTM-…`, público). Vacío = no se carga. `public/js/etiquetas.js` muestra el aviso de cookies y carga Google solo si la persona acepta, en todas las páginas menos Mi cuenta y Necutools. Con cookies aceptadas, `medirCompra()` de `public/js/comun.js` manda `add_to_cart` y `begin_checkout` (pedido o servicio enviado, uno por tienda) en MXN, sin datos del cliente. La CSP solo permite Analytics: Google Ads, HTML personalizado y variables de JavaScript personalizado requieren cambiarla |
 | `hoy_prueba` | Solo en local: fija la fecha de "hoy" (`AAAA-MM-DD`) para probar ofertas y promociones |
 
@@ -377,6 +377,13 @@ un pedido nuevo ("cancelar viejos" no avisa).
   después de mandar un pedido (`ofrecerAvisos()`). El permiso solo se pide al tocar el botón. Al cerrar sesión se quita
   la suscripción de ese navegador. En iPhone solo funciona con Necutla en la pantalla de inicio. La CSP permite
   `worker-src 'self'`.
+- **Panel de permisos de la primera visita** (`public/js/permisos.js`, en todas las páginas públicas menos Necutools):
+  "Permisos de Necutla" con "Permitir notificaciones" y "Ahora no". Sale una vez (`localStorage` `necutla_permisos` =
+  `si`, `no` o `despues`), solo si el permiso del navegador aún no se decidió, y después de que se cierra el aviso de
+  cookies (`etiquetas.js` lanza `necutla:cookies-decididas`). Sin sesión, el permiso se pide ya y se guarda
+  `necutla_avisos_pendiente`; `cuenta.js` hace la suscripción sola al entrar. Los errores del navegador al suscribirse
+  pasan por `mensajeErrorAvisos()` (en Brave hay que activar "Usar los servicios de Google para mensajes push" en
+  `brave://settings/privacy`).
 - **Llaves:** `php8.5 scripts/crear-vapid.php` crea las de Web Push y las guarda en `app/config.php` (`web_push`). Para
   la app, `fcm` en `app/config.php` (`proyecto` y la ruta del JSON de la cuenta de servicio, `app/fcm-cuenta.json`,
   permisos 600, fuera de git).

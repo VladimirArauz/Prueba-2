@@ -159,6 +159,23 @@ function modoAuth(registro, enfocar = false) {
   }
 }
 
+// Permiso de notificaciones dado en el panel de la primera visita sin sesión (permisos.js): al entrar, la
+// suscripción se hace sola, una vez. Si el navegador no puede, se dice por qué y no se vuelve a intentar.
+async function activarAvisosPendientes() {
+  let pendiente = null;
+  try { pendiente = localStorage.getItem("necutla_avisos_pendiente"); } catch (e) { /* sin almacenamiento */ }
+  if (pendiente !== "cliente") return;
+  try { localStorage.removeItem("necutla_avisos_pendiente"); } catch (e) { /* sin almacenamiento */ }
+  if (!avisosPosibles() || Notification.permission !== "granted" || tieneMarcaAvisos("cliente")) return;
+  try {
+    await activarAvisos("cliente");
+    showToast("Avisos activados en este navegador.", "bell");
+  } catch (e) {
+    avisarError(e.message);
+  }
+  pintarTodasLasCajasDeAvisos();
+}
+
 function render(sesion) {
   if (sesion && sesion.pausa) {
     $("cuenta-fuera").hidden = true;
@@ -178,6 +195,7 @@ function render(sesion) {
     return;
   }
   vista(null);
+  activarAvisosPendientes();
   $("dentro-title").textContent = `Hola, ${sesion.nombre}`;
   // /cuenta.html?sub=pedidos (al tocar el aviso de un pedido): abre Mis pedidos una vez
   if (new URLSearchParams(location.search).get("sub") === "pedidos" && !render.subAbierta) {

@@ -395,7 +395,7 @@
                 </div>
                 <div class="form-group"><label for="prod-orden">Orden</label><input id="prod-orden" name="orden" type="number" min="0" max="9999" value="0"><span class="form-hint">Los números más bajos salen primero.</span></div>
                 <div class="form-group"><label for="prod-imagen">Imagen (hasta 1 MB)</label><input id="prod-imagen" name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span class="form-hint">¿Lo tienes en varios colores? Al guardar podrás agregar cada color con su foto.</span></div>
-                <div class="form-group full-width"><label for="prod-desc">Descripción</label><textarea id="prod-desc" name="descripcion" rows="3" maxlength="1000" placeholder="Materiales, tallas, colores o qué incluye el servicio"></textarea></div>
+                <div class="form-group full-width"><label for="prod-desc">Descripción</label><textarea id="prod-desc" name="descripcion" rows="6" maxlength="1000" placeholder="Materiales, tallas, colores o qué incluye el servicio" aria-describedby="prod-desc-ayuda"></textarea><span class="form-hint" id="prod-desc-ayuda">Usa Enter para separar renglones. Se verá tal como la escribas.</span></div>
                 <div class="form-group full-width">
                   <div class="check-group">
                     <label><input type="checkbox" name="visible" checked> Visible en la tienda</label>

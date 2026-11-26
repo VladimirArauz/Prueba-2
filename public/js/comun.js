@@ -937,6 +937,12 @@ document.addEventListener("click", event => {
 
 window.addEventListener("pagereveal", event => {
   limpiarNombresTransicion();
+  // Si el navegador cancela la transición (p. ej. "ViewTransition opt-in disabled"), rechaza estas promesas:
+  // se atienden en todas las páginas para que no salga "Uncaught (in promise)" en la consola (plan 2026-11-25)
+  if (event.viewTransition) {
+    const vt = event.viewTransition;
+    [vt.ready, vt.finished, vt.updateCallbackDone].forEach(p => { if (p) p.catch(() => {}); });
+  }
   const desde = window.navigation && navigation.activation && navigation.activation.from;
   if (!event.viewTransition || !desde || !desde.url) return;
   const ruta = new URL(desde.url).pathname.replace(/\/$/, "");
@@ -945,7 +951,7 @@ window.addEventListener("pagereveal", event => {
   const enlace = [...document.querySelectorAll(".card a[href]")].find(a => a.getAttribute("href") === ruta);
   if (!enlace) return;
   nombrarTarjeta(enlace.closest(".card"), m[1] === "p" ? "producto" : "tienda");
-  event.viewTransition.finished.finally(limpiarNombresTransicion);
+  event.viewTransition.finished.catch(() => {}).finally(limpiarNombresTransicion);
 });
 
 // ================= Avisos de pedidos en el navegador (Web Push, plan 2026-11-22-icono-actualizador-y-notificaciones) =================
@@ -994,18 +1000,48 @@ function llaveABytes(b64) {
   return Uint8Array.from(atob(base), c => c.charCodeAt(0));
 }
 
+const AVISOS_BLOQUEADOS = "Bloqueaste los avisos para Necutla. Para activarlos, toca el candado junto a la dirección de la página y permite las notificaciones.";
+const AVISOS_BRAVE = "Brave trae apagados los avisos. Abre brave://settings/privacy, activa \u201cUsar los servicios de Google para mensajes push\u201d y vuelve a cargar la página.";
+
+// Brave no dice en el agente de usuario quién es; lo dice navigator.brave.isBrave()
+let esBraveCache = null;
+async function esBrave() {
+  if (esBraveCache === null) {
+    try { esBraveCache = Boolean(navigator.brave && await navigator.brave.isBrave()); } catch (e) { esBraveCache = false; }
+  }
+  return esBraveCache;
+}
+
+// Los errores del navegador al suscribirse llegan en inglés ("Registration failed - push service error"):
+// se cambian por qué pasó y cómo arreglarlo. Los del servidor (api) ya vienen en español.
+async function mensajeErrorAvisos(e) {
+  const nombre = e && e.name;
+  const texto = String(e && e.message || "");
+  if (nombre === "NotAllowedError") return AVISOS_BLOQUEADOS;
+  if (await esBrave() || nombre === "AbortError" || /push service/i.test(texto)) {
+    return await esBrave() ? AVISOS_BRAVE
+      : "El servicio de avisos de tu navegador no respondió. Revisa tu conexión, vuelve a cargar la página e inténtalo de nuevo.";
+  }
+  return "No se pudieron activar los avisos en este navegador. Vuelve a cargar la página e inténtalo de nuevo.";
+}
+
 async function activarAvisos(para) {
   if (!avisosPosibles()) throw new Error(esIphone()
     ? "En iPhone, primero agrega Necutla a tu pantalla de inicio (Compartir, Agregar a inicio) y ábrela desde ahí."
     : "Tu navegador no permite avisos. Prueba con Chrome, Edge, Firefox o Safari.");
   const permiso = await Notification.requestPermission();
-  if (permiso !== "granted") throw new Error("Bloqueaste los avisos para Necutla. Para activarlos, toca el candado junto a la dirección de la página y permite las notificaciones.");
+  if (permiso !== "granted") throw new Error(AVISOS_BLOQUEADOS);
   const { llave } = await api("/notificaciones/llave");
   if (!llave) throw new Error("Los avisos todavía no están listos. Inténtalo más tarde.");
-  const reg = await navigator.serviceWorker.register("/sw.js");
-  await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription()
-    || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: llaveABytes(llave) });
+  let sub;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    sub = await reg.pushManager.getSubscription()
+      || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: llaveABytes(llave) });
+  } catch (e) {
+    throw new Error(await mensajeErrorAvisos(e));
+  }
   const datos = sub.toJSON();
   await api("/notificaciones/suscribir", { method: "POST", body: { para, tipo: "web", endpoint: datos.endpoint, p256dh: datos.keys.p256dh, auth: datos.keys.auth } });
   marcaAvisos(para, true);
@@ -1039,7 +1075,9 @@ async function pintarAvisos(caja) {
     texto.textContent = "Bloqueaste los avisos para Necutla. Para activarlos, toca el candado junto a la dirección de la página, permite las notificaciones y vuelve a cargar.";
     botones.innerHTML = "";
   } else {
-    texto.textContent = texto.dataset.original;
+    texto.textContent = await esBrave()
+      ? `${texto.dataset.original} En Brave, antes activa \u201cUsar los servicios de Google para mensajes push\u201d en brave://settings/privacy.`
+      : texto.dataset.original;
     botones.innerHTML = `<button type="button" class="btn secondary" data-action="avisos-activar" data-para="${para}">${icon("bell")}${textos.activar}</button>`;
   }
 }

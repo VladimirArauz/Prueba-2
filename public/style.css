@@ -3195,6 +3195,12 @@ img.admin-thumb.foto-completa {
   max-width: 68ch;
 }
 
+/* La descripción se ve tal como la escribió la tienda: con sus saltos de línea y sus espacios (plan 2026-11-25) */
+#producto-desc {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .producto-info .price {
   font-size: var(--letra-h3);
 }
@@ -4972,6 +4978,12 @@ img.admin-thumb.foto-completa {
   display: flex;
   flex-shrink: 0;
   gap: 8px;
+}
+
+/* Panel de permisos de la primera visita (public/js/permisos.js, plan 2026-11-25): mismo letrero que el de cookies */
+.aviso-permisos h2 {
+  margin: 0 0 4px;
+  font-size: var(--letra-media);
 }
 
 .cookies-decision {
